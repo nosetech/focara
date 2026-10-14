@@ -1,0 +1,4 @@
+backend:
+  port: 8800
+frontend:
+  port: 3800

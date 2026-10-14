@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+
+# 実行時・個人設定
+config/config.yaml
+data/
+logs/
+.env*
+.DS_Store
+.serena/
