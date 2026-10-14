@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 
-from focara.config import DEFAULT_HOST, backend_port
+from focara.config import BACKEND_HOST, load_config
 
 app = FastAPI(title="Focara")
 
@@ -13,7 +13,8 @@ def health() -> dict[str, str]:
 
 def run() -> None:
     # 常に 127.0.0.1 に bind する。公開は frontend 側のみで行う。
-    uvicorn.run("focara.main:app", host=DEFAULT_HOST, port=backend_port())
+    cfg = load_config()  # 不正な設定は ConfigError で起動時に失敗する
+    uvicorn.run("focara.main:app", host=BACKEND_HOST, port=cfg.backend.port)
 
 
 if __name__ == "__main__":
