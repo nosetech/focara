@@ -10,7 +10,7 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 
 ## リポジトリの現状
 
-(後続issueで追記)
+- DB: SQLAlchemy + Alembic(`backend/focara/db/`)。マイグレーションは `migrations/versions/`、起動時に `upgrade_db()` で最新まで適用する。
 
 ## コマンド
 
