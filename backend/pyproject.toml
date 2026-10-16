@@ -32,5 +32,8 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"focara/db/migrations/versions/*" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

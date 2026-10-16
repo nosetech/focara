@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-10-16 09:05:31.519381
+Create Date: 2026-10-16 16:15:08.694417
 """
 
 import sqlalchemy as sa
@@ -37,10 +37,33 @@ def upgrade() -> None:
         sa.Column("run_order", sa.Integer(), nullable=True),
         sa.Column("fixed_at", sa.DateTime(), nullable=True),
         sa.Column("wait_condition", sa.Text(), nullable=True),
-        sa.Column("recurrence", sa.Text(), nullable=True),
+        sa.Column("recurrence_type", sa.String(), nullable=True),
+        sa.Column("recurrence_weekdays", sa.Integer(), nullable=True),
+        sa.Column("recurrence_month_day", sa.Integer(), nullable=True),
+        sa.Column("recurrence_month", sa.Integer(), nullable=True),
+        sa.Column("recurrence_day", sa.Integer(), nullable=True),
+        sa.Column("recurrence_end_type", sa.String(), server_default="none", nullable=False),
+        sa.Column("recurrence_end_date", sa.String(length=10), nullable=True),
+        sa.Column("recurrence_end_count", sa.Integer(), nullable=True),
         sa.Column("memo", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.CheckConstraint(
+            "COALESCE((recurrence_end_type = 'none' AND recurrence_end_date IS NULL AND recurrence_end_count IS NULL) OR (recurrence_end_type = 'date' AND recurrence_end_date IS NOT NULL AND recurrence_end_count IS NULL) OR (recurrence_end_type = 'count' AND recurrence_end_date IS NULL AND recurrence_end_count >= 1), 0)",
+            name=op.f("ck_tasks_recurrence_end_fields"),
+        ),
+        sa.CheckConstraint(
+            "COALESCE((recurrence_type IS NULL AND recurrence_weekdays IS NULL AND recurrence_month_day IS NULL AND recurrence_month IS NULL AND recurrence_day IS NULL AND recurrence_end_type = 'none') OR (recurrence_type = 'weekly' AND recurrence_weekdays BETWEEN 1 AND 127 AND recurrence_month_day IS NULL AND recurrence_month IS NULL AND recurrence_day IS NULL) OR (recurrence_type = 'monthly' AND recurrence_weekdays IS NULL AND (recurrence_month_day BETWEEN 1 AND 31 OR recurrence_month_day = -1) AND recurrence_month IS NULL AND recurrence_day IS NULL) OR (recurrence_type = 'yearly' AND recurrence_weekdays IS NULL AND recurrence_month_day IS NULL AND recurrence_month BETWEEN 1 AND 12 AND recurrence_day BETWEEN 1 AND 31), 0)",
+            name=op.f("ck_tasks_recurrence_fields"),
+        ),
+        sa.CheckConstraint(
+            "recurrence_end_type IN ('none', 'date', 'count')",
+            name=op.f("ck_tasks_recurrence_end_type"),
+        ),
+        sa.CheckConstraint(
+            "recurrence_type IS NULL OR recurrence_type IN ('weekly', 'monthly', 'yearly')",
+            name=op.f("ck_tasks_recurrence_type"),
+        ),
         sa.CheckConstraint(
             "status IN ('inbox', 'next', 'someday', 'waiting', 'habit')",
             name=op.f("ck_tasks_status"),

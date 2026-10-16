@@ -105,3 +105,66 @@ def test_datetime_stored_as_utc(engine):
             s.flush()
     raw = sqlite3.connect(engine.url.database).execute("SELECT fixed_at FROM tasks").fetchone()[0]
     assert raw.startswith("2026-01-01 00:00:00")
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {},
+        {"recurrence_type": "weekly", "recurrence_weekdays": 0b0101010},
+        {"recurrence_type": "monthly", "recurrence_month_day": 31},
+        {"recurrence_type": "monthly", "recurrence_month_day": -1},
+        {"recurrence_type": "yearly", "recurrence_month": 2, "recurrence_day": 29},
+        {
+            "recurrence_type": "weekly",
+            "recurrence_weekdays": 127,
+            "recurrence_end_type": "date",
+            "recurrence_end_date": "2026-12-31",
+        },
+        {
+            "recurrence_type": "monthly",
+            "recurrence_month_day": 1,
+            "recurrence_end_type": "count",
+            "recurrence_end_count": 10,
+        },
+    ],
+)
+def test_valid_recurrence(engine, fields):
+    with Session(engine) as s:
+        s.add(Task(title="r", **fields))
+        s.commit()
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"recurrence_type": "daily"},
+        {"recurrence_type": "weekly"},
+        {"recurrence_type": "weekly", "recurrence_weekdays": 0},
+        {"recurrence_type": "weekly", "recurrence_weekdays": 128},
+        {"recurrence_type": "weekly", "recurrence_weekdays": 1, "recurrence_month_day": 1},
+        {"recurrence_type": "monthly", "recurrence_month_day": 0},
+        {"recurrence_type": "monthly", "recurrence_month_day": 32},
+        {"recurrence_type": "yearly", "recurrence_month": 13, "recurrence_day": 1},
+        {"recurrence_type": "yearly", "recurrence_month": 1},
+        {"recurrence_weekdays": 1},
+        {"recurrence_end_type": "date", "recurrence_end_date": "2026-12-31"},
+        {"recurrence_type": "weekly", "recurrence_weekdays": 1, "recurrence_end_type": "date"},
+        {
+            "recurrence_type": "weekly",
+            "recurrence_weekdays": 1,
+            "recurrence_end_type": "count",
+            "recurrence_end_count": 0,
+        },
+        {
+            "recurrence_type": "weekly",
+            "recurrence_weekdays": 1,
+            "recurrence_end_type": "forever",
+        },
+    ],
+)
+def test_invalid_recurrence(engine, fields):
+    with Session(engine) as s:
+        s.add(Task(title="r", **fields))
+        with pytest.raises(IntegrityError):
+            s.commit()
