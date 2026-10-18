@@ -14,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from focara.db.base import Base
 
-TASK_STATUSES = ("inbox", "next", "someday", "waiting", "habit")
+TASK_STATUSES = ("inbox", "next", "someday", "waiting", "habit", "done")
 TIME_SLOTS = ("morning", "afternoon", "evening")
 TASK_LOG_ACTIONS = ("completed", "postponed")
 RECURRENCE_TYPES = ("weekly", "monthly", "yearly")
@@ -124,7 +124,9 @@ class Task(Base):
     run_order: Mapped[int | None] = mapped_column(Integer)
     # 日時が決まっている予定(UTC)
     fixed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # 条件待ち: 待ち条件(相手の名前・メモ)と、待ち日時(UTC。経過すると next に戻る)
     wait_condition: Mapped[str | None] = mapped_column(Text)
+    wait_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
     # 繰り返し設定。タイプ(週次/月次/年次)ごとに使う項目が異なる
     recurrence_type: Mapped[str | None] = mapped_column(String)
     # 週次: 曜日のビットマスク(bit0=日, bit1=月, ... bit6=土)。複数選択可

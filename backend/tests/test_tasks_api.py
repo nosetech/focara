@@ -98,3 +98,77 @@ def test_recurrence(client):
 def test_openapi(client):
     paths = client.get("/openapi.json").json()["paths"]
     assert "/api/tasks" in paths and "/api/tasks/{task_id}" in paths
+
+
+def _make(client, **kw):
+    return client.post("/api/tasks", json={"title": "t", **kw}).json()["id"]
+
+
+@pytest.mark.parametrize("target", ["next", "someday", "habit", "done"])
+def test_transition_from_inbox(client, target):
+    tid = _make(client)
+    res = client.post(f"/api/tasks/{tid}/transition", json={"status": target})
+    assert res.status_code == 200
+    assert res.json()["status"] == target
+
+
+def test_transition_to_waiting_keeps_condition_and_clears_on_leave(client):
+    tid = _make(client)
+    res = client.post(
+        f"/api/tasks/{tid}/transition",
+        json={
+            "status": "waiting",
+            "wait_condition": "田中さんの返信",
+            "wait_until": "2026-10-20T00:00:00Z",
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["wait_condition"] == "田中さんの返信"
+    assert res.json()["wait_until"] == "2026-10-20T00:00:00Z"
+    res = client.post(f"/api/tasks/{tid}/transition", json={"status": "next"})
+    assert res.json()["wait_condition"] is None
+    assert res.json()["wait_until"] is None
+
+
+def test_transition_to_waiting_requires_condition(client):
+    tid = _make(client)
+    res = client.post(f"/api/tasks/{tid}/transition", json={"status": "waiting"})
+    assert res.status_code == 422
+    assert client.get(f"/api/tasks/{tid}").json()["status"] == "inbox"
+    assert client.post("/api/tasks", json={"title": "x", "status": "waiting"}).status_code == 422
+
+
+def test_invalid_transitions_rejected(client):
+    tid = _make(client)
+    assert client.post(f"/api/tasks/{tid}/transition", json={"status": "inbox"}).status_code == 409
+    client.post(f"/api/tasks/{tid}/transition", json={"status": "done"})
+    assert (
+        client.post(f"/api/tasks/{tid}/transition", json={"status": "someday"}).status_code == 409
+    )
+    assert client.patch(f"/api/tasks/{tid}", json={"status": "habit"}).status_code == 409
+    assert client.post(f"/api/tasks/{tid}/transition", json={"status": "next"}).status_code == 200
+    assert (
+        client.post(
+            f"/api/tasks/{tid}/transition", json={"status": "next", "wait_condition": "x"}
+        ).status_code
+        == 422
+    )
+
+
+def test_release_due_waiting(client):
+    from datetime import UTC, datetime
+
+    from sqlalchemy.orm import Session
+
+    from focara.task_status import release_due_waiting
+
+    past = _make(client, status="waiting", wait_until="2026-10-01T00:00:00Z")
+    future = _make(client, status="waiting", wait_until="2099-01-01T00:00:00Z")
+    person = _make(client, status="waiting", wait_condition="返信待ち")
+    engine = app.dependency_overrides[get_engine]()
+    with Session(engine) as s:
+        assert release_due_waiting(s, datetime(2026, 10, 18, tzinfo=UTC)) == 1
+    assert client.get(f"/api/tasks/{past}").json()["status"] == "next"
+    assert client.get(f"/api/tasks/{past}").json()["wait_until"] is None
+    assert client.get(f"/api/tasks/{future}").json()["status"] == "waiting"
+    assert client.get(f"/api/tasks/{person}").json()["status"] == "waiting"
