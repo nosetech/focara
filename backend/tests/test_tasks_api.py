@@ -172,3 +172,14 @@ def test_release_due_waiting(client):
     assert client.get(f"/api/tasks/{past}").json()["wait_until"] is None
     assert client.get(f"/api/tasks/{future}").json()["status"] == "waiting"
     assert client.get(f"/api/tasks/{person}").json()["status"] == "waiting"
+
+
+def test_wait_fields_only_for_waiting(client):
+    assert client.post("/api/tasks", json={"title": "x", "wait_condition": "a"}).status_code == 422
+    tid = _make(client)
+    assert (
+        client.patch(f"/api/tasks/{tid}", json={"wait_until": "2026-10-01T00:00:00Z"}).status_code
+        == 422
+    )
+    res = client.patch(f"/api/tasks/{tid}", json={"status": "waiting", "wait_condition": "a"})
+    assert res.status_code == 200

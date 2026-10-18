@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
 from focara.db.models import Task
-from focara.task_status import InvalidTransition, transition, validate_waiting
+from focara.task_status import InvalidTransition, MissingWaitCondition, transition, validate_waiting
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -121,6 +121,10 @@ def get_task(task_id: int, session: SessionDep) -> Task:
 @router.post("", response_model=TaskOut, status_code=201)
 def create_task(body: TaskCreate, session: SessionDep) -> Task:
     task = Task(**_to_columns(body.model_dump()))
+    if task.status != "waiting" and (
+        task.wait_condition is not None or task.wait_until is not None
+    ):
+        raise HTTPException(422, "待ち条件は waiting のタスクにのみ指定できます")
     if task.status == "waiting":
         try:
             validate_waiting(task)
@@ -140,10 +144,14 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         if key in values and values[key] is None:
             raise HTTPException(422, f"{key} は null にできません")
     new_status = values.pop("status", None)
+    if (new_status or task.status) != "waiting" and (
+        values.get("wait_condition") is not None or values.get("wait_until") is not None
+    ):
+        raise HTTPException(422, "待ち条件は waiting のタスクにのみ指定できます")
     for key, value in _to_columns(values).items():
         setattr(task, key, value)
     if new_status is not None and new_status != task.status:
-        _transition(task, new_status)
+        _transition(session, task, new_status)
     elif task.status == "waiting":
         try:
             validate_waiting(task)
@@ -153,11 +161,12 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
     return task
 
 
-def _transition(task: Task, new_status: str) -> None:
+def _transition(session: Session, task: Task, new_status: str) -> None:
     try:
         transition(task, new_status)
     except InvalidTransition as e:
-        raise HTTPException(409, str(e)) from e
+        session.rollback()
+        raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
 
 
 @router.post("/{task_id}/transition", response_model=TaskOut)
@@ -174,7 +183,7 @@ def transition_task(task_id: int, body: TaskTransition, session: SessionDep) -> 
     except InvalidTransition as e:
         session.rollback()
         # 必須項目の不足は 422、遷移自体の禁止は 409
-        raise HTTPException(422 if "必要" in str(e) else 409, str(e)) from e
+        raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
     _commit(session)
     return task
 
