@@ -1,10 +1,12 @@
 import uvicorn
 from fastapi import FastAPI
 
+from focara.api.tasks import router as tasks_router
 from focara.config import BACKEND_HOST, load_config
 from focara.db import create_db_engine, upgrade_db
 
 app = FastAPI(title="Focara")
+app.include_router(tasks_router)
 
 
 @app.get("/api/health")
