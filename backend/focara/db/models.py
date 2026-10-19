@@ -19,6 +19,7 @@ TIME_SLOTS = ("morning", "afternoon", "evening")
 TASK_LOG_ACTIONS = ("completed", "postponed")
 RECURRENCE_TYPES = ("weekly", "monthly", "yearly")
 RECURRENCE_END_TYPES = ("none", "date", "count")
+PROPERTY_TYPES = ("string", "number", "date")
 
 
 class UTCDateTime(TypeDecorator):
@@ -160,12 +161,22 @@ class Task(Base):
 
 class TaskProperty(Base):
     __tablename__ = "task_properties"
-    __table_args__ = (Index("uq_task_properties_task_id_key", "task_id", "key", unique=True),)
+    __table_args__ = (
+        CheckConstraint(_in("value_type", PROPERTY_TYPES), name="value_type"),
+        # 単位を持てるのは数値プロパティのみ
+        CheckConstraint("unit IS NULL OR value_type = 'number'", name="unit"),
+        Index("uq_task_properties_task_id_key", "task_id", "key", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     key: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str | None] = mapped_column(Text)
+    # 種別。value は常に文字列で保存し、number は数値、date は YYYY-MM-DD として検証済み
+    value_type: Mapped[str] = mapped_column(
+        String, nullable=False, default="string", server_default="string"
+    )
+    unit: Mapped[str | None] = mapped_column(String)
 
     task: Mapped[Task] = relationship(back_populates="properties")
 

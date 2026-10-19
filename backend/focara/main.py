@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from focara.api.deps import get_engine
 from focara.api.projects import router as projects_router
+from focara.api.properties import router as properties_router
 from focara.api.schedule import router as schedule_router
 from focara.api.tasks import router as tasks_router
 from focara.config import BACKEND_HOST, load_config
@@ -45,6 +46,7 @@ app = FastAPI(title="Focara", lifespan=lifespan)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(schedule_router)
+app.include_router(properties_router)
 
 
 @app.get("/api/health")
