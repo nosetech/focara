@@ -33,6 +33,7 @@ class TaskFields(BaseModel):
     time_slot: TimeSlot | None = None
     run_order: int | None = None
     fixed_at: AwareDatetime | None = None
+    fixed_end_at: AwareDatetime | None = None
     wait_condition: str | None = None
     wait_until: AwareDatetime | None = None
     recurrence_type: RecurrenceType | None = None
@@ -88,6 +89,15 @@ def _get_or_404(session: Session, task_id: int) -> Task:
     return task
 
 
+def _check_fixed_range(task: Task) -> None:
+    if task.fixed_end_at is None:
+        return
+    if task.fixed_at is None:
+        raise HTTPException(422, "fixed_end_at には fixed_at の指定が必要です")
+    if task.fixed_end_at <= task.fixed_at:
+        raise HTTPException(422, "fixed_end_at は fixed_at より後にしてください")
+
+
 def _commit(session: Session) -> None:
     try:
         session.commit()
@@ -130,6 +140,7 @@ def create_task(body: TaskCreate, session: SessionDep) -> Task:
             validate_waiting(task)
         except InvalidTransition as e:
             raise HTTPException(422, str(e)) from e
+    _check_fixed_range(task)
     session.add(task)
     _commit(session)
     return task
@@ -150,6 +161,11 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         raise HTTPException(422, "待ち条件は waiting のタスクにのみ指定できます")
     for key, value in _to_columns(values).items():
         setattr(task, key, value)
+    try:
+        _check_fixed_range(task)
+    except HTTPException:
+        session.rollback()
+        raise
     if new_status is not None and new_status != task.status:
         _transition(session, task, new_status)
     elif task.status == "waiting":
