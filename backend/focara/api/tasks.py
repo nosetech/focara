@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
-from focara.db.models import Task
+from focara.db.models import Task, TaskLog
 from focara.recurrence import clear_recurrence, spawn_next
 from focara.task_status import InvalidTransition, MissingWaitCondition, transition, validate_waiting
 
@@ -187,9 +187,10 @@ def _transition(session: Session, task: Task, new_status: str) -> None:
         raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
 
 
-def _spawn_if_done(session: Session, task: Task) -> None:
-    """繰り返しタスクが完了したら、次の回を生成する。"""
+def _spawn_if_done(session: Session, task: Task, note: str | None = None) -> None:
+    """タスクが完了したら完了を記録し、繰り返しタスクなら次の回を生成する。"""
     if task.status == "done":
+        session.add(TaskLog(task=task, action="completed", note=note))
         spawn_next(session, task)
 
 
