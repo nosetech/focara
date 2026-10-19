@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
 from focara.db.models import Task
+from focara.recurrence import clear_recurrence, spawn_next
 from focara.task_status import InvalidTransition, MissingWaitCondition, transition, validate_waiting
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -168,6 +169,7 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         raise
     if new_status is not None and new_status != task.status:
         _transition(session, task, new_status)
+        _spawn_if_done(session, task)
     elif task.status == "waiting":
         try:
             validate_waiting(task)
@@ -185,6 +187,12 @@ def _transition(session: Session, task: Task, new_status: str) -> None:
         raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
 
 
+def _spawn_if_done(session: Session, task: Task) -> None:
+    """繰り返しタスクが完了したら、次の回を生成する。"""
+    if task.status == "done":
+        spawn_next(session, task)
+
+
 @router.post("/{task_id}/transition", response_model=TaskOut)
 def transition_task(task_id: int, body: TaskTransition, session: SessionDep) -> Task:
     task = _get_or_404(session, task_id)
@@ -200,6 +208,39 @@ def transition_task(task_id: int, body: TaskTransition, session: SessionDep) -> 
         session.rollback()
         # 必須項目の不足は 422、遷移自体の禁止は 409
         raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
+    _spawn_if_done(session, task)
+    _commit(session)
+    return task
+
+
+class RecurrenceRule(BaseModel):
+    """繰り返しルールの設定・変更。整合性は DB の制約で検証する。"""
+
+    recurrence_type: RecurrenceType
+    recurrence_weekdays: int | None = None
+    recurrence_month_day: int | None = None
+    recurrence_month: int | None = None
+    recurrence_day: int | None = None
+    recurrence_end_type: RecurrenceEndType = "none"
+    recurrence_end_date: date | None = None
+    recurrence_end_count: int | None = None
+
+
+@router.put("/{task_id}/recurrence", response_model=TaskOut)
+def set_recurrence(task_id: int, body: RecurrenceRule, session: SessionDep) -> Task:
+    task = _get_or_404(session, task_id)
+    if task.status == "done":
+        raise HTTPException(409, "完了済みのタスクには繰り返しを設定できません")
+    for key, value in _to_columns(body.model_dump()).items():
+        setattr(task, key, value)
+    _commit(session)
+    return task
+
+
+@router.delete("/{task_id}/recurrence", response_model=TaskOut)
+def stop_recurrence(task_id: int, session: SessionDep) -> Task:
+    task = _get_or_404(session, task_id)
+    clear_recurrence(task)
     _commit(session)
     return task
 
