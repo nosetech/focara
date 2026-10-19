@@ -124,6 +124,7 @@ class Task(Base):
     run_order: Mapped[int | None] = mapped_column(Integer)
     # 日時が決まっている予定(UTC)
     fixed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    fixed_end_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     # 条件待ち: 待ち条件(相手の名前・メモ)と、待ち日時(UTC。経過すると next に戻る)
     wait_condition: Mapped[str | None] = mapped_column(Text)
     wait_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
