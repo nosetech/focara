@@ -24,7 +24,7 @@ backend(`backend/` で実行。uv + Python 3.11+):
 frontend(`frontend/` で実行。npm):
 
 - `npm install`: 依存関係のインストール
-- `npm run dev`: 開発サーバ(既定ポート 3800、`FRONTEND_PORT` で変更。`/api/*` は `BACKEND_URL`(既定 `http://127.0.0.1:8800`)へ中継)
+- `npm run dev`: 開発サーバ(既定ポート 3800、`FRONTEND_PORT` で変更。`/api/*` は `BACKEND_URL`(既定 `http://127.0.0.1:8800`)へ中継。別端末からアクセスする場合は `FRONTEND_ALLOWED_DEV_ORIGINS` にホスト名をカンマ区切りで指定)
 - `npm run lint`: ESLint
 - `npm run format:check`: Prettier チェック(`npm run format` で整形)
 - `npm run typecheck`: 型チェック(tsc)
