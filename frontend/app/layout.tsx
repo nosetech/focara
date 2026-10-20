@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Zen_Kaku_Gothic_New } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -20,6 +21,18 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Focara",
   description: "Focara(フォカラ)",
+  appleWebApp: { capable: true, title: "Focara", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f3ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#121211" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -33,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
+        <ServiceWorkerRegister />
         <AppShell>{children}</AppShell>
       </body>
     </html>

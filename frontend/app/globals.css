@@ -64,6 +64,10 @@ body {
   font-family: var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* プルリフレッシュ・バウンスの抑止、長押し選択やダブルタップ拡大の抑止 */
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
   transition:
     background 0.3s,
     color 0.3s;

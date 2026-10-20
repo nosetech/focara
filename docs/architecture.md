@@ -51,6 +51,8 @@
 - タスクの後回し（横スワイプ）などはタッチ操作を前提としたUIで実装し、ネイティブアプリは作らない。
 - Service Worker によるオフライン動作は必須としない。まずは manifest によるホーム画面追加と全画面表示を対象とする。
 - Tailscale 経由のアクセスなど、PWAのインストールに必要な HTTPS 要件は公開方式（Phase 2「LAN/Tailscale公開」）で別途確認する。
+  - Android/Chrome は HTTPS（または localhost）でないと Service Worker が登録されず、インストール（アプリとして追加）できない。`http://<LANのIP>:3800` では「ホーム画面に追加」がアドレスバー付きのショートカットになる。iOS/Safari は HTTP でも追加できる。Tailscale の HTTPS（`tailscale serve --bg 3800` → `https://<host>.<tailnet>.ts.net`）経由でアクセスする。
+  - `npm run dev` に LAN/Tailscale の別端末からアクセスする場合は、環境変数 `FRONTEND_ALLOWED_DEV_ORIGINS`（ホスト名をカンマ区切り。例: `192.168.10.101,host.tailnet.ts.net`）を指定する。未指定だと `/_next/*` が403になり、JSが動かずテーマ切替などが効かない。
 
 ### 2-6. 画面デザインの運用
 
