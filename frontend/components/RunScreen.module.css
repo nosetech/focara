@@ -42,7 +42,7 @@
 .runMain {
   flex: 1;
   min-width: 0;
-  padding-bottom: 24px;
+  padding-bottom: 112px;
 }
 
 .progress {
@@ -90,9 +90,154 @@
   background: var(--accent);
 }
 
-.card {
+.swipe {
+  position: relative;
   margin-top: 10px;
+  overflow: hidden;
+}
+
+.reveal {
+  position: absolute;
+  inset: 0;
+  background: var(--sunk);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 28px;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink2);
+  opacity: 0;
+}
+
+.reveal[data-armed] {
+  color: var(--accent);
+}
+
+.card {
+  position: relative;
+  background: var(--bg);
   padding: 6px 24px 22px;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+  transition:
+    transform 0.22s ease,
+    opacity 0.28s ease;
+  animation: fadeIn 0.28s ease;
+}
+
+.card[data-dragging] {
+  transition: none;
+  cursor: grabbing;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+.actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  padding: 12px 20px;
+  display: flex;
+  gap: 12px;
+  background: var(--bg);
+  z-index: 30;
+}
+
+.complete,
+.postpone {
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.complete {
+  flex: 1;
+  height: 64px;
+  border-radius: 20px;
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: transform 0.15s;
+}
+
+.complete:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.complete:disabled,
+.postpone:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.postpone,
+.actions kbd {
+  display: none;
+}
+
+.toast {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(64px + 96px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 8px 0 18px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.toast[data-show] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toast span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toastUndo {
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  flex: none;
 }
 
 .project {
@@ -354,9 +499,85 @@
     font-size: 13px;
   }
 
+  .swipe {
+    margin-top: 28px;
+    overflow: visible;
+  }
+
+  .reveal {
+    display: none;
+  }
+
   .card {
     padding: 0;
-    margin-top: 28px;
+    background: transparent;
+    cursor: default;
+    user-select: auto;
+  }
+
+  .actions {
+    position: static;
+    padding: 48px 0 0;
+    background: transparent;
+    align-items: center;
+  }
+
+  .complete {
+    flex: none;
+    height: 56px;
+    padding: 0 24px 0 20px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .postpone {
+    display: flex;
+    height: 56px;
+    padding: 0 20px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .postpone:hover:not(:disabled) {
+    background: var(--sunk);
+  }
+
+  .actions kbd {
+    display: inline;
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    opacity: 0.6;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+
+  .postpone kbd {
+    color: var(--ink3);
+    opacity: 1;
+    border-color: var(--line);
+  }
+
+  .toast {
+    left: 50%;
+    right: auto;
+    bottom: 28px;
+    max-width: 560px;
+    min-height: 48px;
+    border-radius: 12px;
+    padding: 0 6px 0 18px;
+    transform: translate(-50%, 8px);
+  }
+
+  .toast[data-show] {
+    transform: translate(-50%, 0);
   }
 
   .project {
