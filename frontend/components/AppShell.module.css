@@ -42,6 +42,25 @@
   font-weight: 700;
 }
 
+/* 実行画面の操作バー(約96px)の上に置く */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(64px + 96px + 16px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--on-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 45;
+}
+
 .themeButton {
   display: flex;
   align-items: center;
@@ -83,7 +102,8 @@
     padding-bottom: 0;
   }
 
-  .bottomNav {
+  .bottomNav,
+  .fab {
     display: none;
   }
 
@@ -107,6 +127,29 @@
     font-size: 17px;
     font-weight: 700;
     letter-spacing: 0.04em;
+  }
+
+  button.sideLink {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  button.sideLink:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .kbd {
+    margin-left: auto;
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 5px;
   }
 
   .sideLink {

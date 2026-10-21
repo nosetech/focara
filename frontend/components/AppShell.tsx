@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { QuickAdd } from "./QuickAdd";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./AppShell.module.css";
 
@@ -23,6 +24,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const [quickAdd, setQuickAdd] = useState(false);
+
+  // デスクトップ: N キーでクイック追加を開く(入力中は無視)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "n" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.isComposing) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input, textarea, select, [contenteditable]")) return;
+      e.preventDefault();
+      setQuickAdd(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className={styles.shell}>
@@ -48,6 +65,24 @@ export function AppShell({ children }: { children: ReactNode }) {
             {item.label}
           </Link>
         ))}
+        <button
+          className={styles.sideLink}
+          onClick={() => setQuickAdd(true)}
+          aria-label="inboxに追加"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          inboxに追加
+          <kbd className={styles.kbd}>N</kbd>
+        </button>
         <div className={styles.spacer} />
         <ThemeToggle />
       </nav>
@@ -77,6 +112,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
         <ThemeToggle />
       </nav>
+
+      <button
+        className={styles.fab}
+        onClick={() => setQuickAdd(true)}
+        aria-label="inboxに追加"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      {quickAdd && <QuickAdd onClose={() => setQuickAdd(false)} />}
     </div>
   );
 }
