@@ -1,16 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { apiFetch } from "@/lib/api";
 import {
   SLOTS,
+  SWIPE_THRESHOLD,
   SLOT_LABEL,
   buildRunView,
   currentSlot,
+  dragOffset,
   formatClock,
   formatDateLabel,
   formatMinutes,
+  restoreBody,
+  spawnsNext,
   toDateParam,
   type RunTask,
   type TimeSlot,
@@ -23,6 +34,12 @@ type Load =
   | { state: "ready"; tasks: RunTask[]; projects: Map<number, string> };
 
 const MAX_UPCOMING = 6;
+const TOAST_MS = 4000;
+
+interface Toast {
+  msg: string;
+  undo?: () => void;
+}
 
 function estimate(t: RunTask) {
   return t.estimate_minutes != null ? `${t.estimate_minutes}分` : "";
@@ -32,8 +49,12 @@ export function RunScreen() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [now, setNow] = useState<Date | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    setLoad({ state: "loading" });
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [busy, setBusy] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoad({ state: "loading" });
     const today = new Date();
     try {
       const [tasks, projects] = await Promise.all([
@@ -52,11 +73,97 @@ export function RunScreen() {
     }
   }, []);
 
+  const showToast = useCallback((next: Toast) => {
+    clearTimeout(toastTimer.current);
+    setToast(next);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
+  }, []);
+
+  const complete = useCallback(
+    async (task: RunTask) => {
+      setBusy(true);
+      try {
+        await apiFetch(`/tasks/${task.id}/complete`, { method: "POST" });
+        showToast({
+          msg: spawnsNext(task)
+            ? "完了しました · 次の回を生成しました"
+            : "完了しました · 今日の記録に追加",
+        });
+        await fetchAll(true);
+      } catch {
+        showToast({ msg: "完了できませんでした。もう一度お試しください" });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchAll, showToast],
+  );
+
+  /** 戻り値は成功したか(失敗時は呼び出し側でカードを元の位置に戻す)。 */
+  const postpone = useCallback(
+    async (task: RunTask): Promise<boolean> => {
+      setBusy(true);
+      try {
+        await apiFetch(`/tasks/${task.id}/postpone`, {
+          method: "POST",
+          body: { target: "end_of_day" },
+        });
+        showToast({
+          msg: `「${task.title}」を後回しにしました`,
+          undo: async () => {
+            clearTimeout(toastTimer.current);
+            setToast(null);
+            try {
+              await apiFetch(`/tasks/${task.id}`, {
+                method: "PATCH",
+                body: restoreBody(task),
+              });
+              await fetchAll(true);
+            } catch {
+              showToast({ msg: "元に戻せませんでした" });
+            }
+          },
+        });
+        await fetchAll(true);
+        return true;
+      } catch {
+        showToast({ msg: "後回しにできませんでした。もう一度お試しください" });
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchAll, showToast],
+  );
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(new Date());
     void fetchAll();
+    return () => clearTimeout(toastTimer.current);
   }, [fetchAll]);
+
+  const curTask =
+    load.state === "ready" ? buildRunView(load.tasks).queue[0] : undefined;
+
+  // デスクトップのショートカット: Enterで完了 / Sで後回し
+  useEffect(() => {
+    if (!curTask || busy) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(el.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void complete(curTask);
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        void postpone(curTask);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [curTask, busy, complete, postpone]);
 
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
 
@@ -73,10 +180,30 @@ export function RunScreen() {
         </div>
       </header>
       {load.state === "loading" && <Loading />}
-      {load.state === "error" && <ErrorView onRetry={fetchAll} />}
+      {load.state === "error" && <ErrorView onRetry={() => fetchAll()} />}
       {load.state === "ready" && (
-        <Ready tasks={load.tasks} projects={load.projects} slot={slot} />
+        <Ready
+          tasks={load.tasks}
+          projects={load.projects}
+          slot={slot}
+          busy={busy}
+          onComplete={complete}
+          onPostpone={postpone}
+        />
       )}
+      <div
+        className={styles.toast}
+        data-show={toast ? "" : undefined}
+        role="status"
+        aria-live="polite"
+      >
+        <span>{toast?.msg}</span>
+        {toast?.undo && (
+          <button onClick={toast.undo} className={styles.toastUndo}>
+            元に戻す
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -113,10 +240,16 @@ function Ready({
   tasks,
   projects,
   slot,
+  busy,
+  onComplete,
+  onPostpone,
 }: {
   tasks: RunTask[];
   projects: Map<number, string>;
   slot: TimeSlot | null;
+  busy: boolean;
+  onComplete: (t: RunTask) => Promise<void>;
+  onPostpone: (t: RunTask) => Promise<boolean>;
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
@@ -230,7 +363,11 @@ function Ready({
           <span className={styles.dot} />
           いま着手
         </div>
-        <article className={styles.card}>
+        <SwipeCard
+          key={cur.id}
+          disabled={busy}
+          onSwiped={() => onPostpone(cur)}
+        >
           <div className={styles.project}>
             <span className={styles.box} />
             {cur.project_id != null
@@ -251,7 +388,36 @@ function Ready({
             ))}
           </div>
           {cur.memo && <p className={styles.memo}>{cur.memo}</p>}
-        </article>
+        </SwipeCard>
+
+        <div className={styles.actions}>
+          <button
+            className={styles.complete}
+            disabled={busy}
+            onClick={() => void onComplete(cur)}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+            {busy ? "処理中" : "完了"}
+            <kbd>Enter</kbd>
+          </button>
+          <button
+            className={styles.postpone}
+            disabled={busy}
+            onClick={() => void onPostpone(cur)}
+          >
+            後回し
+            <kbd>S</kbd>
+          </button>
+        </div>
 
         <section className={styles.after}>
           <div className={styles.afterLabel}>このあと</div>
@@ -317,6 +483,79 @@ function Ready({
           );
         })}
       </aside>
+    </div>
+  );
+}
+
+/** 左スワイプで後回し。タッチ・マウス・ペンはPointer Eventsで共通に扱う。 */
+function SwipeCard({
+  children,
+  disabled,
+  onSwiped,
+}: {
+  children: ReactNode;
+  disabled: boolean;
+  onSwiped: () => Promise<boolean>;
+}) {
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef<number | null>(null);
+
+  const onDown = (e: PointerEvent<HTMLElement>) => {
+    if (disabled || e.button > 0) return;
+    startX.current = e.clientX;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  };
+  const onMove = (e: PointerEvent<HTMLElement>) => {
+    if (startX.current == null) return;
+    setDx(dragOffset(e.clientX - startX.current));
+  };
+  const onUp = async () => {
+    if (startX.current == null) return;
+    startX.current = null;
+    setDragging(false);
+    if (dx > -SWIPE_THRESHOLD) {
+      setDx(0);
+      return;
+    }
+    setDx(-420);
+    // 成功すると次のタスクに差し替わりこのカードごと消える。失敗時だけ戻す
+    if (!(await onSwiped())) setDx(0);
+  };
+
+  const armed = dx < -SWIPE_THRESHOLD;
+  return (
+    <div className={styles.swipe}>
+      <div
+        className={styles.reveal}
+        data-armed={armed ? "" : undefined}
+        style={{ opacity: Math.min(1, Math.max(0, -dx / 60)) }}
+        aria-hidden="true"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path d="M4 12h14M13 6l6 6-6 6" />
+        </svg>
+        後回し
+      </div>
+      <article
+        className={styles.card}
+        data-dragging={dragging ? "" : undefined}
+        style={{ transform: `translateX(${dx}px)` }}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={() => void onUp()}
+        onPointerCancel={() => void onUp()}
+      >
+        {children}
+      </article>
     </div>
   );
 }

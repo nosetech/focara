@@ -10,6 +10,12 @@ export interface RunTask {
   time_slot: TimeSlot | null;
   fixed_at: string | null;
   memo: string | null;
+  scheduled_date: string | null;
+  run_order: number | null;
+  fixed_end_at: string | null;
+  recurrence_type: string | null;
+  recurrence_end_type: string;
+  recurrence_end_count: number | null;
 }
 
 export const SLOTS: { key: TimeSlot; label: string }[] = [
@@ -68,4 +74,30 @@ export function buildRunView(tasks: RunTask[]): RunView {
     total: tasks.length,
     remainMinutes: queue.reduce((a, t) => a + (t.estimate_minutes ?? 0), 0),
   };
+}
+
+/** 完了すると次の回が生成されるか(回数指定の最終回は生成されない)。 */
+export function spawnsNext(t: RunTask): boolean {
+  if (t.recurrence_type == null) return false;
+  return !(
+    t.recurrence_end_type === "count" && (t.recurrence_end_count ?? 0) <= 1
+  );
+}
+
+/** 後回しを元に戻すためのPATCH本文。移動前の位置と日時固定を復元する。 */
+export function restoreBody(t: RunTask) {
+  return {
+    scheduled_date: t.scheduled_date,
+    time_slot: t.time_slot,
+    run_order: t.run_order,
+    fixed_at: t.fixed_at,
+    fixed_end_at: t.fixed_end_at,
+  };
+}
+
+export const SWIPE_THRESHOLD = 96;
+
+/** 右方向は抵抗をかけ、左方向はそのまま追従させる。 */
+export function dragOffset(dx: number): number {
+  return dx > 0 ? dx * 0.2 : dx;
 }
