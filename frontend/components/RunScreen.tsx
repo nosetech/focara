@@ -26,6 +26,7 @@ import {
   type RunTask,
   type TimeSlot,
 } from "@/lib/run";
+import { TaskDetail } from "./TaskDetail";
 import styles from "./RunScreen.module.css";
 
 type Load =
@@ -35,6 +36,7 @@ type Load =
 
 const MAX_UPCOMING = 6;
 const TOAST_MS = 4000;
+const TAP_SLOP = 8;
 
 interface Toast {
   msg: string;
@@ -51,6 +53,7 @@ export function RunScreen() {
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [busy, setBusy] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchAll = useCallback(async (silent = false) => {
@@ -148,7 +151,7 @@ export function RunScreen() {
 
   // デスクトップのショートカット: Enterで完了 / Sで後回し
   useEffect(() => {
-    if (!curTask || busy) return;
+    if (!curTask || busy || detailId != null) return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(el.tagName)) return;
@@ -163,7 +166,7 @@ export function RunScreen() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [curTask, busy, complete, postpone]);
+  }, [curTask, busy, detailId, complete, postpone]);
 
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
 
@@ -189,6 +192,17 @@ export function RunScreen() {
           busy={busy}
           onComplete={complete}
           onPostpone={postpone}
+          onOpenDetail={setDetailId}
+        />
+      )}
+      {detailId != null && (
+        <TaskDetail
+          key={detailId}
+          taskId={detailId}
+          onClose={() => {
+            setDetailId(null);
+            void fetchAll(true);
+          }}
         />
       )}
       <div
@@ -243,6 +257,7 @@ function Ready({
   busy,
   onComplete,
   onPostpone,
+  onOpenDetail,
 }: {
   tasks: RunTask[];
   projects: Map<number, string>;
@@ -250,6 +265,7 @@ function Ready({
   busy: boolean;
   onComplete: (t: RunTask) => Promise<void>;
   onPostpone: (t: RunTask) => Promise<boolean>;
+  onOpenDetail: (id: number) => void;
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
@@ -367,6 +383,7 @@ function Ready({
           key={cur.id}
           disabled={busy}
           onSwiped={() => onPostpone(cur)}
+          onTap={() => onOpenDetail(cur.id)}
         >
           <div className={styles.project}>
             <span className={styles.box} />
@@ -492,24 +509,30 @@ function SwipeCard({
   children,
   disabled,
   onSwiped,
+  onTap,
 }: {
   children: ReactNode;
   disabled: boolean;
   onSwiped: () => Promise<boolean>;
+  onTap: () => void;
 }) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
+  const moved = useRef(false);
 
   const onDown = (e: PointerEvent<HTMLElement>) => {
     if (disabled || e.button > 0) return;
     startX.current = e.clientX;
+    moved.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
   };
   const onMove = (e: PointerEvent<HTMLElement>) => {
     if (startX.current == null) return;
-    setDx(dragOffset(e.clientX - startX.current));
+    const d = e.clientX - startX.current;
+    if (Math.abs(d) > TAP_SLOP) moved.current = true;
+    setDx(dragOffset(d));
   };
   const onUp = async () => {
     if (startX.current == null) return;
@@ -517,6 +540,7 @@ function SwipeCard({
     setDragging(false);
     if (dx > -SWIPE_THRESHOLD) {
       setDx(0);
+      if (!moved.current) onTap();
       return;
     }
     setDx(-420);
@@ -552,7 +576,10 @@ function SwipeCard({
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={() => void onUp()}
-        onPointerCancel={() => void onUp()}
+        onPointerCancel={() => {
+          moved.current = true;
+          void onUp();
+        }}
       >
         {children}
       </article>
