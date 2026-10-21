@@ -42,6 +42,8 @@ export function TaskDetail({
 
   const seq = useRef(0);
   const pending = useRef(0);
+  const chains = useRef(new Map<string, Promise<void>>());
+  const rowIds = useRef(new Map<string, number>());
   const failed = useRef(new Map<string, () => Promise<void>>());
   const memoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const memoDirty = useRef<string | null>(null);
@@ -54,6 +56,7 @@ export function TaskDetail({
         apiFetch<TaskProperty[]>(`/tasks/${taskId}/properties`),
       ]);
       setMemo(task.memo ?? "");
+      rowIds.current = new Map(props.map((p) => [`p${p.id}`, p.id]));
       setRows(props.map(toDraft));
       setLoad({ state: "ready", title: task.title });
     } catch {
@@ -67,19 +70,25 @@ export function TaskDetail({
   }, [fetchAll]);
 
   /** 保存を1件実行する。同じ name の保存は失敗時に再試行用として最新のものだけ残す。 */
-  const run = useCallback(async (name: string, fn: () => Promise<void>) => {
+  const run = useCallback((name: string, fn: () => Promise<void>) => {
     pending.current += 1;
     setSave("saving");
-    try {
-      await fn();
-      failed.current.delete(name);
-    } catch {
-      failed.current.set(name, fn);
-    } finally {
-      pending.current -= 1;
-      if (pending.current === 0)
-        setSave(failed.current.size > 0 ? "error" : "saved");
-    }
+    // 同じ対象への保存は順番に実行する(POST完了前の再保存・削除や古い値の上書きを防ぐ)
+    const prev = chains.current.get(name) ?? Promise.resolve();
+    const next = prev.then(async () => {
+      try {
+        await fn();
+        failed.current.delete(name);
+      } catch {
+        failed.current.set(name, fn);
+      } finally {
+        pending.current -= 1;
+        if (pending.current === 0)
+          setSave(failed.current.size > 0 ? "error" : "saved");
+      }
+    });
+    chains.current.set(name, next);
+    return next;
   }, []);
 
   const putMemo = useCallback(
@@ -89,14 +98,17 @@ export function TaskDetail({
           method: "PUT",
           body: { memo: value === "" ? null : value },
         });
-        if (memoDirty.current === value) memoDirty.current = null;
       }),
     [run, taskId],
   );
 
   const flushMemo = useCallback(() => {
     clearTimeout(memoTimer.current);
-    if (memoDirty.current !== null) void putMemo(memoDirty.current);
+    if (memoDirty.current === null) return;
+    const value = memoDirty.current;
+    // 送信済みの値を閉じる時に再送しない。失敗時は再試行ボタンが同じ値を送り直す
+    memoDirty.current = null;
+    void putMemo(value);
   }, [putMemo]);
 
   const onMemo = (value: string) => {
@@ -134,25 +146,32 @@ export function TaskDetail({
   const saveRow = (draft: PropertyDraft) => {
     const body = propertyBody(draft);
     clearRowError(draft.localId);
-    if (body === null) return;
+    if (body === null) {
+      if (draft.id != null)
+        setRowErrors((e) => ({
+          ...e,
+          [draft.localId]: "名前を入力してください",
+        }));
+      return;
+    }
     if ("error" in body) {
       setRowErrors((e) => ({ ...e, [draft.localId]: body.error }));
       return;
     }
     void run(draft.localId, async () => {
       try {
+        const id = rowIds.current.get(draft.localId);
         const saved =
-          draft.id == null
+          id == null
             ? await apiFetch<TaskProperty>(`/tasks/${taskId}/properties`, {
                 method: "POST",
                 body,
               })
             : await apiFetch<TaskProperty>(
-                `/tasks/${taskId}/properties/${draft.id}`,
+                `/tasks/${taskId}/properties/${id}`,
                 { method: "PATCH", body },
               );
-        // 再試行で二重にPOSTしないよう、保存後は id を引き継いだ関数に差し替える
-        draft = { ...draft, id: saved.id };
+        rowIds.current.set(draft.localId, saved.id);
         patchRow(draft.localId, { id: saved.id });
       } catch (e) {
         if (e instanceof ApiError && e.status === 409)
@@ -169,10 +188,21 @@ export function TaskDetail({
     setRows((rs) => rs.filter((r) => r.localId !== draft.localId));
     clearRowError(draft.localId);
     failed.current.delete(draft.localId);
-    if (draft.id == null) return;
-    const id = draft.id;
     void run(draft.localId, async () => {
-      await apiFetch(`/tasks/${taskId}/properties/${id}`, { method: "DELETE" });
+      const id = rowIds.current.get(draft.localId);
+      if (id == null) return;
+      try {
+        await apiFetch(`/tasks/${taskId}/properties/${id}`, {
+          method: "DELETE",
+        });
+        rowIds.current.delete(draft.localId);
+      } catch (e) {
+        // 失敗したら行を元に戻す
+        setRows((rs) =>
+          rs.some((r) => r.localId === draft.localId) ? rs : [...rs, draft],
+        );
+        throw e;
+      }
     });
   };
 
