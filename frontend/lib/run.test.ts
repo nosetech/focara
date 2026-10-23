@@ -85,10 +85,13 @@ test("restoreBody / dragOffset", () => {
 });
 
 test("isDayOver: 夜の枠が終わって未完了が残るときだけ", () => {
-  assert.equal(isDayOver(new Date(2026, 9, 15, 22), 2, false), true);
-  assert.equal(isDayOver(new Date(2026, 9, 15, 21), 2, false), false);
-  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 0, false), false);
-  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 2, true), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 22), 2, false, 22), true);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 21), 2, false, 22), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 0, false, 22), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 2, true, 22), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 20), 2, false, 20), true);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 19), 2, false, 20), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 0), 2, false, 0), true);
 });
 
 test("予定を変える: 翌日・指定日・いつか", () => {

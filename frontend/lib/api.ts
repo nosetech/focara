@@ -61,3 +61,18 @@ export async function apiFetch<T>(
   }
   return data as T;
 }
+
+/** 設定の取得に失敗したとき・取得前に使う既定値(backend の既定と揃える)。 */
+export const DEFAULT_DAY_END_HOUR = 22;
+
+/** 「1日の予定を終えた」画面に切り替わる時刻(時)。失敗時は既定値を返す。 */
+export async function fetchDayEndHour(): Promise<number> {
+  try {
+    const cfg = await apiFetch<{ day_end_hour: number }>("/config");
+    return Number.isInteger(cfg.day_end_hour)
+      ? cfg.day_end_hour
+      : DEFAULT_DAY_END_HOUR;
+  } catch {
+    return DEFAULT_DAY_END_HOUR;
+  }
+}

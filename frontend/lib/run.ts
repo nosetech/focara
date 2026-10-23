@@ -102,12 +102,14 @@ export function dragOffset(dx: number): number {
   return dx > 0 ? dx * 0.2 : dx;
 }
 
-/** この時刻以降は「1日の予定を終えた」画面で未完了タスクの扱いを選ぶ。 */
-export const DAY_END_HOUR = 22;
-
-/** 未完了が残っていて、夜の枠が終わった時刻を過ぎている(「やる」を選んだ後は除く)。 */
-export function isDayOver(now: Date, queueLength: number, resumed: boolean) {
-  return queueLength > 0 && !resumed && now.getHours() >= DAY_END_HOUR;
+/** 未完了が残っていて、dayEndHour(時)以降になっている(「やる」を選んだ後は除く)。 */
+export function isDayOver(
+  now: Date,
+  queueLength: number,
+  resumed: boolean,
+  dayEndHour: number,
+) {
+  return queueLength > 0 && !resumed && now.getHours() >= dayEndHour;
 }
 
 /** 予定を変える: 指定日の午前中へ。 */
