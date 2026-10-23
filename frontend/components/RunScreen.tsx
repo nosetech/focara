@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -32,6 +31,8 @@ import {
   type TimeSlot,
 } from "@/lib/run";
 import { TaskDetail } from "./TaskDetail";
+import { Toast, type ToastMessage } from "./Toast";
+import { EmptyState, ErrorState, LoadingState } from "./StateView";
 import styles from "./RunScreen.module.css";
 
 type Load =
@@ -43,11 +44,6 @@ const MAX_UPCOMING = 6;
 const TOAST_MS = 4000;
 const TAP_SLOP = 8;
 
-interface Toast {
-  msg: string;
-  undo?: () => void;
-}
-
 function estimate(t: RunTask) {
   return t.estimate_minutes != null ? `${t.estimate_minutes}分` : "";
 }
@@ -56,7 +52,7 @@ export function RunScreen() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [now, setNow] = useState<Date | null>(null);
 
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [resumed, setResumed] = useState(false);
@@ -83,7 +79,7 @@ export function RunScreen() {
     }
   }, []);
 
-  const showToast = useCallback((next: Toast) => {
+  const showToast = useCallback((next: ToastMessage) => {
     clearTimeout(toastTimer.current);
     setToast(next);
     toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
@@ -222,8 +218,13 @@ export function RunScreen() {
           ))}
         </div>
       </header>
-      {load.state === "loading" && <Loading />}
-      {load.state === "error" && <ErrorView onRetry={() => fetchAll()} />}
+      {load.state === "loading" && <LoadingState />}
+      {load.state === "error" && (
+        <ErrorState
+          title="タスクを読み込めませんでした"
+          onRetry={() => fetchAll()}
+        />
+      )}
       {load.state === "ready" && (
         <Ready
           tasks={load.tasks}
@@ -257,47 +258,7 @@ export function RunScreen() {
           }}
         />
       )}
-      <div
-        className={styles.toast}
-        data-show={toast ? "" : undefined}
-        role="status"
-        aria-live="polite"
-      >
-        <span>{toast?.msg}</span>
-        {toast?.undo && (
-          <button onClick={toast.undo} className={styles.toastUndo}>
-            元に戻す
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Loading() {
-  return (
-    <div className={styles.skeleton} aria-busy="true" aria-label="読み込み中">
-      <i style={{ height: 3, width: "100%" }} />
-      <i style={{ height: 12, width: 110, marginTop: 52 }} />
-      <i style={{ height: 28, width: 300, marginTop: 16 }} />
-      <i style={{ height: 28, width: 190, marginTop: 12 }} />
-      <i style={{ height: 26, width: 120, marginTop: 22, borderRadius: 999 }} />
-      <i style={{ height: 14, width: 240, marginTop: 64 }} />
-      <i style={{ height: 14, width: 200, marginTop: 22 }} />
-    </div>
-  );
-}
-
-function ErrorView({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className={styles.message} role="alert">
-      <h1>タスクを読み込めませんでした</h1>
-      <p>
-        通信が不安定な可能性があります。接続を確認して、もう一度お試しください。
-      </p>
-      <button className={styles.primary} onClick={onRetry}>
-        再試行
-      </button>
+      <Toast toast={toast} />
     </div>
   );
 }
@@ -336,13 +297,12 @@ function Ready({
 
   if (view.total === 0) {
     return (
-      <div className={styles.message}>
-        <h1>今日の予定はありません</h1>
-        <p>今日やるものを選びましょう。</p>
-        <Link href="/organize" className={styles.primary}>
-          inboxを整理する
-        </Link>
-      </div>
+      <EmptyState
+        title="今日の予定はありません"
+        description="今日やるものを選びましょう。"
+        href="/organize"
+        actionLabel="inboxを整理する"
+      />
     );
   }
 
