@@ -14,6 +14,8 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 
 ## コマンド
 
+- `scripts/start.sh` / `scripts/stop.sh`: backend と frontend をまとめて起動・停止(`frontend.host` を `FRONTEND_HOST` に渡す)
+
 backend(`backend/` で実行。uv + Python 3.11+):
 
 - `uv sync`: 依存関係のインストール
