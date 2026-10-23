@@ -101,3 +101,32 @@ export const SWIPE_THRESHOLD = 96;
 export function dragOffset(dx: number): number {
   return dx > 0 ? dx * 0.2 : dx;
 }
+
+/** この時刻以降は「1日の予定を終えた」画面で未完了タスクの扱いを選ぶ。 */
+export const DAY_END_HOUR = 22;
+
+/** 未完了が残っていて、夜の枠が終わった時刻を過ぎている(「やる」を選んだ後は除く)。 */
+export function isDayOver(now: Date, queueLength: number, resumed: boolean) {
+  return queueLength > 0 && !resumed && now.getHours() >= DAY_END_HOUR;
+}
+
+/** 予定を変える: 指定日の午前中へ。 */
+export function moveBody(date: string) {
+  return { target: "date", scheduled_date: date, time_slot: "morning" };
+}
+
+/** 予定を変える: いつかへ。日付・枠・日時固定を外す。 */
+export function somedayBody() {
+  return {
+    status: "someday",
+    scheduled_date: null,
+    time_slot: null,
+    run_order: null,
+    fixed_at: null,
+    fixed_end_at: null,
+  };
+}
+
+export function tomorrowParam(d: Date): string {
+  return toDateParam(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
+}
