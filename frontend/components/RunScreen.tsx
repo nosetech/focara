@@ -20,10 +20,15 @@ import {
   formatClock,
   formatDateLabel,
   formatMinutes,
+  isDayOver,
+  moveBody,
   restoreBody,
+  somedayBody,
+  tomorrowParam,
   spawnsNext,
   toDateParam,
   type RunTask,
+  type RunView,
   type TimeSlot,
 } from "@/lib/run";
 import { TaskDetail } from "./TaskDetail";
@@ -54,6 +59,8 @@ export function RunScreen() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [resumed, setResumed] = useState(false);
+  const [resched, setResched] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchAll = useCallback(async (silent = false) => {
@@ -139,6 +146,39 @@ export function RunScreen() {
     [fetchAll, showToast],
   );
 
+  /** 未完了タスクの予定を変える。date=翌日・別の日の午前中 / null=いつか。 */
+  const reschedule = useCallback(
+    async (task: RunTask, date: string | null) => {
+      setBusy(true);
+      try {
+        if (date) {
+          await apiFetch(`/tasks/${task.id}/postpone`, {
+            method: "POST",
+            body: moveBody(date),
+          });
+        } else {
+          await apiFetch(`/tasks/${task.id}`, {
+            method: "PATCH",
+            body: somedayBody(),
+          });
+        }
+        showToast({
+          msg: date
+            ? `「${task.title}」を${date === tomorrowParam(new Date()) ? "明日" : date}の午前中へ`
+            : `「${task.title}」をいつかへ`,
+        });
+        await fetchAll(true);
+      } catch {
+        showToast({
+          msg: "予定を変えられませんでした。もう一度お試しください",
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchAll, showToast],
+  );
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(new Date());
@@ -193,6 +233,18 @@ export function RunScreen() {
           onComplete={complete}
           onPostpone={postpone}
           onOpenDetail={setDetailId}
+          now={now}
+          resumed={resumed}
+          onResume={() => setResumed(true)}
+          onResched={() => setResched(true)}
+        />
+      )}
+      {resched && load.state === "ready" && (
+        <ReschedSheet
+          tasks={buildRunView(load.tasks).queue}
+          busy={busy}
+          onMove={reschedule}
+          onClose={() => setResched(false)}
         />
       )}
       {detailId != null && (
@@ -258,6 +310,10 @@ function Ready({
   onComplete,
   onPostpone,
   onOpenDetail,
+  now,
+  resumed,
+  onResume,
+  onResched,
 }: {
   tasks: RunTask[];
   projects: Map<number, string>;
@@ -266,9 +322,17 @@ function Ready({
   onComplete: (t: RunTask) => Promise<void>;
   onPostpone: (t: RunTask) => Promise<boolean>;
   onOpenDetail: (id: number) => void;
+  now: Date | null;
+  resumed: boolean;
+  onResume: () => void;
+  onResched: () => void;
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
+
+  if (now && isDayOver(now, view.queue.length, resumed)) {
+    return <DayOver view={view} onResume={onResume} onResched={onResched} />;
+  }
 
   if (view.total === 0) {
     return (
@@ -500,6 +564,108 @@ function Ready({
           );
         })}
       </aside>
+    </div>
+  );
+}
+
+/** 1日の予定を終えた画面。未完了タスクを「やる」か「予定を変える」かを選ぶ。 */
+function DayOver({
+  view,
+  onResume,
+  onResched,
+}: {
+  view: RunView;
+  onResume: () => void;
+  onResched: () => void;
+}) {
+  return (
+    <div className={styles.dayOver}>
+      <div className={styles.eyebrow}>夜の枠が終わりました</div>
+      <h1>今日の予定を終えました</h1>
+      <div className={styles.counts}>
+        <div>
+          <b>{view.done.length}</b>
+          <span>完了</span>
+        </div>
+        <div>
+          <b className={styles.dim}>{view.queue.length}</b>
+          <span>未完了</span>
+        </div>
+      </div>
+      <div className={styles.leftList}>
+        {view.queue.map((t) => (
+          <div key={t.id} className={styles.leftRow}>
+            <span>{t.title}</span>
+            <span className={styles.mono}>{estimate(t)}</span>
+          </div>
+        ))}
+      </div>
+      <div className={styles.dayActions}>
+        <button className={styles.dayPrimary} onClick={onResume}>
+          終わっていないタスクをやる
+        </button>
+        <button className={styles.dayGhost} onClick={onResched}>
+          予定を変える
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 未完了タスクごとに、明日の午前中・別の日・いつかを選ぶボトムシート。 */
+function ReschedSheet({
+  tasks,
+  busy,
+  onMove,
+  onClose,
+}: {
+  tasks: RunTask[];
+  busy: boolean;
+  onMove: (t: RunTask, date: string | null) => Promise<void>;
+  onClose: () => void;
+}) {
+  const tomorrow = tomorrowParam(new Date());
+  return (
+    <div className={styles.sheetRoot}>
+      <div className={styles.sheetBackdrop} onClick={onClose} />
+      <div
+        className={styles.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-label="予定を変える"
+      >
+        <div className={styles.grabber} />
+        <h2>予定を変える</h2>
+        <p>終わっていないタスクの行き先を決めます。</p>
+        <div className={styles.reschedList}>
+          {tasks.length === 0 && (
+            <div className={styles.leftRow}>未完了のタスクはありません</div>
+          )}
+          {tasks.map((t) => (
+            <div key={t.id} className={styles.reschedRow}>
+              <span className={styles.reschedTitle}>{t.title}</span>
+              <button disabled={busy} onClick={() => void onMove(t, tomorrow)}>
+                明日の午前中
+              </button>
+              <input
+                type="date"
+                aria-label={`${t.title}の日付を選ぶ`}
+                min={tomorrow}
+                disabled={busy}
+                onChange={(e) =>
+                  e.target.value && void onMove(t, e.target.value)
+                }
+              />
+              <button disabled={busy} onClick={() => void onMove(t, null)}>
+                いつか
+              </button>
+            </div>
+          ))}
+        </div>
+        <button className={styles.closeBtn} onClick={onClose}>
+          閉じる
+        </button>
+      </div>
     </div>
   );
 }
