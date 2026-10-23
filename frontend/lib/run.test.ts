@@ -4,6 +4,10 @@ import {
   buildRunView,
   currentSlot,
   dragOffset,
+  isDayOver,
+  moveBody,
+  somedayBody,
+  tomorrowParam,
   restoreBody,
   spawnsNext,
   formatDateLabel,
@@ -78,4 +82,22 @@ test("restoreBody / dragOffset", () => {
   assert.equal(r.run_order, 2);
   assert.equal(dragOffset(100), 20);
   assert.equal(dragOffset(-100), -100);
+});
+
+test("isDayOver: 夜の枠が終わって未完了が残るときだけ", () => {
+  assert.equal(isDayOver(new Date(2026, 9, 15, 22), 2, false), true);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 21), 2, false), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 0, false), false);
+  assert.equal(isDayOver(new Date(2026, 9, 15, 23), 2, true), false);
+});
+
+test("予定を変える: 翌日・指定日・いつか", () => {
+  assert.equal(tomorrowParam(new Date(2026, 9, 31)), "2026-11-01");
+  assert.deepEqual(moveBody("2026-11-01"), {
+    target: "date",
+    scheduled_date: "2026-11-01",
+    time_slot: "morning",
+  });
+  assert.equal(somedayBody().status, "someday");
+  assert.equal(somedayBody().scheduled_date, null);
 });

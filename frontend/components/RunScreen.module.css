@@ -711,3 +711,177 @@
     text-decoration: line-through;
   }
 }
+
+.dayOver {
+  flex: 1;
+  padding: 40px 24px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dayOver h1 {
+  font-size: 28px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.leftList {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.leftRow {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  color: var(--ink2);
+}
+
+.leftRow .mono {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.dayActions {
+  margin-top: auto;
+  padding-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayPrimary,
+.dayGhost {
+  width: 100%;
+  height: 56px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dayPrimary {
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.dayGhost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.sheetRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.sheetBackdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--backdrop);
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  padding: 10px 24px 34px;
+}
+
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  align-self: center;
+}
+
+.sheet h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 18px;
+}
+
+.sheet p {
+  font-size: 13px;
+  color: var(--ink2);
+  margin-top: 6px;
+}
+
+.reschedList {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.reschedRow {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reschedTitle {
+  flex: 1 1 100%;
+  font-size: 15px;
+}
+
+.reschedRow button,
+.reschedRow input {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.closeBtn {
+  margin-top: 20px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    width: 520px;
+    transform: translate(-50%, -50%);
+    border-radius: 16px;
+  }
+
+  .grabber {
+    display: none;
+  }
+}
