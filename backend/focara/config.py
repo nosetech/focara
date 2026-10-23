@@ -36,12 +36,19 @@ class LogConfig:
 
 
 @dataclass(frozen=True)
+class UiConfig:
+    # この時刻(時)以降、未完了が残っていると「1日の予定を終えた」画面に切り替わる。
+    day_end_hour: int = 22
+
+
+@dataclass(frozen=True)
 class Config:
     instance: str = "default"
     backend: BackendConfig = field(default_factory=BackendConfig)
     frontend: FrontendConfig = field(default_factory=FrontendConfig)
     db: DbConfig = field(default_factory=DbConfig)
     log: LogConfig = field(default_factory=LogConfig)
+    ui: UiConfig = field(default_factory=UiConfig)
 
 
 def _section(raw: dict[str, Any], key: str, allowed: set[str]) -> dict[str, Any]:
@@ -62,6 +69,12 @@ def _port(value: Any, name: str) -> int:
     return value
 
 
+def _hour(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 23:
+        raise ConfigError(f"{name} は 0〜23 の整数で指定してください: {value!r}")
+    return value
+
+
 def _string(value: Any, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{name} は空でない文字列で指定してください: {value!r}")
@@ -74,7 +87,7 @@ def parse_config(raw: Any) -> Config:
         raw = {}
     if not isinstance(raw, dict):
         raise ConfigError("設定ファイルのトップレベルはマッピングで指定してください")
-    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log"}
+    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log", "ui"}
     if unknown:
         raise ConfigError(f"未知の項目があります: {', '.join(sorted(map(str, unknown)))}")
 
@@ -83,6 +96,7 @@ def parse_config(raw: Any) -> Config:
     frontend = _section(raw, "frontend", {"port", "host"})
     db = _section(raw, "db", {"path"})
     log = _section(raw, "log", {"dir"})
+    ui = _section(raw, "ui", {"day_end_hour"})
 
     cfg = Config(
         instance=_string(raw.get("instance", d.instance), "instance"),
@@ -93,6 +107,9 @@ def parse_config(raw: Any) -> Config:
         ),
         db=DbConfig(path=_string(db.get("path", d.db.path), "db.path")),
         log=LogConfig(dir=_string(log.get("dir", d.log.dir), "log.dir")),
+        ui=UiConfig(
+            day_end_hour=_hour(ui.get("day_end_hour", d.ui.day_end_hour), "ui.day_end_hour")
+        ),
     )
     if cfg.backend.port == cfg.frontend.port:
         raise ConfigError("backend.port と frontend.port は異なる値にしてください")

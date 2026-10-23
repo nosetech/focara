@@ -72,6 +72,7 @@
 | 待ち受けアドレス | 既定は `127.0.0.1`。LAN/Tailscale公開は設定で有効化し、適用するのは frontend のみ |
 | launchdジョブ名 | `com.nosetech.focara.<instance>.<job>`（`<job>` は `backend` / `frontend` など）。`instance` は設定ファイルで指定する |
 | ログ | 展開先配下の `logs/` に出力する |
+| 1日の終了時刻 | `ui.day_end_hour`（0〜23、既定 22）で指定する。この時刻以降、未完了が残っていると実行画面が「1日の予定を終えた」画面に切り替わる。frontend は `GET /api/config` で取得する |
 
 - 設定は YAML ファイル（`config/config.yaml.example` をコミット、実ファイル `config.yaml` は `.gitignore`）で行い、反映はアプリの再起動とする。
 - 同じ DB ファイルを複数バージョンが同時に開かない。スキーマの異なるバージョンが同一DBを触るとマイグレーションが衝突するため、DBパスは必ずバージョンごとに分ける。

@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
+from focara.api.config import router as config_router
 from focara.api.deps import get_engine
 from focara.api.logs import router as logs_router
 from focara.api.projects import router as projects_router
@@ -44,6 +45,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Focara", lifespan=lifespan)
+app.include_router(config_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(schedule_router)

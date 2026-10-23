@@ -8,7 +8,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { apiFetch } from "@/lib/api";
+import { DEFAULT_DAY_END_HOUR, apiFetch, fetchDayEndHour } from "@/lib/api";
 import {
   SLOTS,
   SWIPE_THRESHOLD,
@@ -56,6 +56,7 @@ export function RunScreen() {
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [resumed, setResumed] = useState(false);
+  const [dayEndHour, setDayEndHour] = useState(DEFAULT_DAY_END_HOUR);
   const [resched, setResched] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -179,6 +180,7 @@ export function RunScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(new Date());
     void fetchAll();
+    void fetchDayEndHour().then(setDayEndHour);
     return () => clearTimeout(toastTimer.current);
   }, [fetchAll]);
 
@@ -236,6 +238,7 @@ export function RunScreen() {
           onOpenDetail={setDetailId}
           now={now}
           resumed={resumed}
+          dayEndHour={dayEndHour}
           onResume={() => setResumed(true)}
           onResched={() => setResched(true)}
         />
@@ -273,6 +276,7 @@ function Ready({
   onOpenDetail,
   now,
   resumed,
+  dayEndHour,
   onResume,
   onResched,
 }: {
@@ -285,13 +289,14 @@ function Ready({
   onOpenDetail: (id: number) => void;
   now: Date | null;
   resumed: boolean;
+  dayEndHour: number;
   onResume: () => void;
   onResched: () => void;
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
 
-  if (now && isDayOver(now, view.queue.length, resumed)) {
+  if (now && isDayOver(now, view.queue.length, resumed, dayEndHour)) {
     return <DayOver view={view} onResume={onResume} onResched={onResched} />;
   }
 

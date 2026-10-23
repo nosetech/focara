@@ -72,3 +72,23 @@ def test_invalid_yaml(tmp_path: Path) -> None:
     f.write_text("a: [")
     with pytest.raises(ConfigError):
         load_config(f)
+
+
+def test_ui_default() -> None:
+    assert parse_config(None).ui.day_end_hour == 22
+
+
+def test_ui_applied() -> None:
+    assert parse_config({"ui": {"day_end_hour": 0}}).ui.day_end_hour == 0
+    assert parse_config({"ui": {"day_end_hour": 23}}).ui.day_end_hour == 23
+
+
+@pytest.mark.parametrize("value", [-1, 24, "22", 22.5, True, None])
+def test_ui_day_end_hour_invalid(value: object) -> None:
+    with pytest.raises(ConfigError):
+        parse_config({"ui": {"day_end_hour": value}})
+
+
+def test_ui_unknown_key() -> None:
+    with pytest.raises(ConfigError):
+        parse_config({"ui": {"foo": 1}})
