@@ -1,0 +1,375 @@
+/* 値は Focara 整理画面.dc.html のデザインに合わせる。基本はモバイル、900px 以上でデスクトップ。 */
+.shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop);
+  z-index: 39;
+}
+
+/* ナビ: モバイルは左から開くドロワー(292px) */
+.nav {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 292px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: calc(16px + env(safe-area-inset-top)) 12px 24px;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform 0.2s,
+    visibility 0.2s;
+}
+
+.nav[data-open] {
+  transform: none;
+  visibility: visible;
+}
+
+.brand {
+  padding: 0 10px 14px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.navLink,
+.navItem,
+.addButton {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink2);
+}
+
+.addButton {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  margin: 6px 0 10px;
+  font-family: inherit;
+}
+
+.addButton span {
+  flex: 1;
+  text-align: left;
+}
+
+.kbd {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink3);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink3);
+  padding: 14px 10px 6px;
+}
+
+.navItem span:first-child {
+  flex: 1;
+}
+
+.navItem[aria-current="page"] {
+  background: var(--sunk);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.count {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--ink3);
+  font-weight: 400;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  flex: none;
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.menuButton {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.titles {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.toolbar:empty {
+  display: none;
+}
+
+.dateNav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  margin-right: 8px;
+}
+
+.iconButton {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dateLabel {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.today {
+  height: 36px;
+  padding: 0 12px;
+  margin-left: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.filter {
+  flex: none;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filter[data-active] {
+  border-color: var(--accent);
+}
+
+.clear {
+  flex: none;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 120px;
+  scrollbar-width: none;
+}
+
+.keys,
+.panel {
+  display: none;
+}
+
+/* モバイルのクイック追加FAB */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+}
+
+@media (min-width: 900px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .backdrop,
+  .menuButton,
+  .fab {
+    display: none;
+  }
+
+  .nav {
+    position: relative;
+    width: 232px;
+    flex: none;
+    padding: 20px 12px;
+    transform: none;
+    visibility: visible;
+    transition: none;
+  }
+
+  .head {
+    padding: 24px 28px 12px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .content {
+    padding: 4px 28px 24px;
+    scrollbar-width: auto;
+  }
+
+  .keys {
+    flex: none;
+    border-top: 1px solid var(--line);
+    padding: 10px 28px;
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  .key {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .key kbd {
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--ink2);
+  }
+
+  .panel {
+    display: block;
+    width: 400px;
+    flex: none;
+    height: 100%;
+  }
+
+  .panelEmpty {
+    height: 100%;
+    border-left: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    font-size: 13px;
+    color: var(--ink3);
+    text-align: center;
+    line-height: 1.8;
+  }
+}
