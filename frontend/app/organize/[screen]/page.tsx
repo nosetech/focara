@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EmptyState } from "@/components/StateView";
+import { OrganizeEmpty } from "@/components/OrganizeStates";
 import { ORGANIZE_SCREENS, isOrganizeScreen } from "@/lib/organize";
 
 export function generateStaticParams() {
@@ -13,9 +13,9 @@ export default async function OrganizeScreenPage({
   if (!isOrganizeScreen(screen)) notFound();
   const label = ORGANIZE_SCREENS.find((s) => s.key === screen)?.label;
   return (
-    <EmptyState
+    <OrganizeEmpty
       title={`${label}は準備中です`}
-      description="この画面の中身は順次実装されます。"
+      text="この画面の中身は順次実装されます。"
     />
   );
 }

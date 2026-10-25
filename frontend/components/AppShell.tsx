@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { OrganizeShell } from "./OrganizeShell";
 import { QuickAdd } from "./QuickAdd";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./AppShell.module.css";
@@ -40,6 +41,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // 整理画面群はデザイン固有のナビ・レイアウトを持つ
+  if (pathname.startsWith("/organize")) {
+    return (
+      <>
+        <OrganizeShell onQuickAdd={() => setQuickAdd(true)}>
+          {children}
+        </OrganizeShell>
+        {quickAdd && <QuickAdd onClose={() => setQuickAdd(false)} />}
+      </>
+    );
+  }
 
   return (
     <div className={styles.shell}>
