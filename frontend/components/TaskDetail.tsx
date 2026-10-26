@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { fixedBody, splitFixed, type FixedDraft } from "@/lib/fixed";
 import {
   PROPERTY_TYPES,
   SAVE_LABEL,
@@ -21,6 +22,10 @@ interface TaskData {
   id: number;
   title: string;
   memo: string | null;
+  scheduled_date: string | null;
+  time_slot: string | null;
+  fixed_at: string | null;
+  fixed_end_at: string | null;
 }
 
 type Load =
@@ -39,6 +44,14 @@ export function TaskDetail({
   const [rows, setRows] = useState<PropertyDraft[]>([]);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [save, setSave] = useState<SaveState>("saved");
+  const [fixed, setFixed] = useState<FixedDraft>({
+    date: "",
+    start: "",
+    end: "",
+  });
+  const [fixedError, setFixedError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const hasSlot = useRef(false);
 
   const seq = useRef(0);
   const pending = useRef(0);
@@ -56,6 +69,10 @@ export function TaskDetail({
         apiFetch<TaskProperty[]>(`/tasks/${taskId}/properties`),
       ]);
       setMemo(task.memo ?? "");
+      setFixed(
+        splitFixed(task.fixed_at, task.fixed_end_at, task.scheduled_date),
+      );
+      hasSlot.current = task.time_slot != null;
       rowIds.current = new Map(props.map((p) => [`p${p.id}`, p.id]));
       setRows(props.map(toDraft));
       setLoad({ state: "ready", title: task.title });
@@ -206,6 +223,35 @@ export function TaskDetail({
     });
   };
 
+  /** 日時予定を保存する。入力が不正ならエラーを出して保存しない。 */
+  const saveFixed = (next: FixedDraft) => {
+    setFixed(next);
+    const result = fixedBody(next);
+    if ("error" in result) {
+      // 日付だけ・途中まで入力した状態は保存対象外(エラーは時刻を入れ始めてから出す)
+      setFixedError(next.start || next.end ? result.error : null);
+      return;
+    }
+    setFixedError(null);
+    const body: Record<string, unknown> = { ...result.body };
+    // 時間帯が未設定なら、開始時刻から実行画面で並ぶ枠を決める
+    if (result.slot && !hasSlot.current) body.time_slot = result.slot;
+    void run("fixed", async () => {
+      await apiFetch(`/tasks/${taskId}`, { method: "PATCH", body });
+      if (result.slot) hasSlot.current = true;
+    });
+  };
+
+  const deleteTask = async () => {
+    try {
+      await apiFetch(`/tasks/${taskId}`, { method: "DELETE" });
+      onClose();
+    } catch {
+      setConfirmDelete(false);
+      setSave("error");
+    }
+  };
+
   const retry = () => {
     if (failed.current.size === 0) setSave("saved");
     for (const [name, fn] of [...failed.current.entries()]) void run(name, fn);
@@ -288,6 +334,58 @@ export function TaskDetail({
               </div>
             )}
             <h2 className={styles.title}>{load.title}</h2>
+
+            <div className={styles.label} style={{ marginTop: 16 }}>
+              日時予定
+            </div>
+            <div className={styles.fixed}>
+              <div className={styles.propRow}>
+                <span className={styles.fixedLabel}>日付</span>
+                <input
+                  type="date"
+                  className={`${styles.input} ${styles.mono}`}
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={fixed.date}
+                  aria-label="日付"
+                  onChange={(e) =>
+                    saveFixed({ ...fixed, date: e.target.value })
+                  }
+                />
+              </div>
+              <div className={styles.propRow}>
+                <span className={styles.fixedLabel}>時刻</span>
+                <input
+                  type="time"
+                  className={`${styles.input} ${styles.mono}`}
+                  value={fixed.start}
+                  aria-label="開始時刻"
+                  onChange={(e) =>
+                    saveFixed({ ...fixed, start: e.target.value })
+                  }
+                />
+                <span className={styles.hint}>〜</span>
+                <input
+                  type="time"
+                  className={`${styles.input} ${styles.mono}`}
+                  value={fixed.end}
+                  aria-label="終了時刻"
+                  onChange={(e) => saveFixed({ ...fixed, end: e.target.value })}
+                />
+                {(fixed.start || fixed.end) && (
+                  <button
+                    className={styles.clearFixed}
+                    onClick={() => saveFixed({ ...fixed, start: "", end: "" })}
+                  >
+                    なしにする
+                  </button>
+                )}
+              </div>
+              {fixedError && (
+                <div className={styles.rowError} role="alert">
+                  {fixedError}
+                </div>
+              )}
+            </div>
 
             <div className={styles.labelRow}>
               <span className={styles.label}>メモ</span>
@@ -426,6 +524,33 @@ export function TaskDetail({
                 </svg>
                 プロパティを追加
               </button>
+            </div>
+
+            <div className={styles.deleteRow}>
+              {confirmDelete ? (
+                <>
+                  <span className={styles.hint}>このタスクを削除します</span>
+                  <button
+                    className={styles.clearFixed}
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    取消
+                  </button>
+                  <button
+                    className={styles.danger}
+                    onClick={() => void deleteTask()}
+                  >
+                    削除する
+                  </button>
+                </>
+              ) : (
+                <button
+                  className={styles.clearFixed}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  削除
+                </button>
+              )}
             </div>
           </div>
         )}

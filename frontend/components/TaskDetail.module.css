@@ -314,3 +314,51 @@
     opacity: 0;
   }
 }
+
+.fixed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.fixedLabel {
+  width: 40px;
+  flex: none;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.clearFixed {
+  height: 36px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.deleteRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.danger {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

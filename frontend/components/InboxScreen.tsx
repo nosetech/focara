@@ -21,6 +21,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { TaskDetail } from "./TaskDetail";
 import styles from "./InboxScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -46,6 +47,7 @@ export function InboxScreen() {
   const [checked, setChecked] = useState<number[]>([]);
   const [waitFor, setWaitFor] = useState<number[] | null>(null);
   const [waitText, setWaitText] = useState("");
+  const [detailId, setDetailId] = useState<number | null>(null);
   const busy = useRef(false);
 
   const fetchTasks = useCallback(async (initial: boolean) => {
@@ -289,11 +291,31 @@ export function InboxScreen() {
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         />
       </section>
+      <section className={styles.field}>
+        <div className={styles.fieldLabel}>日時予定</div>
+        <button
+          className={styles.segment}
+          onClick={() => setDetailId(current.id)}
+        >
+          日時・メモを編集
+        </button>
+      </section>
     </div>
   );
 
   return (
     <>
+      {detailId != null && (
+        <TaskDetail
+          key={detailId}
+          taskId={detailId}
+          onClose={() => {
+            setDetailId(null);
+            void fetchTasks(false);
+            void refreshCounts();
+          }}
+        />
+      )}
       {waitFor && (
         <form
           className={styles.wait}

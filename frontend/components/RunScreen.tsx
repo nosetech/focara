@@ -16,7 +16,6 @@ import {
   buildRunView,
   currentSlot,
   dragOffset,
-  formatClock,
   formatDateLabel,
   formatMinutes,
   isDayOver,
@@ -30,6 +29,7 @@ import {
   type RunView,
   type TimeSlot,
 } from "@/lib/run";
+import { formatRange, overlappingIds } from "@/lib/fixed";
 import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
 import { EmptyState, ErrorState, LoadingState } from "./StateView";
@@ -334,13 +334,21 @@ function Ready({
   const rest = view.queue.slice(1);
   const shown = rest.slice(0, MAX_UPCOMING);
   const pct = Math.round((view.done.length / view.total) * 100);
-  const chips: { label: string; accent?: boolean; mono?: boolean }[] = [];
+  const overlaps = overlappingIds(view.queue);
+  const chips: {
+    label: string;
+    accent?: boolean;
+    mono?: boolean;
+    danger?: boolean;
+  }[] = [];
   if (cur.fixed_at)
     chips.push({
-      label: `${formatClock(cur.fixed_at)}〜`,
+      label: formatRange(cur.fixed_at, cur.fixed_end_at),
       accent: true,
       mono: true,
     });
+  if (overlaps.has(cur.id))
+    chips.push({ label: "他の予定と重なっています", danger: true });
   if (cur.time_slot) chips.push({ label: SLOT_LABEL[cur.time_slot] });
   if (cur.priority != null) chips.push({ label: `優先度 ${cur.priority}` });
   if (cur.estimate_minutes != null) chips.push({ label: estimate(cur) });
@@ -366,8 +374,14 @@ function Ready({
       >
         <span className={styles.upTitle}>{t.title}</span>
         {t.fixed_at && (
-          <span className={styles.mono} style={{ color: "var(--accent)" }}>
-            {formatClock(t.fixed_at)}
+          <span
+            className={styles.mono}
+            style={{
+              color: overlaps.has(t.id) ? "var(--danger)" : "var(--accent)",
+            }}
+            title={overlaps.has(t.id) ? "他の予定と重なっています" : undefined}
+          >
+            {formatRange(t.fixed_at, t.fixed_end_at)}
           </span>
         )}
         <span className={styles.est}>{estimate(t)}</span>
@@ -428,6 +442,7 @@ function Ready({
                 className={styles.chip}
                 data-accent={c.accent ? "" : undefined}
                 data-mono={c.mono ? "" : undefined}
+                data-danger={c.danger ? "" : undefined}
               >
                 {c.label}
               </span>
