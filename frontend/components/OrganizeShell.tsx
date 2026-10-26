@@ -303,6 +303,7 @@ export function OrganizeShell({
               clearFilters: () => setFilters(DEFAULT_FILTERS),
               projects,
               panelEl,
+              date,
               refreshCounts,
               showToast,
               openQuickAdd: onQuickAdd,

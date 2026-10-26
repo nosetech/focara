@@ -1,0 +1,135 @@
+/* 値は Focara 整理画面.dc.html のデザイン(3枠割り当て)に合わせる */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .col {
+    min-height: 420px;
+  }
+}
+
+.col {
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.col[data-none] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.col[data-dragging] {
+  border-style: dashed;
+}
+
+.col[data-over] {
+  background: var(--sunk);
+  border-color: var(--accent);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.count {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+  color: var(--ink2);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: grab;
+}
+
+.card[data-drag] {
+  opacity: 0.4;
+}
+
+.card[data-drop] {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+
+.title {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink3);
+  flex-wrap: wrap;
+}
+
+.slotBtns {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.slotBtn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  font-size: 13px;
+  color: var(--ink3);
+  text-align: center;
+  line-height: 1.7;
+}
+
+/* モバイルはボタンで割り当てる(ドラッグ前提にしない) */
+@media (min-width: 900px) {
+  .slotBtns {
+    display: none;
+  }
+}
