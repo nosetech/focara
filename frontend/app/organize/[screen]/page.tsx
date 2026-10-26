@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { InboxScreen } from "@/components/InboxScreen";
 import { OrganizeEmpty } from "@/components/OrganizeStates";
 import { ORGANIZE_SCREENS, isOrganizeScreen } from "@/lib/organize";
 
@@ -11,6 +12,7 @@ export default async function OrganizeScreenPage({
 }: PageProps<"/organize/[screen]">) {
   const { screen } = await params;
   if (!isOrganizeScreen(screen)) notFound();
+  if (screen === "inbox") return <InboxScreen />;
   const label = ORGANIZE_SCREENS.find((s) => s.key === screen)?.label;
   return (
     <OrganizeEmpty

@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { apiFetch } from "@/lib/api";
+import { DEFAULT_FILTERS } from "@/lib/inbox";
 import {
   ORGANIZE_GROUPS,
   ORGANIZE_SCREENS,
@@ -16,7 +23,9 @@ import {
   type OrganizeCounts,
   type OrganizeScreenKey,
 } from "@/lib/organize";
+import { OrganizeContext, type OrganizeProject } from "./OrganizeContext";
 import { ThemeToggle } from "./ThemeToggle";
+import { Toast, type ToastMessage } from "./Toast";
 import styles from "./OrganizeShell.module.css";
 
 const KEYS = [
@@ -47,10 +56,7 @@ const SORT_OPTIONS = [
   { v: "project", l: "プロジェクト順" },
 ];
 
-interface Project {
-  id: number;
-  name: string;
-}
+const TOAST_MS = 4000;
 
 const chevron = (d: string) => (
   <svg
@@ -82,36 +88,41 @@ export function OrganizeShell({
   const [navOpen, setNavOpen] = useState(false);
   const [date, setDate] = useState(() => new Date());
   const [counts, setCounts] = useState<OrganizeCounts | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filters, setFilters] = useState({
-    status: "",
-    project: "",
-    pri: "",
-    sort: "default",
-  });
+  const [projects, setProjects] = useState<OrganizeProject[]>([]);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [panelEl, setPanelEl] = useState<HTMLElement | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const showToast = useCallback((next: ToastMessage) => {
+    clearTimeout(toastTimer.current);
+    setToast(next);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  const refreshCounts = useCallback(() => {
+    apiFetch<{ status: string; scheduled_date?: string | null }[]>("/tasks")
+      .then((tasks) => setCounts(countTasks(tasks)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    apiFetch<{ status: string; scheduled_date?: string | null }[]>("/tasks")
-      .then((tasks) => alive && setCounts(countTasks(tasks)))
-      .catch(() => {});
-    apiFetch<Project[]>("/projects")
+    refreshCounts();
+    apiFetch<OrganizeProject[]>("/projects")
       .then((p) => alive && setProjects(p))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [pathname]);
+  }, [pathname, refreshCounts]);
 
   // ナビを開いたまま画面を移動したら閉じる(モバイル)
   useEffect(() => setNavOpen(false), [pathname]);
 
   const step = screen === "week" ? 7 : 1;
-  const hasFilter =
-    filters.status !== "" ||
-    filters.project !== "" ||
-    filters.pri !== "" ||
-    filters.sort !== "default";
+  const hasFilter = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
   const list = isListScreen(screen);
   const sub = screenSub(screen, counts, date);
 
@@ -275,14 +286,7 @@ export function OrganizeShell({
                 {hasFilter && (
                   <button
                     className={styles.clear}
-                    onClick={() =>
-                      setFilters({
-                        status: "",
-                        project: "",
-                        pri: "",
-                        sort: "default",
-                      })
-                    }
+                    onClick={() => setFilters(DEFAULT_FILTERS)}
                   >
                     絞り込みを解除
                   </button>
@@ -292,7 +296,21 @@ export function OrganizeShell({
           </div>
         </div>
 
-        <div className={styles.content}>{children}</div>
+        <div className={styles.content}>
+          <OrganizeContext.Provider
+            value={{
+              filters,
+              clearFilters: () => setFilters(DEFAULT_FILTERS),
+              projects,
+              panelEl,
+              refreshCounts,
+              showToast,
+              openQuickAdd: onQuickAdd,
+            }}
+          >
+            {children}
+          </OrganizeContext.Provider>
+        </div>
 
         {screen === "inbox" && (
           <div className={styles.keys}>
@@ -307,14 +325,18 @@ export function OrganizeShell({
       </main>
 
       {list && (
-        <aside className={styles.panel}>
-          <div className={styles.panelEmpty}>
-            行を選択すると
-            <br />
-            ここに詳細が表示されます
-          </div>
+        <aside className={styles.panel} ref={setPanelEl}>
+          {screen !== "inbox" && (
+            <div className={styles.panelEmpty}>
+              行を選択すると
+              <br />
+              ここに詳細が表示されます
+            </div>
+          )}
         </aside>
       )}
+
+      <Toast toast={toast} />
 
       <button
         className={styles.fab}

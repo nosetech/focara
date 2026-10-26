@@ -8,6 +8,9 @@ const TOAST_MS = 1800;
 
 type Status = "typing" | "saving" | "error";
 
+/** inboxにタスクを追加したことを整理画面などへ知らせるイベント */
+export const TASK_ADDED_EVENT = "focara:task-added";
+
 export function QuickAdd({ onClose }: { onClose: () => void }) {
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<Status>("typing");
@@ -28,6 +31,7 @@ export function QuickAdd({ onClose }: { onClose: () => void }) {
     setToast(false);
     try {
       await apiFetch("/tasks", { method: "POST", body: { title } });
+      window.dispatchEvent(new Event(TASK_ADDED_EVENT));
     } catch {
       setStatus("error");
       return;
