@@ -232,6 +232,11 @@
   color: var(--accent);
 }
 
+.chip[data-danger] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .chip[data-mono] {
   font-family: var(--font-mono), monospace;
 }
