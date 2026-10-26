@@ -16,6 +16,8 @@ export interface OrganizeContextValue {
   projects: OrganizeProject[];
   /** 詳細パネルの描画先。デスクトップのみ存在する */
   panelEl: HTMLElement | null;
+  /** 日付ナビで選んでいる日 */
+  date: Date;
   refreshCounts: () => void;
   showToast: (toast: ToastMessage) => void;
   openQuickAdd: () => void;
