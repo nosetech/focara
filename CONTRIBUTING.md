@@ -26,3 +26,20 @@
 - コミットメッセージは変更内容が分かる簡潔な1行目(日本語可)から始めます。
 - 1コミットは1つの論理的な変更にまとめます。
 - 必要に応じて本文に背景・理由を記載します。
+
+## 動作確認用インスタンス
+
+画面・APIの動作確認は、運用インスタンスとは別に `scripts/dev-instance.sh` で起動します。
+
+```sh
+scripts/dev-instance.sh start   # backend / frontend を起動し、URLを表示
+scripts/dev-instance.sh status  # 起動状態・URL・ログの場所
+scripts/dev-instance.sh stop    # 起動したプロセスグループだけを停止
+```
+
+- 事前に `backend/` で `uv sync`、`frontend/` で `npm install` を済ませておきます。
+- ポートは18000番台から空きを自動採番します。`DEV_BACKEND_PORT` / `DEV_FRONTEND_PORT` で指定もできますが、運用の既定ポート(8800 / 3800)と使用中のポートは拒否されます。
+- 設定(`.dev-run/config.yaml`、毎回生成)・DB(`.dev-run/focara.db`)・ログ・PID記録はすべて worktree 直下の `.dev-run/`(`.gitignore` 対象)に置かれ、運用の `config/config.yaml` や `data/focara.db` は参照・変更しません。worktree ごとに独立しているため、複数worktreeで同時に起動できます。
+- `stop` は `.dev-run/` に記録したPID/PGID/目印と一致するプロセスグループだけを止めます。不一致の場合は何も止めずにエラー終了します。`pkill` / `killall` やポート検索による kill は、運用や他worktreeのインスタンスを巻き込むため行わないでください。
+- `NODE_ENV` は子プロセスに引き継ぎません(`NODE_ENV=production` の shell でも `next dev` が動作します)。
+- 現状 Focara には Slack通知・AI呼び出し・launchdジョブなどの外部副作用がありません。今後追加する際は、動作確認用インスタンスでは無効化してください。

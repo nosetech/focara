@@ -16,6 +16,8 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 
 - `scripts/start.sh` / `scripts/stop.sh`: backend と frontend をまとめて起動・停止(`frontend.host` を `FRONTEND_HOST` に渡す)
 
+- `scripts/dev-instance.sh start|stop|status`: 動作確認用インスタンス(運用と分離。ポートは18000番台から自動採番、設定・DB・ログ・PID記録は `.dev-run/`)。画面・APIの動作確認はこれで行う。`pkill` / `killall` / ポート検索による kill はしない(運用や他worktreeのインスタンスを巻き込むため)。
+
 backend(`backend/` で実行。uv + Python 3.11+):
 
 - `uv sync`: 依存関係のインストール

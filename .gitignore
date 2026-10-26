@@ -17,3 +17,4 @@ logs/
 .env*
 .DS_Store
 .serena/
+.dev-run/
