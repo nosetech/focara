@@ -1,0 +1,333 @@
+/* 値は Focara 整理画面.dc.html のデザイン(inboxの行・一括操作バー・詳細)に合わせる */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.row[data-focused] {
+  background: var(--sunk);
+}
+
+.check {
+  width: 36px;
+  height: 36px;
+  margin: -6px -4px -6px -8px;
+  flex: none;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--on-ink);
+}
+
+.check span {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--ink3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.check span[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.title {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.actions {
+  display: none;
+  gap: 6px;
+  flex: none;
+}
+
+.action {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.action kbd,
+.segment kbd {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  color: var(--ink3);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.empty > div {
+  padding-bottom: 0;
+}
+
+.outline {
+  margin: 20px 0 0 12px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 条件待ちの待ち条件入力 */
+.wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 12px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.wait .input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.primary {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.link {
+  height: 36px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 一括操作バー */
+.bulk {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.bulkCount {
+  font-size: 13px;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.bulkCount b {
+  font-family: var(--font-mono), monospace;
+}
+
+.bulk .action {
+  height: 36px;
+}
+
+.select {
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 0 8px;
+}
+
+.clear {
+  margin-left: auto;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--on-ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.input {
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* 詳細パネル(デスクトップ) */
+.panelBody {
+  height: 100%;
+  border-left: 1px solid var(--line);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.panelTitle {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.segments {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.segment {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.segment[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
+
+.panelEmpty {
+  height: 100%;
+  border-left: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  font-size: 13px;
+  color: var(--ink3);
+  text-align: center;
+  line-height: 1.8;
+  box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+  .actions {
+    display: flex;
+  }
+
+  .bulk {
+    left: 260px;
+    right: 428px;
+    bottom: 56px;
+  }
+}
