@@ -75,6 +75,7 @@ class TaskOut(TaskFields):
     id: int
     title: str
     status: Status
+    project_order: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -118,7 +119,9 @@ def list_tasks(
     if status is not None:
         stmt = stmt.where(Task.status == status)
     if project_id is not None:
-        stmt = stmt.where(Task.project_id == project_id)
+        # プロジェクト内の並び順(未設定は末尾)
+        stmt = stmt.where(Task.project_id == project_id).order_by(None)
+        stmt = stmt.order_by(Task.project_order.is_(None), Task.project_order, Task.id)
     if scheduled_date is not None:
         stmt = stmt.where(Task.scheduled_date == scheduled_date.isoformat())
     return list(session.scalars(stmt))
@@ -160,6 +163,8 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         values.get("wait_condition") is not None or values.get("wait_until") is not None
     ):
         raise HTTPException(422, "待ち条件は waiting のタスクにのみ指定できます")
+    if "project_id" in values and values["project_id"] != task.project_id:
+        task.project_order = None
     for key, value in _to_columns(values).items():
         setattr(task, key, value)
     try:

@@ -103,6 +103,26 @@ def update_project(project_id: int, body: ProjectUpdate, session: SessionDep) ->
     return _out_for(session, project_id)
 
 
+class TaskOrder(BaseModel):
+    task_ids: list[int]
+
+
+@router.put("/{project_id}/task-order", status_code=204)
+def reorder_tasks(project_id: int, body: TaskOrder, session: SessionDep) -> Response:
+    """所属タスク全件の並び順を task_ids の順に設定する。過不足・重複する ID は 422。"""
+    _get_or_404(session, project_id)
+    if len(set(body.task_ids)) != len(body.task_ids):
+        raise HTTPException(422, "task_ids が重複しています")
+    tasks = session.scalars(select(Task).where(Task.project_id == project_id)).all()
+    if {t.id for t in tasks} != set(body.task_ids):
+        raise HTTPException(422, "task_ids は所属タスクの全件を指定してください")
+    by_id = {t.id: t for t in tasks}
+    for i, task_id in enumerate(body.task_ids):
+        by_id[task_id].project_order = i
+    session.commit()
+    return Response(status_code=204)
+
+
 @router.delete("/{project_id}", status_code=204)
 def delete_project(project_id: int, session: SessionDep) -> Response:
     """プロジェクトのみ削除する。所属タスクは残り、project_id が NULL になる。"""
