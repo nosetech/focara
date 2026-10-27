@@ -80,3 +80,27 @@ def test_delete_project_keeps_tasks(client):
     assert client.delete(f"/api/projects/{pid}").status_code == 204
     task = client.get(f"/api/tasks/{tid}").json()
     assert task["project_id"] is None
+
+
+def test_reorder_tasks(client):
+    pid = client.post("/api/projects", json={"name": "P"}).json()["id"]
+    other = client.post("/api/projects", json={"name": "Q"}).json()["id"]
+    ids = [
+        client.post("/api/tasks", json={"title": f"t{i}", "project_id": pid}).json()["id"]
+        for i in range(3)
+    ]
+    outsider = client.post("/api/tasks", json={"title": "x", "project_id": other}).json()["id"]
+    order = [ids[2], ids[0], ids[1]]
+    res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": order})
+    assert res.status_code == 204
+    listed = client.get("/api/tasks", params={"project_id": pid}).json()
+    assert [t["id"] for t in listed] == order
+    # 所属外・重複は拒否
+    res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": [outsider]})
+    assert res.status_code == 422
+    res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": [ids[0], ids[0]]})
+    assert res.status_code == 422
+    assert client.put("/api/projects/999/task-order", json={"task_ids": []}).status_code == 404
+    # プロジェクトを変えると並び順はリセットされる
+    client.patch(f"/api/tasks/{ids[2]}", json={"project_id": other})
+    assert client.get(f"/api/tasks/{ids[2]}").json()["project_order"] is None

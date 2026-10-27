@@ -14,6 +14,7 @@ export interface OrganizeContextValue {
   filters: OrganizeFilters;
   clearFilters: () => void;
   projects: OrganizeProject[];
+  refreshProjects: () => void;
   /** 詳細パネルの描画先。デスクトップのみ存在する */
   panelEl: HTMLElement | null;
   /** 日付ナビで選んでいる日 */

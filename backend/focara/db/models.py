@@ -117,6 +117,8 @@ class Task(Base):
     project_id: Mapped[int | None] = mapped_column(
         ForeignKey("projects.id", ondelete="SET NULL"), index=True
     )
+    # プロジェクト内の並び順(小さいほど先頭。NULL は末尾)
+    project_order: Mapped[int | None] = mapped_column(Integer)
     priority: Mapped[int | None] = mapped_column(Integer)
     estimate_minutes: Mapped[int | None] = mapped_column(Integer)
     # 予定日(日付 YYYY-MM-DD。ユーザーのローカル日付)と時間帯・実行順

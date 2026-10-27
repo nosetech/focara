@@ -107,16 +107,16 @@ export function OrganizeShell({
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    refreshCounts();
+  const refreshProjects = useCallback(() => {
     apiFetch<OrganizeProject[]>("/projects")
-      .then((p) => alive && setProjects(p))
+      .then(setProjects)
       .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [pathname, refreshCounts]);
+  }, []);
+
+  useEffect(() => {
+    refreshCounts();
+    refreshProjects();
+  }, [pathname, refreshCounts, refreshProjects]);
 
   // ナビを開いたまま画面を移動したら閉じる(モバイル)
   useEffect(() => setNavOpen(false), [pathname]);
@@ -302,6 +302,7 @@ export function OrganizeShell({
               filters,
               clearFilters: () => setFilters(DEFAULT_FILTERS),
               projects,
+              refreshProjects,
               panelEl,
               date,
               setDate,

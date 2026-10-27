@@ -54,11 +54,11 @@ export function formatAdded(iso: string): string {
 }
 
 /** 絞り込みと並び替え。並び替えは安定(同値は追加順のまま)。 */
-export function filterInbox(
-  tasks: readonly InboxTask[],
+export function filterInbox<T extends InboxTask>(
+  tasks: readonly T[],
   f: OrganizeFilters,
   projectName: (id: number | null) => string,
-): InboxTask[] {
+): T[] {
   const l = tasks.filter(
     (t) =>
       (!f.status || t.status === f.status) &&
@@ -68,7 +68,7 @@ export function filterInbox(
           : String(t.project_id) === f.project)) &&
       (!f.pri || priorityLabel(t.priority) === f.pri),
   );
-  const rank = (t: InboxTask) => t.priority ?? Infinity;
+  const rank = (t: T) => t.priority ?? Infinity;
   if (f.sort === "pri") l.sort((a, b) => rank(a) - rank(b));
   else if (f.sort === "est")
     l.sort(

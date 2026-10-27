@@ -1,0 +1,400 @@
+/* 値は Focara 整理画面.dc.html のデザイン(プロジェクト列・ヘッダー・タスク行)に合わせる */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.project {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.project[data-on] {
+  background: var(--sunk);
+}
+
+.projectTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.project[data-on] .projectName {
+  font-weight: 700;
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.bar {
+  display: block;
+  height: 3px;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.bar[data-large] {
+  height: 4px;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hint {
+  padding: 24px 12px;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 12px 12px;
+}
+
+.back {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.headerTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.headerName {
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.headerProgress {
+  font-size: 13px;
+  color: var(--ink3);
+  white-space: nowrap;
+}
+
+.headerProgress .mono {
+  font-size: 13px;
+}
+
+.description {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.headerActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.groupLabel {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 14px 12px 6px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.row:hover {
+  background: var(--sunk);
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.title {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title[data-done] {
+  color: var(--ink3);
+  text-decoration: line-through;
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.action,
+.iconButton {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.iconButton {
+  width: 36px;
+  padding: 0;
+  font-size: 14px;
+}
+
+.action:disabled,
+.iconButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.select,
+.input,
+.textarea {
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.select {
+  height: 36px;
+  padding: 0 8px;
+  font-size: 13px;
+  max-width: 200px;
+}
+
+.input {
+  height: 36px;
+  padding: 0 10px;
+}
+
+.textarea {
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.primary,
+.danger {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.danger {
+  background: var(--danger);
+  color: var(--on-ink);
+}
+
+.primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.link {
+  height: 36px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.outline {
+  height: 44px;
+  padding: 0 18px;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.emptyFiltered {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--backdrop);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dialogTitle {
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.dialogText {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.7;
+}
+
+/* モバイル: 一覧 → 詳細の2段階。選択中は一覧を隠す */
+.grid[data-selected] .projects {
+  display: none;
+}
+
+.grid:not([data-selected]) .detail {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .grid[data-selected] .projects,
+  .grid:not([data-selected]) .detail {
+    display: flex;
+  }
+
+  .back {
+    display: none;
+  }
+}
