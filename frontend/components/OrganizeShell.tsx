@@ -26,6 +26,7 @@ import {
 import { OrganizeContext, type OrganizeProject } from "./OrganizeContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { Toast, type ToastMessage } from "./Toast";
+import { BrandLogo } from "./BrandLogo";
 import styles from "./OrganizeShell.module.css";
 
 const KEYS = [
@@ -166,7 +167,10 @@ export function OrganizeShell({
         data-open={navOpen ? "" : undefined}
         aria-label="メインナビゲーション"
       >
-        <div className={styles.brand}>Focara</div>
+        <div className={styles.brand}>
+          <BrandLogo />
+          Focara
+        </div>
         <Link href="/" className={styles.navLink}>
           <svg
             width="16"

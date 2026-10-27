@@ -123,6 +123,9 @@
   }
 
   .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 0 10px 14px;
     font-size: 17px;
     font-weight: 700;
