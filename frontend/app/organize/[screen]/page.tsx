@@ -3,6 +3,7 @@ import { AssignScreen } from "@/components/AssignScreen";
 import { CalendarScreen } from "@/components/CalendarScreen";
 import { InboxScreen } from "@/components/InboxScreen";
 import { ProjectsScreen } from "@/components/ProjectsScreen";
+import { StatusListScreen } from "@/components/StatusListScreen";
 import { OrganizeEmpty } from "@/components/OrganizeStates";
 import { ORGANIZE_SCREENS, isOrganizeScreen } from "@/lib/organize";
 
@@ -18,6 +19,9 @@ export default async function OrganizeScreenPage({
   if (screen === "inbox") return <InboxScreen />;
   if (screen === "assign") return <AssignScreen />;
   if (screen === "projects") return <ProjectsScreen />;
+  if (screen === "waiting" || screen === "someday")
+    return <StatusListScreen status={screen} />;
+  if (screen === "habits") return <StatusListScreen status="habit" />;
   if (screen === "day" || screen === "week")
     return <CalendarScreen mode={screen} />;
   const label = ORGANIZE_SCREENS.find((s) => s.key === screen)?.label;
