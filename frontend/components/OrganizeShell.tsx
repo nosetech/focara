@@ -304,6 +304,7 @@ export function OrganizeShell({
               projects,
               panelEl,
               date,
+              setDate,
               refreshCounts,
               showToast,
               openQuickAdd: onQuickAdd,

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AssignScreen } from "@/components/AssignScreen";
+import { CalendarScreen } from "@/components/CalendarScreen";
 import { InboxScreen } from "@/components/InboxScreen";
 import { OrganizeEmpty } from "@/components/OrganizeStates";
 import { ORGANIZE_SCREENS, isOrganizeScreen } from "@/lib/organize";
@@ -15,6 +16,8 @@ export default async function OrganizeScreenPage({
   if (!isOrganizeScreen(screen)) notFound();
   if (screen === "inbox") return <InboxScreen />;
   if (screen === "assign") return <AssignScreen />;
+  if (screen === "day" || screen === "week")
+    return <CalendarScreen mode={screen} />;
   const label = ORGANIZE_SCREENS.find((s) => s.key === screen)?.label;
   return (
     <OrganizeEmpty

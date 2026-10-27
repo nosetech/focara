@@ -18,6 +18,7 @@ export interface OrganizeContextValue {
   panelEl: HTMLElement | null;
   /** 日付ナビで選んでいる日 */
   date: Date;
+  setDate: (date: Date) => void;
   refreshCounts: () => void;
   showToast: (toast: ToastMessage) => void;
   openQuickAdd: () => void;

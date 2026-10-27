@@ -1,0 +1,286 @@
+/* 値は Focara 整理画面.dc.html のデザイン(日・週カレンダー)に合わせる */
+.mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+}
+
+.slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0 20px;
+}
+
+@media (min-width: 900px) {
+  .slot {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  .slotLabel {
+    flex-direction: column;
+  }
+}
+
+.slotLabel {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 12px 0 4px;
+}
+
+.slotName {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.slotCount {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.items[data-over] {
+  background: var(--sunk);
+  border-color: var(--accent);
+}
+
+.item {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.item[draggable="true"] {
+  cursor: grab;
+}
+
+.item[data-drag] {
+  opacity: 0.4;
+}
+
+.time {
+  width: 96px;
+  flex: none;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.mark {
+  width: 96px;
+  flex: none;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.itemTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemTitle[data-done] {
+  color: var(--ink3);
+  text-decoration: line-through;
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--ink3);
+  white-space: nowrap;
+}
+
+.overlap {
+  color: var(--danger);
+}
+
+.emptyRow {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+/* 週(デスクトップは日が列・枠が行、モバイルは枠が列・日が行) */
+.week {
+  grid-template-columns: 72px repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.weekMobile {
+  grid-template-columns: 64px repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.desktopOnly,
+.mobileOnly {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .desktopOnly {
+    display: grid;
+  }
+
+  span.desktopOnly {
+    display: inline;
+  }
+}
+
+@media (max-width: 899px) {
+  .mobileOnly {
+    display: grid;
+  }
+
+  span.mobileOnly {
+    display: inline;
+  }
+}
+
+.slotHead {
+  font-size: 12px;
+  color: var(--ink3);
+  padding: 8px 4px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.weekMobile .slotHead {
+  align-items: flex-end;
+}
+.dayHead {
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  cursor: pointer;
+  color: var(--ink);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dayHead[data-today] {
+  background: var(--sunk);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.dayHeadSub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink3);
+}
+
+.cell {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+  min-width: 0;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .cell {
+    min-height: 160px;
+  }
+}
+
+.cell[data-over] {
+  background: var(--sunk);
+  border-color: var(--accent);
+}
+
+.event {
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip {
+  display: none;
+  font-size: 12px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--sunk);
+}
+
+.chip[data-drag] {
+  opacity: 0.4;
+}
+
+.chip[data-done] {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.more {
+  display: none;
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+.summary {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+.event[data-overlap] {
+  color: var(--danger);
+}
+
+@media (min-width: 900px) {
+  .chip {
+    display: block;
+    cursor: grab;
+  }
+
+  .more {
+    display: block;
+  }
+}
