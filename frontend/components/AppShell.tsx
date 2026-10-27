@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { OrganizeShell } from "./OrganizeShell";
 import { QuickAdd } from "./QuickAdd";
 import { ThemeToggle } from "./ThemeToggle";
+import { BrandLogo } from "./BrandLogo";
 import styles from "./AppShell.module.css";
 
 const NAV_ITEMS = [
@@ -57,7 +58,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <nav className={styles.sidebar} aria-label="メインナビゲーション">
-        <div className={styles.brand}>Focara</div>
+        <div className={styles.brand}>
+          <BrandLogo />
+          Focara
+        </div>
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.href}
