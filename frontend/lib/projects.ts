@@ -42,11 +42,11 @@ export function byProjectOrder(tasks: readonly ProjectTask[]): ProjectTask[] {
   );
 }
 
+/** ステータス別にまとめる。各グループ内は渡された順を保つ。 */
 export function groupByStatus(tasks: readonly ProjectTask[]) {
-  const ordered = byProjectOrder(tasks);
   return PROJECT_GROUPS.map((g) => ({
     ...g,
-    tasks: ordered.filter((t) => t.status === g.status),
+    tasks: tasks.filter((t) => t.status === g.status),
   })).filter((g) => g.tasks.length > 0);
 }
 

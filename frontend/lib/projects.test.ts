@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  byProjectOrder,
   groupByStatus,
   movedOrder,
   projectProgress,
@@ -32,11 +33,13 @@ test("進捗: 習慣は件数に含めない", () => {
 });
 
 test("グループ化: 並び順に従い、空のグループは出さない", () => {
-  const g = groupByStatus([
-    t(1, { project_order: 1 }),
-    t(2, { project_order: 0 }),
-    t(3, { status: "done" }),
-  ]);
+  const g = groupByStatus(
+    byProjectOrder([
+      t(1, { project_order: 1 }),
+      t(2, { project_order: 0 }),
+      t(3, { status: "done" }),
+    ]),
+  );
   assert.deepEqual(
     g.map((x) => [x.status, x.tasks.map((y) => y.id)]),
     [

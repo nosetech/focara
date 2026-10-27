@@ -9,6 +9,7 @@ import {
   priorityLabel,
 } from "@/lib/inbox";
 import {
+  byProjectOrder,
   groupByStatus,
   movedOrder,
   projectProgress,
@@ -76,7 +77,8 @@ export function ProjectsScreen() {
     [tasks, selected],
   );
   const shown = useMemo(
-    () => filterInbox(owned, { ...filters, project: "" }, () => ""),
+    () =>
+      filterInbox(byProjectOrder(owned), { ...filters, project: "" }, () => ""),
     [owned, filters],
   );
   const filtered =
@@ -94,18 +96,18 @@ export function ProjectsScreen() {
   ) => {
     if (busy.current) return false;
     busy.current = true;
+    let ok = true;
     try {
       await action();
       if (okMsg) showToast({ msg: okMsg });
-      return true;
     } catch {
       showToast({ msg: failMsg });
-      return false;
-    } finally {
-      busy.current = false;
-      await fetchAll(false);
-      refreshProjects();
+      ok = false;
     }
+    busy.current = false;
+    void fetchAll(false);
+    refreshProjects();
+    return ok;
   };
 
   const submitForm = async (e: React.FormEvent) => {

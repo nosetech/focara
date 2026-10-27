@@ -95,7 +95,9 @@ def test_reorder_tasks(client):
     assert res.status_code == 204
     listed = client.get("/api/tasks", params={"project_id": pid}).json()
     assert [t["id"] for t in listed] == order
-    # 所属外・重複は拒否
+    # 所属外・重複・一部だけの指定は拒否
+    res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": order[:2]})
+    assert res.status_code == 422
     res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": [outsider]})
     assert res.status_code == 422
     res = client.put(f"/api/projects/{pid}/task-order", json={"task_ids": [ids[0], ids[0]]})

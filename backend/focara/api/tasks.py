@@ -115,11 +115,13 @@ def list_tasks(
     project_id: int | None = None,
     scheduled_date: date | None = None,
 ) -> list[Task]:
-    stmt = select(Task).order_by(Task.project_order.is_(None), Task.project_order, Task.id)
+    stmt = select(Task).order_by(Task.id)
     if status is not None:
         stmt = stmt.where(Task.status == status)
     if project_id is not None:
-        stmt = stmt.where(Task.project_id == project_id)
+        # プロジェクト内の並び順(未設定は末尾)
+        stmt = stmt.where(Task.project_id == project_id).order_by(None)
+        stmt = stmt.order_by(Task.project_order.is_(None), Task.project_order, Task.id)
     if scheduled_date is not None:
         stmt = stmt.where(Task.scheduled_date == scheduled_date.isoformat())
     return list(session.scalars(stmt))
