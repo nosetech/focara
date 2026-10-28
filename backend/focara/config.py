@@ -21,8 +21,6 @@ class BackendConfig:
 @dataclass(frozen=True)
 class FrontendConfig:
     port: int = 3800
-    # 公開用の bind 先。LAN/Tailscale 公開時は 0.0.0.0 等を指定する(frontend のみに適用)。
-    host: str = "127.0.0.1"
 
 
 @dataclass(frozen=True)
@@ -51,12 +49,26 @@ class Config:
     ui: UiConfig = field(default_factory=UiConfig)
 
 
-def _section(raw: dict[str, Any], key: str, allowed: set[str]) -> dict[str, Any]:
+_FRONTEND_HOST_REMOVED = (
+    "frontend.host は廃止しました。frontend の公開先は環境変数 LAN_IP か TAILSCALE_IP "
+    "(どちらか一方)で指定してください。frontend.host を config.yaml から削除してください"
+)
+
+
+def _section(
+    raw: dict[str, Any],
+    key: str,
+    allowed: set[str],
+    removed: dict[str, str] | None = None,
+) -> dict[str, Any]:
     value = raw.get(key)
     if value is None:
         return {}
     if not isinstance(value, dict):
         raise ConfigError(f"{key} はマッピングで指定してください")
+    for name, message in (removed or {}).items():
+        if name in value:
+            raise ConfigError(message)
     unknown = set(value) - allowed
     if unknown:
         raise ConfigError(f"{key} に未知の項目があります: {', '.join(sorted(map(str, unknown)))}")
@@ -93,7 +105,7 @@ def parse_config(raw: Any) -> Config:
 
     d = Config()
     backend = _section(raw, "backend", {"port"})
-    frontend = _section(raw, "frontend", {"port", "host"})
+    frontend = _section(raw, "frontend", {"port"}, removed={"host": _FRONTEND_HOST_REMOVED})
     db = _section(raw, "db", {"path"})
     log = _section(raw, "log", {"dir"})
     ui = _section(raw, "ui", {"day_end_hour"})
@@ -103,7 +115,6 @@ def parse_config(raw: Any) -> Config:
         backend=BackendConfig(port=_port(backend.get("port", d.backend.port), "backend.port")),
         frontend=FrontendConfig(
             port=_port(frontend.get("port", d.frontend.port), "frontend.port"),
-            host=_string(frontend.get("host", d.frontend.host), "frontend.host"),
         ),
         db=DbConfig(path=_string(db.get("path", d.db.path), "db.path")),
         log=LogConfig(dir=_string(log.get("dir", d.log.dir), "log.dir")),

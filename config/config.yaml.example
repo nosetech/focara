@@ -8,9 +8,7 @@ backend:
   port: 8800 # 常に 127.0.0.1 に bind する
 
 frontend:
-  port: 3800
-  # 公開用の bind 先。127.0.0.1(ローカルのみ) / 0.0.0.0(LAN) / Tailscale の IP など
-  host: 127.0.0.1
+  port: 3800 # bind 先は環境変数 LAN_IP / TAILSCALE_IP で指定(未指定は 127.0.0.1)
 
 db:
   path: data/focara.db

@@ -22,9 +22,9 @@ scripts/stop.sh    # 停止
 
 既定ではすべて `127.0.0.1` のみで待ち受けます。別端末から使うときは **frontend の bind 先だけ** を切り替えます(backend は常に `127.0.0.1` のままで、frontend の `/api/*` 中継経由でのみ到達します)。
 
-1. `config/config.yaml` の `frontend.host` を設定します(`0.0.0.0`=LAN全体 / Tailscale のIP=tailnet内のみ、が目安です)。
-2. `scripts/start.sh` で起動します。`frontend.host` の値が `FRONTEND_HOST` として frontend に渡されます。
-3. 開発サーバで使う場合(`FOCARA_FRONTEND_MODE=dev scripts/start.sh`)は、別端末からのアクセス元ホスト名も `FRONTEND_ALLOWED_DEV_ORIGINS`(カンマ区切り)に指定します。
+1. 環境変数 `LAN_IP`(LANのIP)か `TAILSCALE_IP`(TailscaleのIP)の**どちらか一方**を指定して `scripts/start.sh` を起動します(例: `LAN_IP=192.168.10.101 scripts/start.sh`)。そのIPにのみ bind し、`0.0.0.0` では待ち受けません。両方指定するとエラーで起動しません。どちらも未指定なら `127.0.0.1` のみです。
+2. `/api/*` は frontend の Route Handler が実行時に `BACKEND_URL`(`scripts/start.sh` が `backend.port` から設定)へ中継するため、`backend.port` を変えてもビルドし直す必要はありません。
+3. 開発サーバで使う場合(`FOCARA_FRONTEND_MODE=dev scripts/start.sh`)は、bind 先のIPが `FRONTEND_ALLOWED_DEV_ORIGINS` の既定値になります。ホスト名など他の許可元が必要なら、カンマ区切りで明示してください。
 4. 別端末のブラウザで `http://<IPまたはホスト名>:3800` を開きます。
 
 認証はありません。信頼できるネットワーク(自宅LAN・Tailscale)以外には公開しないでください。

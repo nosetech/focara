@@ -41,9 +41,9 @@
 
 ### 2-4. frontend と backend の通信
 
-- ブラウザは常に Next.js のオリジンへ `/api/*` でアクセスし、Next.js の `rewrites` がバックエンドへ中継する。同一オリジンになるため CORS 設定が不要になる。
-- 中継先は環境変数 `BACKEND_URL`（既定 `http://127.0.0.1:<backend_port>`）で指定する。
-- LAN / Tailscale 公開時もブラウザが到達するのは Next.js のポートのみでよく、バックエンドは常に `127.0.0.1` に bind したままにできる。公開範囲は要件どおり LAN / Tailscale のみで、インターネットには公開しない。
+- ブラウザは常に Next.js のオリジンへ `/api/*` でアクセスし、Route Handler（`frontend/app/api/[...path]/route.ts`）がバックエンドへ中継する。同一オリジンになるため CORS 設定が不要になる。
+- 中継先は環境変数 `BACKEND_URL`（既定 `http://127.0.0.1:<backend_port>`）で指定する。ビルド時に固定される `rewrites` ではなく実行時に読むため、`backend.port` を変えてもビルドし直し不要。バックエンド停止時は 502 を返す。SSE 等のストリーミング応答は使っていない。
+- LAN / Tailscale 公開時もブラウザが到達するのは Next.js のポートのみでよく、バックエンドは常に `127.0.0.1` に bind したままにできる。frontend の bind 先は環境変数 `LAN_IP` / `TAILSCALE_IP` のどちらか一方で指定する（両方指定はエラー、未指定は `127.0.0.1`。`0.0.0.0` は使わない）。公開範囲は要件どおり LAN / Tailscale のみで、インターネットには公開しない。
 
 ### 2-5. モバイル対応: PWA
 
@@ -52,7 +52,7 @@
 - Service Worker によるオフライン動作は必須としない。まずは manifest によるホーム画面追加と全画面表示を対象とする。
 - Tailscale 経由のアクセスなど、PWAのインストールに必要な HTTPS 要件は公開方式（Phase 2「LAN/Tailscale公開」）で別途確認する。
   - Android/Chrome は HTTPS（または localhost）でないと Service Worker が登録されず、インストール（アプリとして追加）できない。`http://<LANのIP>:3800` では「ホーム画面に追加」がアドレスバー付きのショートカットになる。iOS/Safari は HTTP でも追加できる。Tailscale の HTTPS（`tailscale serve --bg 3800` → `https://<host>.<tailnet>.ts.net`）経由でアクセスする。
-  - `npm run dev` に LAN/Tailscale の別端末からアクセスする場合は、環境変数 `FRONTEND_ALLOWED_DEV_ORIGINS`（ホスト名をカンマ区切り。例: `192.168.10.101,host.tailnet.ts.net`）を指定する。未指定だと `/_next/*` が403になり、JSが動かずテーマ切替などが効かない。
+  - `npm run dev` に LAN/Tailscale の別端末からアクセスする場合は、環境変数 `FRONTEND_ALLOWED_DEV_ORIGINS`（ホスト名をカンマ区切り。例: `192.168.10.101,host.tailnet.ts.net`）を指定する（`scripts/start.sh` は bind 先のIPを既定にする）。未指定だと `/_next/*` が403になり、JSが動かずテーマ切替などが効かない。
 
 ### 2-6. 画面デザインの運用
 
