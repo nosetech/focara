@@ -53,6 +53,14 @@ export function formatAdded(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+/** ステータスの絞り込みが有効なのはプロジェクト画面だけ。他の画面はステータス単位で取得済み。 */
+export function effectiveFilters(
+  screen: string,
+  f: OrganizeFilters,
+): OrganizeFilters {
+  return screen === "projects" ? f : { ...f, status: "" };
+}
+
 /** 絞り込みと並び替え。並び替えは安定(同値は追加順のまま)。 */
 export function filterInbox<T extends InboxTask>(
   tasks: readonly T[],

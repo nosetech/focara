@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   DEFAULT_FILTERS,
+  effectiveFilters,
   filterInbox,
   formatEstimate,
   nextFocus,
@@ -56,4 +57,11 @@ test("振り分け本文と補助関数", () => {
   assert.equal(formatEstimate(null), "");
   assert.equal(nextFocus(5, 3), 2);
   assert.equal(nextFocus(1, 0), 0);
+});
+
+test("ステータス絞り込みはプロジェクト画面だけ有効", () => {
+  const f = { ...DEFAULT_FILTERS, status: "next", pri: "P1" };
+  for (const screen of ["inbox", "waiting", "someday", "habit"])
+    assert.deepEqual(effectiveFilters(screen, f), { ...f, status: "" });
+  assert.deepEqual(effectiveFilters("projects", f), f);
 });

@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { apiFetch } from "@/lib/api";
-import { DEFAULT_FILTERS } from "@/lib/inbox";
+import { DEFAULT_FILTERS, effectiveFilters } from "@/lib/inbox";
 import {
   ORGANIZE_GROUPS,
   ORGANIZE_SCREENS,
@@ -123,7 +123,9 @@ export function OrganizeShell({
   useEffect(() => setNavOpen(false), [pathname]);
 
   const step = screen === "week" ? 7 : 1;
-  const hasFilter = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
+  const activeFilters = effectiveFilters(screen, filters);
+  const hasFilter =
+    JSON.stringify(activeFilters) !== JSON.stringify(DEFAULT_FILTERS);
   const list = isListScreen(screen);
   const sub = screenSub(screen, counts, date);
 
@@ -272,10 +274,11 @@ export function OrganizeShell({
             )}
             {list && (
               <>
-                {select("status", "ステータス", [
-                  { v: "", l: "ステータス: すべて" },
-                  ...STATUS_OPTIONS,
-                ])}
+                {screen === "projects" &&
+                  select("status", "ステータス", [
+                    { v: "", l: "ステータス: すべて" },
+                    ...STATUS_OPTIONS,
+                  ])}
                 {screen !== "projects" &&
                   select("project", "プロジェクト", [
                     { v: "", l: "プロジェクト: すべて" },
@@ -303,7 +306,7 @@ export function OrganizeShell({
         <div className={styles.content}>
           <OrganizeContext.Provider
             value={{
-              filters,
+              filters: activeFilters,
               clearFilters: () => setFilters(DEFAULT_FILTERS),
               projects,
               refreshProjects,
