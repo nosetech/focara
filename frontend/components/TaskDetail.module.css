@@ -629,3 +629,23 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* panel: 整理画面の右ペインに埋め込む(固定配置・背景・スライドなし) */
+.root[data-variant="panel"] {
+  position: static;
+  height: 100%;
+}
+
+.root[data-variant="panel"] .sheet {
+  position: static;
+  width: auto;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border-left: 1px solid var(--line);
+  animation: none;
+}
+
+.root[data-variant="panel"] .footer {
+  padding-bottom: 16px;
+}

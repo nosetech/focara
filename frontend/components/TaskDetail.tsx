@@ -83,9 +83,12 @@ const CLOSE_ICON = (
 export function TaskDetail({
   taskId,
   onClose,
+  variant = "sheet",
 }: {
   taskId: number;
   onClose: () => void;
+  /** sheet: 画面下から出るシート(モバイル)/ panel: 整理画面の右ペインに埋め込む */
+  variant?: "sheet" | "panel";
 }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [title, setTitle] = useState("");
@@ -541,6 +544,7 @@ export function TaskDetail({
   };
 
   useEffect(() => {
+    if (variant === "panel") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
@@ -551,15 +555,17 @@ export function TaskDetail({
   const repeatMonthDays = MONTH_DAYS[(repeat?.month ?? 1) - 1];
 
   return (
-    <div className={styles.root}>
-      <div className={styles.backdrop} onClick={close} />
+    <div className={styles.root} data-variant={variant}>
+      {variant === "sheet" && (
+        <div className={styles.backdrop} onClick={close} />
+      )}
       <div
         className={styles.sheet}
         role="dialog"
-        aria-modal="true"
+        aria-modal={variant === "sheet"}
         aria-label="タスクの詳細"
       >
-        <div className={styles.grabber} />
+        {variant === "sheet" && <div className={styles.grabber} />}
         <div className={styles.top}>
           <div className={styles.save} data-state={save} role="status">
             <span className={styles.saveDot} />

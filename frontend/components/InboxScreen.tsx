@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { apiFetch } from "@/lib/api";
 import {
-  PRIORITIES,
   TRIAGE_STATUSES,
   filterInbox,
   formatAdded,
@@ -47,7 +46,6 @@ export function InboxScreen() {
   const [checked, setChecked] = useState<number[]>([]);
   const [waitFor, setWaitFor] = useState<number[] | null>(null);
   const [waitText, setWaitText] = useState("");
-  const [detailId, setDetailId] = useState<number | null>(null);
   const busy = useRef(false);
 
   const fetchTasks = useCallback(async (initial: boolean) => {
@@ -138,20 +136,6 @@ export function InboxScreen() {
     [rows, refreshCounts, showToast, fetchTasks],
   );
 
-  const patchTask = async (id: number, body: Record<string, unknown>) => {
-    const before = tasks.find((t) => t.id === id);
-    try {
-      const updated = await apiFetch<InboxTask>(`/tasks/${id}`, {
-        method: "PATCH",
-        body,
-      });
-      patchLocal(id, updated);
-    } catch {
-      if (before) patchLocal(id, before);
-      showToast({ msg: "保存できませんでした。もう一度お試しください" });
-    }
-  };
-
   const bulkPatch = async (ids: number[], body: Record<string, unknown>) => {
     const results = await Promise.allSettled(
       ids.map((id) =>
@@ -212,110 +196,19 @@ export function InboxScreen() {
     );
 
   const panel = current && (
-    <div className={styles.panelBody}>
-      <div className={styles.panelTitle}>{current.title}</div>
-      <section className={styles.field}>
-        <div className={styles.fieldLabel}>ステータス</div>
-        <div className={styles.segments}>
-          {TRIAGE_STATUSES.map((s) => (
-            <button
-              key={s.status}
-              className={styles.segment}
-              onClick={() => void assign([current.id], s.status)}
-            >
-              <kbd>{s.key}</kbd>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor="inbox-project">
-          プロジェクト
-        </label>
-        <select
-          id="inbox-project"
-          className={styles.select}
-          value={current.project_id ?? ""}
-          onChange={(e) =>
-            void patchTask(current.id, {
-              project_id: e.target.value ? Number(e.target.value) : null,
-            })
-          }
-        >
-          <option value="">なし</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </section>
-      <section className={styles.field}>
-        <div className={styles.fieldLabel}>優先度</div>
-        <div className={styles.segments}>
-          {[...PRIORITIES.map((p) => p), { value: null, label: "なし" }].map(
-            (p) => (
-              <button
-                key={p.label}
-                className={styles.segment}
-                aria-pressed={current.priority === p.value}
-                onClick={() =>
-                  void patchTask(current.id, { priority: p.value })
-                }
-              >
-                {p.label}
-              </button>
-            ),
-          )}
-        </div>
-      </section>
-      <section className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor="inbox-estimate">
-          見積もり時間(分)
-        </label>
-        <input
-          key={`${current.id}:${current.estimate_minutes ?? ""}`}
-          id="inbox-estimate"
-          className={styles.input}
-          type="number"
-          min={0}
-          inputMode="numeric"
-          defaultValue={current.estimate_minutes ?? ""}
-          onBlur={(e) => {
-            const v = e.target.value.trim();
-            const next = v === "" ? null : Math.max(0, Math.floor(Number(v)));
-            if (next !== current.estimate_minutes && !Number.isNaN(next))
-              void patchTask(current.id, { estimate_minutes: next });
-          }}
-          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        />
-      </section>
-      <section className={styles.field}>
-        <div className={styles.fieldLabel}>日時予定</div>
-        <button
-          className={styles.segment}
-          onClick={() => setDetailId(current.id)}
-        >
-          日時・メモを編集
-        </button>
-      </section>
-    </div>
+    <TaskDetail
+      key={current.id}
+      variant="panel"
+      taskId={current.id}
+      onClose={() => {
+        void fetchTasks(false);
+        void refreshCounts();
+      }}
+    />
   );
 
   return (
     <>
-      {detailId != null && (
-        <TaskDetail
-          key={detailId}
-          taskId={detailId}
-          onClose={() => {
-            setDetailId(null);
-            void fetchTasks(false);
-            void refreshCounts();
-          }}
-        />
-      )}
       {waitFor && (
         <form
           className={styles.wait}
