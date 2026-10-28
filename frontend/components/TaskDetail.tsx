@@ -97,6 +97,9 @@ export function TaskDetail({
   const [slot, setSlot] = useState<TimeSlot | null>(null);
   const [priority, setPriority] = useState<number | null>(null);
   const [estimate, setEstimate] = useState("");
+  const estimateSaved = useRef("");
+  const [ymDraft, setYmDraft] = useState<string | null>(null);
+  const [ydDraft, setYdDraft] = useState<string | null>(null);
   const [cond, setCond] = useState("");
   const [repeat, setRepeat] = useState<RepeatDraft | null>(null);
   const [calMonth, setCalMonth] = useState(1);
@@ -146,9 +149,9 @@ export function TaskDetail({
       setProjects(projs);
       setSlot(task.time_slot);
       setPriority(task.priority);
-      setEstimate(
-        task.estimate_minutes == null ? "" : String(task.estimate_minutes),
-      );
+      estimateSaved.current =
+        task.estimate_minutes == null ? "" : String(task.estimate_minutes);
+      setEstimate(estimateSaved.current);
       setCond(task.wait_condition ?? "");
       setRepeat(rep);
       setCalMonth(rep?.month ?? 1);
@@ -249,6 +252,7 @@ export function TaskDetail({
           body: { memo: memoDirty.current === "" ? null : memoDirty.current },
         }).catch(() => {});
       const t = titleDirty.current?.trim();
+      titleDirty.current = null;
       if (t)
         void apiFetch(`/tasks/${taskId}`, {
           method: "PATCH",
@@ -378,7 +382,12 @@ export function TaskDetail({
 
   const saveEstimate = () => {
     const n = estimate.trim() === "" ? null : Number(estimate);
-    if (n != null && !(Number.isInteger(n) && n >= 0)) return;
+    if (n != null && !(Number.isInteger(n) && n >= 0)) {
+      // 不正な入力は保存せず、保存済みの値に戻す
+      setEstimate(estimateSaved.current);
+      return;
+    }
+    estimateSaved.current = n == null ? "" : String(n);
     void patchTask("estimate", { estimate_minutes: n });
   };
 
@@ -465,6 +474,7 @@ export function TaskDetail({
   const flush = () => {
     flushMemo();
     flushTitle();
+    saveCond();
   };
 
   const close = () => {
@@ -479,11 +489,19 @@ export function TaskDetail({
     try {
       // 未送信の保存が終わってから実行する
       await Promise.all([...chains.current.values()]);
+      // 先の保存に失敗していたら、編集内容を残すため閉じない
+      if (failed.current.size > 0) {
+        setSave("error");
+        return;
+      }
       await fn();
       onClose();
     } catch {
       setSave("error");
-      failed.current.set("action", async () => {});
+      failed.current.set("action", async () => {
+        await fn();
+        onClose();
+      });
     } finally {
       setBusy(false);
     }
@@ -614,6 +632,12 @@ export function TaskDetail({
                 onChange={(e) => {
                   setTitle(e.target.value);
                   titleDirty.current = e.target.value;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
                 }}
                 onBlur={flushTitle}
               />
@@ -899,10 +923,16 @@ export function TaskDetail({
                               className={`${styles.input} ${styles.mono}`}
                               style={{ width: 64 }}
                               aria-label="月"
-                              value={repeat.month}
+                              value={ymDraft ?? repeat.month}
                               onChange={(e) => {
-                                const n = Math.round(Number(e.target.value));
-                                if (!(n >= 1 && n <= 12)) return;
+                                const v = e.target.value;
+                                const n = Math.round(Number(v));
+                                if (v === "" || !(n >= 1 && n <= 12)) {
+                                  setYmDraft(v);
+                                  return;
+                                }
+                                setYmDraft(null);
+                                setYdDraft(null);
                                 setCalMonth(n);
                                 saveRepeat({
                                   ...repeat,
@@ -920,10 +950,18 @@ export function TaskDetail({
                               className={`${styles.input} ${styles.mono}`}
                               style={{ width: 64, marginLeft: 6 }}
                               aria-label="日"
-                              value={repeat.day}
+                              value={ydDraft ?? repeat.day}
                               onChange={(e) => {
-                                const n = Math.round(Number(e.target.value));
-                                if (!(n >= 1 && n <= repeatMonthDays)) return;
+                                const v = e.target.value;
+                                const n = Math.round(Number(v));
+                                if (
+                                  v === "" ||
+                                  !(n >= 1 && n <= repeatMonthDays)
+                                ) {
+                                  setYdDraft(v);
+                                  return;
+                                }
+                                setYdDraft(null);
                                 saveRepeat({ ...repeat, day: n });
                               }}
                             />

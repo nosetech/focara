@@ -163,7 +163,7 @@ export function repeatFromTask(t: RepeatSource): RepeatDraft | null {
       type === "monthly"
         ? t.recurrence_month_day === -1
           ? null
-          : t.recurrence_month_day
+          : (t.recurrence_month_day ?? base.mday)
         : base.mday,
     month: t.recurrence_month ?? base.month,
     day: t.recurrence_day ?? base.day,
