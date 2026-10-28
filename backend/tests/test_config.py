@@ -20,9 +20,16 @@ def test_example_is_valid() -> None:
 
 def test_values_applied(tmp_path: Path) -> None:
     f = tmp_path / "c.yaml"
-    f.write_text("backend:\n  port: 8810\nfrontend:\n  port: 3810\n  host: 0.0.0.0\n")
+    f.write_text("backend:\n  port: 8810\nfrontend:\n  port: 3810\n")
     cfg = load_config(f)
-    assert (cfg.backend.port, cfg.frontend.port, cfg.frontend.host) == (8810, 3810, "0.0.0.0")
+    assert (cfg.backend.port, cfg.frontend.port) == (8810, 3810)
+
+
+def test_frontend_host_removed(tmp_path: Path) -> None:
+    f = tmp_path / "c.yaml"
+    f.write_text("frontend:\n  host: 0.0.0.0\n")
+    with pytest.raises(ConfigError, match="LAN_IP"):
+        load_config(f)
 
 
 def test_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -54,7 +61,6 @@ def test_missing_default_file_uses_defaults(
         {"backend": {"port": 70000}},
         {"backend": {"port": True}},
         {"backend": {"port": 3800}},  # frontend 既定と重複
-        {"frontend": {"host": ""}},
         {"db": {"path": 1}},
         {"db": "x"},
         {"unknown": 1},

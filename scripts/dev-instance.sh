@@ -142,7 +142,6 @@ backend:
 
 frontend:
   port: $fport # frontend
-  host: 127.0.0.1
 
 db:
   path: '$RUN_DIR/focara.db'
@@ -152,8 +151,8 @@ log:
 YAML
 
   # 運用 shell から継承した値を参照しないよう、必要なものだけ明示して渡す
-  launch backend "$ROOT/backend" env FOCARA_CONFIG="$CONFIG" uv run python -m focara.main
-  launch frontend "$ROOT/frontend" env -u FOCARA_CONFIG FRONTEND_HOST=127.0.0.1 \
+  launch backend "$ROOT/backend" env -u LAN_IP -u TAILSCALE_IP FOCARA_CONFIG="$CONFIG" uv run python -m focara.main
+  launch frontend "$ROOT/frontend" env -u FOCARA_CONFIG -u LAN_IP -u TAILSCALE_IP -u FRONTEND_ALLOWED_DEV_ORIGINS FRONTEND_HOST=127.0.0.1 \
     FRONTEND_PORT="$fport" BACKEND_URL="http://127.0.0.1:$bport" npm run dev
 
   local ok=1

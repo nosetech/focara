@@ -14,7 +14,7 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 
 ## コマンド
 
-- `scripts/start.sh` / `scripts/stop.sh`: backend と frontend をまとめて起動・停止(`frontend.host` を `FRONTEND_HOST` に渡す)
+- `scripts/start.sh` / `scripts/stop.sh`: backend と frontend をまとめて起動・停止(`LAN_IP` / `TAILSCALE_IP` のどちらか一方で frontend の bind 先を指定。未指定は `127.0.0.1`、両方指定はエラー。`0.0.0.0` は使わない)
 
 - `scripts/dev-instance.sh start|stop|status`: 動作確認用インスタンス(運用と分離。ポートは18000番台から自動採番、設定・DB・ログ・PID記録は `.dev-run/`)。画面・APIの動作確認はこれで行う。`pkill` / `killall` / ポート検索による kill はしない(運用や他worktreeのインスタンスを巻き込むため)。
 
@@ -28,7 +28,7 @@ backend(`backend/` で実行。uv + Python 3.11+):
 frontend(`frontend/` で実行。npm):
 
 - `npm install`: 依存関係のインストール
-- `npm run dev`: 開発サーバ(既定ポート 3800、`FRONTEND_PORT` で変更。`/api/*` は `BACKEND_URL`(既定 `http://127.0.0.1:8800`)へ中継。別端末からアクセスする場合は `FRONTEND_ALLOWED_DEV_ORIGINS` にホスト名をカンマ区切りで指定)
+- `npm run dev`: 開発サーバ(既定ポート 3800、`FRONTEND_PORT` で変更。`/api/*` は Route Handler が実行時に `BACKEND_URL`(既定 `http://127.0.0.1:8800`)へ中継。別端末からアクセスする場合は `FRONTEND_ALLOWED_DEV_ORIGINS` にホスト名をカンマ区切りで指定)
 - `npm run lint`: ESLint
 - `npm run format:check`: Prettier チェック(`npm run format` で整形)
 - `npm run typecheck`: 型チェック(tsc)
