@@ -76,3 +76,15 @@ export async function fetchDayEndHour(): Promise<number> {
     return DEFAULT_DAY_END_HOUR;
   }
 }
+
+/** 画面に表示するアプリのバージョン。取得できない・不明のときは null を返す。 */
+export async function fetchAppVersion(): Promise<string | null> {
+  try {
+    const cfg = await apiFetch<{ version?: unknown }>("/config");
+    return typeof cfg.version === "string" && cfg.version !== "unknown"
+      ? cfg.version
+      : null;
+  } catch {
+    return null;
+  }
+}

@@ -43,12 +43,27 @@
 
 .brand {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0 10px 14px;
+}
+
+.brandName {
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 14px;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+.brandVersion {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--ink2);
 }
 
 .navLink,
