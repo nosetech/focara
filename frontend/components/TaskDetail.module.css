@@ -105,7 +105,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0 20px calc(24px + env(safe-area-inset-bottom));
+  padding: 0 20px 20px;
 }
 
 .alert {
@@ -117,10 +117,18 @@
   line-height: 1.7;
 }
 
-.title {
+.titleInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
   font-size: 22px;
   line-height: 1.45;
   font-weight: 700;
+  padding: 0;
 }
 
 .labelRow {
@@ -199,8 +207,9 @@
 }
 
 .seg button {
-  width: 52px;
-  height: 30px;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
   border: none;
   border-radius: 7px;
   background: transparent;
@@ -250,6 +259,7 @@
 }
 
 .skeleton {
+  flex: 1;
   padding: 8px 20px 24px;
   display: flex;
   flex-direction: column;
@@ -303,8 +313,8 @@
     display: none;
   }
 
-  .body {
-    padding-bottom: 24px;
+  .footer {
+    padding-bottom: 16px;
   }
 }
 
@@ -315,24 +325,34 @@
   }
 }
 
-.fixed {
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 6px;
-  margin-top: 8px;
 }
 
-.fixedLabel {
-  width: 40px;
-  flex: none;
+.unit {
   font-size: 13px;
-  color: var(--ink3);
+  color: var(--ink2);
 }
 
-.clearFixed {
-  height: 36px;
-  padding: 0 8px;
-  border: none;
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
   background: transparent;
   color: var(--ink2);
   font-family: inherit;
@@ -340,14 +360,261 @@
   cursor: pointer;
 }
 
-.deleteRow {
+.chip[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
+
+.chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.list {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  min-height: 52px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tall {
+  min-height: 56px;
+}
+
+.itemBlock {
+  border-bottom: 1px solid var(--line);
+}
+
+.itemLabel {
+  width: 84px;
+  flex: none;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.solid,
+.ghost {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.solid {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.solid:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ghost {
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  padding: 0 8px;
+}
+
+.repeat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin-top: 24px;
-  padding-top: 12px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.fieldNote {
+  font-size: 12px;
+  color: var(--ink3);
+  line-height: 1.6;
+}
+
+.days {
+  display: flex;
+  gap: 4px;
+}
+
+.days button {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.days button[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cell {
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sunk);
+  color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cell[data-on] {
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.cellLast {
+  grid-column: span 4;
+  font-family: inherit;
+}
+
+.cal {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 8px 10px;
+  background: var(--bg);
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.calHead button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.calHead button:hover {
+  background: var(--sunk);
+}
+
+.summary {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.6;
+}
+
+.skelChips {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.skelLine {
+  height: 1px;
+  background: var(--line);
+  margin-top: 8px;
+}
+
+.footer {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  align-items: center;
   border-top: 1px solid var(--line);
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom));
+}
+
+.del {
+  height: 48px;
+  padding: 0 10px;
+  margin-right: auto;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.confirmText {
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--ink2);
+}
+
+.secondary,
+.primaryBtn {
+  height: 48px;
+  border-radius: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.secondary {
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.primaryBtn {
+  padding: 0 24px;
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.secondary:disabled,
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .danger {
