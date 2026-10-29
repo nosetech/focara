@@ -171,7 +171,6 @@ export function OrganizeShell({
       >
         <Brand
           className={styles.brand}
-          nameClassName={styles.brandName}
           versionClassName={styles.brandVersion}
         />
         <Link href="/" className={styles.navLink}>

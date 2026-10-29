@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 import { fetchAppVersion } from "@/lib/api";
 import { BrandLogo } from "./BrandLogo";
 
-/** サイドバー先頭のロゴ・アプリ名と、その下のバージョン表示。 */
+/** サイドバー先頭のロゴ・アプリ名と、その右のバージョン表示。 */
 export function Brand({
   className,
-  nameClassName,
   versionClassName,
 }: {
   className: string;
-  nameClassName: string;
   versionClassName: string;
 }) {
   const [version, setVersion] = useState<string | null>(null);
@@ -28,10 +26,8 @@ export function Brand({
 
   return (
     <div className={className}>
-      <span className={nameClassName}>
-        <BrandLogo />
-        Focara
-      </span>
+      <BrandLogo />
+      Focara
       {version && <span className={versionClassName}>v{version}</span>}
     </div>
   );

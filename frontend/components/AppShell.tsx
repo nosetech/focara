@@ -60,7 +60,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className={styles.sidebar} aria-label="メインナビゲーション">
         <Brand
           className={styles.brand}
-          nameClassName={styles.brandName}
           versionClassName={styles.brandVersion}
         />
         {NAV_ITEMS.map((item) => (

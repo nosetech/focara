@@ -125,7 +125,7 @@ Focara(フォカラ)の画面デザインを Claude Design で作成するため
 
 ## バージョン表示
 
-サイドバーのアプリ名の下にバージョン(例: `v0.1.0`)を補助テキストで表示する。詳細は [design-prompt-ui-diff-version.md](./design-prompt-ui-diff-version.md)。
+サイドバーのアプリ名の右にバージョン(例: `v0.1.0`)を補助テキストで表示する。詳細は [design-prompt-ui-diff-version.md](./design-prompt-ui-diff-version.md)。
 
 ## スコープ外(デザインしない)
 
