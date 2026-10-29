@@ -51,6 +51,17 @@
   letter-spacing: 0.04em;
 }
 
+.brandVersion {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+  color: var(--ink2);
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+
 .navLink,
 .navItem,
 .addButton {

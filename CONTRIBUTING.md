@@ -43,3 +43,9 @@ scripts/dev-instance.sh stop    # 起動したプロセスグループだけを�
 - `stop` は `.dev-run/` に記録したPID/PGID/目印と一致するプロセスグループだけを止めます。不一致の場合は何も止めずにエラー終了します。`pkill` / `killall` やポート検索による kill は、運用や他worktreeのインスタンスを巻き込むため行わないでください。
 - `NODE_ENV` は子プロセスに引き継ぎません(`NODE_ENV=production` の shell でも `next dev` が動作します)。
 - 現状 Focara には Slack通知・AI呼び出し・launchdジョブなどの外部副作用がありません。今後追加する際は、動作確認用インスタンスでは無効化してください。
+
+## バージョン
+
+- 画面に表示されるバージョンは `backend/pyproject.toml` の `version` が正です。リリース時はここを更新します(更新後に `uv sync` で反映)。
+- `frontend/package.json` の `version` は表示に使わないため、触りません。
+- 設定ファイルの `instance` は並行稼働の識別子で、バージョンとは別物です。
