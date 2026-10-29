@@ -14,6 +14,7 @@ import {
 import { formatEstimate } from "@/lib/inbox";
 import { toDateParam, type TimeSlot } from "@/lib/run";
 import { useOrganize } from "./OrganizeContext";
+import { TaskDetailHost } from "./TaskDetailHost";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
 import styles from "./AssignScreen.module.css";
@@ -31,6 +32,7 @@ export function AssignScreen() {
   const [over, setOver] = useState<{ col: Column; index?: number } | null>(
     null,
   );
+  const [selId, setSelId] = useState<number | null>(null);
   const busy = useRef(false);
 
   const fetchAll = useCallback(
@@ -130,99 +132,114 @@ export function AssignScreen() {
   };
 
   return (
-    <div className={styles.grid}>
-      {columns.map((c) => (
-        <div
-          key={c.key}
-          className={styles.col}
-          data-none={c.key === "none" ? "" : undefined}
-          data-dragging={dragId !== null ? "" : undefined}
-          data-over={over?.col === c.key ? "" : undefined}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setOver((o) => (o?.col === c.key ? o : { col: c.key }));
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node))
-              setOver(null);
-          }}
-          onDrop={drop(c.key)}
-        >
-          <div className={styles.head}>
-            <span className={styles.name}>{c.label}</span>
-            <span className={styles.count}>
-              {c.tasks.length}件 · 合計{" "}
-              <span className={styles.mono}>
-                {formatEstimate(
-                  totalEstimate(c.tasks.filter((t) => t.status !== "done")),
-                ) || "0分"}
-              </span>
-            </span>
-          </div>
-          {c.tasks.map((t, i) => (
-            <div
-              key={t.id}
-              className={styles.card}
-              draggable
-              data-drag={dragId === t.id ? "" : undefined}
-              data-drop={
-                over?.col === c.key && over.index === i && dragId !== t.id
-                  ? ""
-                  : undefined
-              }
-              style={
-                t.status === "done"
-                  ? { textDecoration: "line-through", opacity: 0.5 }
-                  : undefined
-              }
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", String(t.id));
-                setDragId(t.id);
-              }}
-              onDragEnd={() => {
-                setDragId(null);
+    <>
+      <div className={styles.grid}>
+        {columns.map((c) => (
+          <div
+            key={c.key}
+            className={styles.col}
+            data-none={c.key === "none" ? "" : undefined}
+            data-dragging={dragId !== null ? "" : undefined}
+            data-over={over?.col === c.key ? "" : undefined}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setOver((o) => (o?.col === c.key ? o : { col: c.key }));
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node))
                 setOver(null);
-              }}
-              onDragOver={(e) => {
-                if (c.key === "none") return;
-                e.preventDefault();
-                e.stopPropagation();
-                setOver({ col: c.key, index: i });
-              }}
-              onDrop={c.key === "none" ? undefined : drop(c.key, i)}
-            >
-              <div className={styles.title}>{t.title}</div>
-              <div className={styles.meta}>
-                <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
+            }}
+            onDrop={drop(c.key)}
+          >
+            <div className={styles.head}>
+              <span className={styles.name}>{c.label}</span>
+              <span className={styles.count}>
+                {c.tasks.length}件 · 合計{" "}
                 <span className={styles.mono}>
-                  {formatEstimate(t.estimate_minutes)}
+                  {formatEstimate(
+                    totalEstimate(c.tasks.filter((t) => t.status !== "done")),
+                  ) || "0分"}
                 </span>
-              </div>
-              {c.key === "none" && (
-                <div className={styles.slotBtns}>
-                  {COLUMNS.filter((x) => x.key !== "none").map((s) => (
-                    <button
-                      key={s.key}
-                      className={styles.slotBtn}
-                      onClick={() => void move(t, s.key)}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+              </span>
+            </div>
+            {c.tasks.map((t, i) => (
+              <div
+                key={t.id}
+                className={styles.card}
+                draggable
+                data-drag={dragId === t.id ? "" : undefined}
+                data-selected={selId === t.id ? "" : undefined}
+                onClick={() => setSelId(t.id)}
+                data-drop={
+                  over?.col === c.key && over.index === i && dragId !== t.id
+                    ? ""
+                    : undefined
+                }
+                style={
+                  t.status === "done"
+                    ? { textDecoration: "line-through", opacity: 0.5 }
+                    : undefined
+                }
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(t.id));
+                  setDragId(t.id);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOver(null);
+                }}
+                onDragOver={(e) => {
+                  if (c.key === "none") return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOver({ col: c.key, index: i });
+                }}
+                onDrop={c.key === "none" ? undefined : drop(c.key, i)}
+              >
+                <div className={styles.title}>{t.title}</div>
+                <div className={styles.meta}>
+                  <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
+                  <span className={styles.mono}>
+                    {formatEstimate(t.estimate_minutes)}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
-          {c.tasks.length === 0 && (
-            <div className={styles.empty}>
-              {c.key === "none"
-                ? "未割り当てのタスクはありません"
-                : "ここにドラッグして割り当て"}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
+                {c.key === "none" && (
+                  <div className={styles.slotBtns}>
+                    {COLUMNS.filter((x) => x.key !== "none").map((s) => (
+                      <button
+                        key={s.key}
+                        className={styles.slotBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void move(t, s.key);
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {c.tasks.length === 0 && (
+              <div className={styles.empty}>
+                {c.key === "none"
+                  ? "未割り当てのタスクはありません"
+                  : "ここにドラッグして割り当て"}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <TaskDetailHost
+        taskId={selId}
+        onClose={() => {
+          setSelId(null);
+          void fetchAll(false);
+          refreshCounts();
+        }}
+      />
+    </>
   );
 }

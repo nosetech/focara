@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { apiFetch } from "@/lib/api";
 import {
   TRIAGE_STATUSES,
@@ -20,7 +19,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
-import { TaskDetail } from "./TaskDetail";
+import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./InboxScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -35,7 +34,6 @@ export function InboxScreen() {
     filters,
     clearFilters,
     projects,
-    panelEl,
     refreshCounts,
     showToast,
     openQuickAdd,
@@ -46,6 +44,7 @@ export function InboxScreen() {
   const [checked, setChecked] = useState<number[]>([]);
   const [waitFor, setWaitFor] = useState<number[] | null>(null);
   const [waitText, setWaitText] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const busy = useRef(false);
 
   const fetchTasks = useCallback(async (initial: boolean) => {
@@ -195,18 +194,6 @@ export function InboxScreen() {
       <OrganizeError label="inbox" onRetry={() => void fetchTasks(true)} />
     );
 
-  const panel = current && (
-    <TaskDetail
-      key={current.id}
-      variant="panel"
-      taskId={current.id}
-      onClose={() => {
-        void fetchTasks(false);
-        void refreshCounts();
-      }}
-    />
-  );
-
   return (
     <>
       {waitFor && (
@@ -275,7 +262,10 @@ export function InboxScreen() {
                 key={t.id}
                 className={styles.row}
                 data-focused={focused ? "" : undefined}
-                onClick={() => setFocus(i)}
+                onClick={() => {
+                  setFocus(i);
+                  setSheetOpen(true);
+                }}
               >
                 <button
                   className={styles.check}
@@ -380,17 +370,16 @@ export function InboxScreen() {
         </div>
       )}
 
-      {panelEl &&
-        createPortal(
-          panel || (
-            <div className={styles.panelEmpty}>
-              行を選択すると
-              <br />
-              ここに詳細が表示されます
-            </div>
-          ),
-          panelEl,
-        )}
+      <TaskDetailHost
+        taskId={current?.id ?? null}
+        showEmpty
+        sheetOpen={sheetOpen}
+        onClose={() => {
+          setSheetOpen(false);
+          void fetchTasks(false);
+          void refreshCounts();
+        }}
+      />
     </>
   );
 }

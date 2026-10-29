@@ -374,6 +374,11 @@
     height: 100%;
   }
 
+  /* 一覧以外の画面は、タスクを選択したときだけ右ペインを出す */
+  .panel:empty {
+    display: none;
+  }
+
   .panelEmpty {
     height: 100%;
     border-left: 1px solid var(--line);
