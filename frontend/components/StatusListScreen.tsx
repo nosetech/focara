@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { apiFetch } from "@/lib/api";
 import { filterInbox, formatEstimate, priorityLabel } from "@/lib/inbox";
 import {
@@ -19,7 +18,7 @@ import {
   OrganizeError,
   OrganizeLoading,
 } from "./OrganizeStates";
-import { TaskDetail } from "./TaskDetail";
+import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./InboxScreen.module.css";
 import extra from "./StatusListScreen.module.css";
 
@@ -28,7 +27,7 @@ type Log = { task_title: string; action: string; created_at: string };
 
 /** 整理画面の条件待ち・いつか・習慣。一覧と、待ち条件・繰り返しルールの編集、次にやるへの復帰。 */
 export function StatusListScreen({ status }: { status: ListStatus }) {
-  const { filters, clearFilters, projects, panelEl, refreshCounts, showToast } =
+  const { filters, clearFilters, projects, refreshCounts, showToast } =
     useOrganize();
   const copy = LIST_COPY[status];
   const [tasks, setTasks] = useState<ListTask[]>([]);
@@ -126,18 +125,6 @@ export function StatusListScreen({ status }: { status: ListStatus }) {
     return (
       <OrganizeError label={copy.label} onRetry={() => void fetchAll(true)} />
     );
-
-  const panel = current && (
-    <TaskDetail
-      key={current.id}
-      variant="panel"
-      taskId={current.id}
-      onClose={() => {
-        void fetchAll(false);
-        refreshCounts();
-      }}
-    />
-  );
 
   return (
     <>
@@ -240,17 +227,15 @@ export function StatusListScreen({ status }: { status: ListStatus }) {
         </ul>
       )}
 
-      {panelEl &&
-        createPortal(
-          panel || (
-            <div className={styles.panelEmpty}>
-              行を選択すると
-              <br />
-              ここに詳細が表示されます
-            </div>
-          ),
-          panelEl,
-        )}
+      <TaskDetailHost
+        taskId={current?.id ?? null}
+        showEmpty
+        onClose={() => {
+          setSelId(null);
+          void fetchAll(false);
+          refreshCounts();
+        }}
+      />
     </>
   );
 }

@@ -133,3 +133,7 @@
     display: none;
   }
 }
+
+.card[data-selected] {
+  border-color: var(--ink3);
+}

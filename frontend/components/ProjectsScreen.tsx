@@ -23,7 +23,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
-import { TaskDetail } from "./TaskDetail";
+import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./ProjectsScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -274,17 +274,15 @@ export function ProjectsScreen() {
 
   return (
     <>
-      {detailId != null && (
-        <TaskDetail
-          key={detailId}
-          taskId={detailId}
-          onClose={() => {
-            setDetailId(null);
-            void fetchAll(false);
-            refreshCounts();
-          }}
-        />
-      )}
+      <TaskDetailHost
+        taskId={detailId}
+        showEmpty
+        onClose={() => {
+          setDetailId(null);
+          void fetchAll(false);
+          refreshCounts();
+        }}
+      />
       {confirmDelete && selected && (
         <div
           className={styles.backdrop}

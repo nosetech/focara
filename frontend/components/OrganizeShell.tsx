@@ -334,17 +334,11 @@ export function OrganizeShell({
         )}
       </main>
 
-      {list && (
-        <aside className={styles.panel} ref={setPanelEl}>
-          {screen !== "inbox" && (
-            <div className={styles.panelEmpty}>
-              行を選択すると
-              <br />
-              ここに詳細が表示されます
-            </div>
-          )}
-        </aside>
-      )}
+      <aside
+        className={styles.panel}
+
+        ref={setPanelEl}
+      />
 
       <Toast toast={toast} />
 

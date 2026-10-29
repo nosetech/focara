@@ -16,6 +16,7 @@ import { formatEstimate } from "@/lib/inbox";
 import { formatDay } from "@/lib/organize";
 import { SLOTS, toDateParam, type TimeSlot } from "@/lib/run";
 import { useOrganize } from "./OrganizeContext";
+import { TaskDetailHost } from "./TaskDetailHost";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
 import styles from "./CalendarScreen.module.css";
@@ -37,6 +38,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
   const [load, setLoad] = useState<Load>("loading");
   const [dragId, setDragId] = useState<number | null>(null);
   const [over, setOver] = useState<Target | null>(null);
+  const [selId, setSelId] = useState<number | null>(null);
   const busy = useRef(false);
 
   const fetchAll = useCallback(
@@ -123,6 +125,14 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
     },
   });
 
+  const selectProps = (t: CalendarTask) => ({
+    "data-selected": selId === t.id ? "" : undefined,
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelId(t.id);
+    },
+  });
+
   const dragProps = (t: CalendarTask) =>
     isMovable(t)
       ? {
@@ -150,60 +160,75 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
   if (mode === "day") {
     const day = days[0];
     return (
-      <div className={styles.day}>
-        {SLOTS.map((s) => {
-          const items = cellTasks(tasks, day, s.key);
-          return (
-            <div key={s.key} className={styles.slot}>
-              <div className={styles.slotLabel}>
-                <span className={styles.slotName}>{s.label}</span>
-                <span className={styles.slotCount}>
-                  {items.length}件 ·{" "}
-                  <span className={styles.mono}>{estimateOf(items)}</span>
-                </span>
-              </div>
-              <div
-                className={styles.items}
-                data-over={sameTarget(over, day, s.key) ? "" : undefined}
-                {...dropProps(day, s.key)}
-              >
-                {items.map((t) => (
-                  <div key={t.id} className={styles.item} {...dragProps(t)}>
-                    {t.fixed_at ? (
-                      <span
-                        className={`${styles.time} ${styles.mono} ${overlaps.has(t.id) ? styles.overlap : ""}`}
-                      >
-                        {formatRange(t.fixed_at, t.fixed_end_at)}
-                      </span>
-                    ) : (
-                      <span className={styles.mark}>タスク</span>
-                    )}
-                    <span
-                      className={styles.itemTitle}
-                      data-done={t.status === "done" ? "" : undefined}
+      <>
+        <div className={styles.day}>
+          {SLOTS.map((s) => {
+            const items = cellTasks(tasks, day, s.key);
+            return (
+              <div key={s.key} className={styles.slot}>
+                <div className={styles.slotLabel}>
+                  <span className={styles.slotName}>{s.label}</span>
+                  <span className={styles.slotCount}>
+                    {items.length}件 ·{" "}
+                    <span className={styles.mono}>{estimateOf(items)}</span>
+                  </span>
+                </div>
+                <div
+                  className={styles.items}
+                  data-over={sameTarget(over, day, s.key) ? "" : undefined}
+                  {...dropProps(day, s.key)}
+                >
+                  {items.map((t) => (
+                    <div
+                      key={t.id}
+                      className={styles.item}
+                      {...selectProps(t)}
+                      {...dragProps(t)}
                     >
-                      {t.title}
-                    </span>
-                    <span className={styles.meta}>
-                      {[
-                        projectName(t.project_id),
-                        formatEstimate(t.estimate_minutes),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </div>
-                ))}
-                {items.length === 0 && (
-                  <div className={styles.emptyRow}>
-                    この枠のタスクはありません
-                  </div>
-                )}
+                      {t.fixed_at ? (
+                        <span
+                          className={`${styles.time} ${styles.mono} ${overlaps.has(t.id) ? styles.overlap : ""}`}
+                        >
+                          {formatRange(t.fixed_at, t.fixed_end_at)}
+                        </span>
+                      ) : (
+                        <span className={styles.mark}>タスク</span>
+                      )}
+                      <span
+                        className={styles.itemTitle}
+                        data-done={t.status === "done" ? "" : undefined}
+                      >
+                        {t.title}
+                      </span>
+                      <span className={styles.meta}>
+                        {[
+                          projectName(t.project_id),
+                          formatEstimate(t.estimate_minutes),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </div>
+                  ))}
+                  {items.length === 0 && (
+                    <div className={styles.emptyRow}>
+                      この枠のタスクはありません
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+        <TaskDetailHost
+          taskId={selId}
+          onClose={() => {
+            setSelId(null);
+            void fetchAll(false);
+            refreshCounts();
+          }}
+        />
+      </>
     );
   }
 
@@ -252,6 +277,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
             key={t.id}
             className={styles.event}
             data-overlap={overlaps.has(t.id) ? "" : undefined}
+            {...selectProps(t)}
           >
             <span className={styles.mono}>
               {formatRange(t.fixed_at as string, t.fixed_end_at)}
@@ -264,6 +290,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
             key={t.id}
             className={styles.chip}
             data-done={t.status === "done" ? "" : undefined}
+            {...selectProps(t)}
             {...dragProps(t)}
           >
             {t.title}
@@ -307,6 +334,14 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
         ))}
         {days.map((d) => [head(d), ...SLOTS.map((s) => cell(d, s))])}
       </div>
+      <TaskDetailHost
+        taskId={selId}
+        onClose={() => {
+          setSelId(null);
+          void fetchAll(false);
+          refreshCounts();
+        }}
+      />
     </>
   );
 }
