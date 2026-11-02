@@ -23,6 +23,7 @@ import styles from "./CalendarScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
 type Target = { day: string; slot: TimeSlot };
+const NO_SLOT = { key: null, label: "時間未設定" } as const;
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 const sameTarget = (a: Target | null, day: string, slot: TimeSlot) =>
@@ -162,10 +163,11 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
     return (
       <>
         <div className={styles.day}>
-          {SLOTS.map((s) => {
+          {[...SLOTS, NO_SLOT].map((s) => {
             const items = cellTasks(tasks, day, s.key);
+            if (s.key === null && items.length === 0) return null;
             return (
-              <div key={s.key} className={styles.slot}>
+              <div key={s.key ?? "none"} className={styles.slot}>
                 <div className={styles.slotLabel}>
                   <span className={styles.slotName}>{s.label}</span>
                   <span className={styles.slotCount}>
@@ -175,8 +177,10 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
                 </div>
                 <div
                   className={styles.items}
-                  data-over={sameTarget(over, day, s.key) ? "" : undefined}
-                  {...dropProps(day, s.key)}
+                  data-over={
+                    s.key && sameTarget(over, day, s.key) ? "" : undefined
+                  }
+                  {...(s.key ? dropProps(day, s.key) : {})}
                 >
                   {items.map((t) => (
                     <div
@@ -232,6 +236,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
     );
   }
 
+  const hasNoSlot = days.some((d) => cellTasks(tasks, d, null).length > 0);
   const today = toDateParam(new Date());
   const goDay = (d: string) => {
     setDate(new Date(`${d}T00:00`));
@@ -257,20 +262,20 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
     );
   };
 
-  const cell = (d: string, s: { key: TimeSlot; label: string }) => {
+  const cell = (d: string, s: { key: TimeSlot | null; label: string }) => {
     const items = cellTasks(tasks, d, s.key);
     const events = items.filter((t) => t.fixed_at);
     const plain = items.filter((t) => !t.fixed_at);
     return (
       <div
-        key={`${d}-${s.key}`}
+        key={`${d}-${s.key ?? "none"}`}
         className={styles.cell}
-        data-over={sameTarget(over, d, s.key) ? "" : undefined}
+        data-over={s.key && sameTarget(over, d, s.key) ? "" : undefined}
         title={`${formatDay(new Date(`${d}T00:00`))} ${s.label}`}
         onClick={() => {
           if (window.matchMedia("(max-width: 899px)").matches) goDay(d);
         }}
-        {...dropProps(d, s.key)}
+        {...(s.key ? dropProps(d, s.key) : {})}
       >
         {events.map((t) => (
           <div
@@ -318,21 +323,27 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
       <div className={`${styles.week} ${styles.desktopOnly}`}>
         <div />
         {days.map(head)}
-        {SLOTS.map((s) => [
-          <div key={s.key} className={styles.slotHead}>
+        {[...SLOTS, ...(hasNoSlot ? [NO_SLOT] : [])].map((s) => [
+          <div key={s.key ?? "none"} className={styles.slotHead}>
             {s.label}
           </div>,
           ...days.map((d) => cell(d, s)),
         ])}
       </div>
-      <div className={`${styles.weekMobile} ${styles.mobileOnly}`}>
+      <div
+        className={`${styles.weekMobile} ${styles.mobileOnly}`}
+        style={{ "--slot-cols": hasNoSlot ? 4 : 3 } as React.CSSProperties}
+      >
         <div />
-        {SLOTS.map((s) => (
-          <div key={s.key} className={styles.slotHead}>
+        {[...SLOTS, ...(hasNoSlot ? [NO_SLOT] : [])].map((s) => (
+          <div key={s.key ?? "none"} className={styles.slotHead}>
             {s.label}
           </div>
         ))}
-        {days.map((d) => [head(d), ...SLOTS.map((s) => cell(d, s))])}
+        {days.map((d) => [
+          head(d),
+          ...[...SLOTS, ...(hasNoSlot ? [NO_SLOT] : [])].map((s) => cell(d, s)),
+        ])}
       </div>
       <TaskDetailHost
         taskId={selId}

@@ -8,6 +8,7 @@ import {
   isCandidate,
   slotTasks,
   totalEstimate,
+  unslotted,
   type AssignTask,
   type Column,
 } from "@/lib/assign";
@@ -117,10 +118,13 @@ export function AssignScreen() {
 
   const all = [...candidates, ...scheduled];
   const dragged = all.find((t) => t.id === dragId);
+  const noSlot = unslotted(scheduled);
   const columns = COLUMNS.map((c) => ({
     ...c,
     tasks:
-      c.key === "none" ? candidates : slotTasks(scheduled, c.key as TimeSlot),
+      c.key === "none"
+        ? [...candidates, ...noSlot]
+        : slotTasks(scheduled, c.key as TimeSlot),
   }));
 
   const drop = (col: Column, index?: number) => (e: React.DragEvent) => {
@@ -197,6 +201,9 @@ export function AssignScreen() {
                 }}
                 onDrop={c.key === "none" ? undefined : drop(c.key, i)}
               >
+                {c.key === "none" && t.scheduled_date && (
+                  <div className={styles.meta}>この日・時間帯未設定</div>
+                )}
                 <div className={styles.title}>{t.title}</div>
                 <div className={styles.meta}>
                   <span>{projectName(t.project_id) || "プロジェクトなし"}</span>

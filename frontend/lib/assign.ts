@@ -52,3 +52,13 @@ export function insertAt(
   const i = index === undefined ? rest.length : Math.min(index, rest.length);
   return [...rest.slice(0, i), id, ...rest.slice(i)];
 }
+
+/** 選択日の日付あり・時間帯未設定のタスク(実行順。run_order 未設定は末尾) */
+export function unslotted(scheduled: readonly AssignTask[]): AssignTask[] {
+  return scheduled
+    .filter((t) => !!t.scheduled_date && t.time_slot === null)
+    .sort(
+      (a, b) =>
+        (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id,
+    );
+}
