@@ -183,3 +183,21 @@ def test_wait_fields_only_for_waiting(client):
     )
     res = client.patch(f"/api/tasks/{tid}", json={"status": "waiting", "wait_condition": "a"})
     assert res.status_code == 200
+
+
+def test_patch_status_waiting_with_condition_persists(client):
+    tid = _make(client)
+    res = client.patch(
+        f"/api/tasks/{tid}", json={"status": "waiting", "wait_condition": "返信待ち"}
+    )
+    assert res.status_code == 200
+    got = client.get(f"/api/tasks/{tid}").json()
+    assert got["status"] == "waiting"
+    assert got["wait_condition"] == "返信待ち"
+
+
+def test_patch_status_waiting_without_condition_is_422(client):
+    tid = _make(client)
+    res = client.patch(f"/api/tasks/{tid}", json={"status": "waiting"})
+    assert res.status_code == 422
+    assert client.get(f"/api/tasks/{tid}").json()["status"] == "inbox"

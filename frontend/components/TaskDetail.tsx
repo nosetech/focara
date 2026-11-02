@@ -16,6 +16,7 @@ import {
   propertyBody,
   repeatBody,
   repeatFromTask,
+  waitingBody,
   repeatSummary,
   toDraft,
   type RepeatDraft,
@@ -130,6 +131,13 @@ export function TaskDetail({
   const memoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const memoDirty = useRef<string | null>(null);
   const titleDirty = useRef<string | null>(null);
+  const condTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // サーバーに保存済みのステータス・条件(保存失敗時に画面を戻す先)
+  const savedStatus = useRef("inbox");
+  const savedCond = useRef("");
+  // 画面上の最新値(タイマー・アンマウント時に古いクロージャを見ないため)
+  const liveStatus = useRef("inbox");
+  const liveCond = useRef("");
 
   const fetchAll = useCallback(async () => {
     setLoad({ state: "loading" });
@@ -147,6 +155,10 @@ export function TaskDetail({
       const rep = repeatFromTask(task);
       setTitle(task.title);
       setStatus(task.status);
+      savedStatus.current = task.status;
+      savedCond.current = task.wait_condition ?? "";
+      liveStatus.current = task.status;
+      liveCond.current = task.wait_condition ?? "";
       setDone(task.status === "done");
       setProjectId(task.project_id);
       setProjects(projs);
@@ -249,6 +261,17 @@ export function TaskDetail({
   useEffect(() => {
     return () => {
       clearTimeout(memoTimer.current);
+      clearTimeout(condTimer.current);
+      const wc = liveCond.current.trim();
+      if (
+        liveStatus.current === "waiting" &&
+        wc &&
+        !(savedStatus.current === "waiting" && savedCond.current === wc)
+      )
+        void apiFetch(`/tasks/${taskId}`, {
+          method: "PATCH",
+          body: { status: "waiting", wait_condition: wc },
+        }).catch(() => {});
       if (memoDirty.current !== null)
         void apiFetch(`/tasks/${taskId}/memo`, {
           method: "PUT",
@@ -422,24 +445,57 @@ export function TaskDetail({
     });
   };
 
-  /** ステータスを変える。条件待ちは待つ条件が入るまで保存しない。 */
+  /** ステータス(と条件)を保存する。失敗したら画面をサーバーの状態へ戻す。 */
+  const saveStatus = useCallback(
+    (body: Record<string, unknown>, next: { status: string; cond: string }) =>
+      run("status", async () => {
+        try {
+          await apiFetch(`/tasks/${taskId}`, { method: "PATCH", body });
+          savedStatus.current = next.status;
+          savedCond.current = next.cond;
+        } catch (e) {
+          liveStatus.current = savedStatus.current;
+          liveCond.current = savedCond.current;
+          setStatus(savedStatus.current);
+          setCond(savedCond.current);
+          throw e;
+        }
+      }),
+    [run, taskId],
+  );
+
+  /** 条件待ちの条件が入力済みで未保存なら保存する。 */
+  const flushCond = useCallback(() => {
+    clearTimeout(condTimer.current);
+    if (liveStatus.current !== "waiting") return;
+    const body = waitingBody(liveCond.current);
+    if (
+      !body ||
+      (savedStatus.current === "waiting" &&
+        savedCond.current === body.wait_condition)
+    )
+      return;
+    void saveStatus(body, { status: "waiting", cond: body.wait_condition });
+  }, [saveStatus]);
+
+  /** ステータスを変える。条件待ちは待つ条件が入るまで保存しない(入力欄で案内する)。 */
   const pickStatus = (key: string) => {
     if (key === status || done) return;
     setStatus(key);
+    liveStatus.current = key;
     if (key === "waiting") {
-      if (cond.trim())
-        void patchTask("status", { status: key, wait_condition: cond.trim() });
+      flushCond();
       return;
     }
-    void patchTask("status", { status: key });
+    clearTimeout(condTimer.current);
+    void saveStatus({ status: key }, { status: key, cond: "" });
   };
 
-  const saveCond = () => {
-    if (status !== "waiting" || !cond.trim()) return;
-    void patchTask("status", {
-      status: "waiting",
-      wait_condition: cond.trim(),
-    });
+  const onCond = (value: string) => {
+    setCond(value);
+    liveCond.current = value;
+    clearTimeout(condTimer.current);
+    condTimer.current = setTimeout(flushCond, MEMO_DEBOUNCE_MS);
   };
 
   /** 繰り返しを保存する。null なら解除する。 */
@@ -477,7 +533,7 @@ export function TaskDetail({
   const flush = () => {
     flushMemo();
     flushTitle();
-    saveCond();
+    flushCond();
   };
 
   const close = () => {
@@ -1120,9 +1176,14 @@ export function TaskDetail({
                       value={cond}
                       placeholder="例: 田中さんから返信が来たら"
                       aria-label="待つ条件"
-                      onChange={(e) => setCond(e.target.value)}
-                      onBlur={saveCond}
+                      onChange={(e) => onCond(e.target.value)}
+                      onBlur={flushCond}
                     />
+                    {cond.trim() === "" && (
+                      <span className={styles.hint} role="note">
+                        条件を入力すると保存されます
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

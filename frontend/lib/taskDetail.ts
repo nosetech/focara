@@ -221,3 +221,17 @@ export function repeatSummary(r: RepeatDraft): string {
   else s += " · 終了日なし";
   return s;
 }
+
+/** 条件待ちとして保存できる条件か(空・空白のみは保存できない)。 */
+export function canSaveWaiting(cond: string): boolean {
+  return cond.trim() !== "";
+}
+
+/** 条件待ちへ変更する PATCH ボディ。条件が空なら null(保存しない)。 */
+export function waitingBody(
+  cond: string,
+): { status: "waiting"; wait_condition: string } | null {
+  return canSaveWaiting(cond)
+    ? { status: "waiting", wait_condition: cond.trim() }
+    : null;
+}
