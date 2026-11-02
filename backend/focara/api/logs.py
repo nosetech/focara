@@ -12,8 +12,9 @@ from focara.api.tasks import (
     TimeSlot,
     _commit,
     _get_or_404,
-    _spawn_if_done,
     _transition,
+    add_log,
+    log_if_done,
 )
 from focara.db.models import TaskLog
 
@@ -43,7 +44,8 @@ class TaskLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    task_id: int
+    task_id: int | None
+    habit_id: int | None
     task_title: str
     action: LogAction
     note: str | None
@@ -54,7 +56,8 @@ def _to_out(log: TaskLog) -> TaskLogOut:
     return TaskLogOut(
         id=log.id,
         task_id=log.task_id,
-        task_title=log.task.title,
+        habit_id=log.habit_id,
+        task_title=log.task_title,
         action=log.action,
         note=log.note,
         created_at=log.created_at,
@@ -63,10 +66,10 @@ def _to_out(log: TaskLog) -> TaskLogOut:
 
 @router.post("/tasks/{task_id}/complete", response_model=TaskOut)
 def complete_task(task_id: int, session: SessionDep, body: CompleteBody | None = None) -> Task:
-    """完了にして記録を残す。繰り返しタスクは次の回を生成する。"""
+    """完了にして記録を残す。"""
     task = _get_or_404(session, task_id)
     _transition(session, task, "done")
-    _spawn_if_done(session, task, body.note if body else None)
+    log_if_done(session, task, body.note if body else None)
     _commit(session)
     return task
 
@@ -99,7 +102,7 @@ def postpone_task(task_id: int, body: PostponeBody, session: SessionDep) -> Task
     task.run_order = 0 if last is None else last + 1
     # 日時固定の予定は移動後は意味を持たないため外す
     task.fixed_at = task.fixed_end_at = None
-    session.add(TaskLog(task=task, action="postponed", note=body.note))
+    add_log(session, task, "postponed", body.note)
     _commit(session)
     return task
 
@@ -114,6 +117,7 @@ def list_logs(
     from_date: date | None = None,
     to_date: date | None = None,
     action: LogAction | None = None,
+    habit_id: int | None = None,
 ) -> list[TaskLogOut]:
     """日付範囲(ローカル日付、両端含む)の完了・後回しの記録を新しい順に返す。"""
     if from_date and to_date and from_date > to_date:
@@ -125,4 +129,6 @@ def list_logs(
         stmt = stmt.where(TaskLog.created_at < _local_start(to_date + timedelta(days=1)))
     if action is not None:
         stmt = stmt.where(TaskLog.action == action)
+    if habit_id is not None:
+        stmt = stmt.where(TaskLog.habit_id == habit_id)
     return [_to_out(log) for log in session.scalars(stmt)]

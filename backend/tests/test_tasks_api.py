@@ -66,7 +66,7 @@ def test_list_filters(client):
         {"title": "a", "time_slot": "night"},
         {"title": "a", "fixed_at": "2026-10-20T10:00:00"},
         {"title": "a", "project_id": 999},
-        {"title": "a", "recurrence_type": "weekly"},
+        {"title": "a", "status": "habit"},
     ],
 )
 def test_create_validation(client, body):
@@ -77,22 +77,8 @@ def test_update_validation(client):
     tid = client.post("/api/tasks", json={"title": "a"}).json()["id"]
     assert client.patch(f"/api/tasks/{tid}", json={"status": "bogus"}).status_code == 422
     assert client.patch(f"/api/tasks/{tid}", json={"title": None}).status_code == 422
-    assert client.patch(f"/api/tasks/{tid}", json={"recurrence_end_type": None}).status_code == 422
     assert client.patch("/api/tasks/999", json={"title": "x"}).status_code == 404
     assert client.get(f"/api/tasks/{tid}").json()["title"] == "a"
-
-
-def test_recurrence(client):
-    res = client.post(
-        "/api/tasks",
-        json={
-            "title": "r",
-            "status": "habit",
-            "recurrence_type": "weekly",
-            "recurrence_weekdays": 2,
-        },
-    )
-    assert res.status_code == 201
 
 
 def test_openapi(client):
@@ -104,7 +90,7 @@ def _make(client, **kw):
     return client.post("/api/tasks", json={"title": "t", **kw}).json()["id"]
 
 
-@pytest.mark.parametrize("target", ["next", "someday", "habit", "done"])
+@pytest.mark.parametrize("target", ["next", "someday", "done"])
 def test_transition_from_inbox(client, target):
     tid = _make(client)
     res = client.post(f"/api/tasks/{tid}/transition", json={"status": target})
@@ -145,7 +131,7 @@ def test_invalid_transitions_rejected(client):
     assert (
         client.post(f"/api/tasks/{tid}/transition", json={"status": "someday"}).status_code == 409
     )
-    assert client.patch(f"/api/tasks/{tid}", json={"status": "habit"}).status_code == 409
+    assert client.patch(f"/api/tasks/{tid}", json={"status": "habit"}).status_code == 422
     assert client.post(f"/api/tasks/{tid}/transition", json={"status": "next"}).status_code == 200
     assert (
         client.post(

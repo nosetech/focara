@@ -40,6 +40,12 @@ class UiConfig:
 
 
 @dataclass(frozen=True)
+class HabitConfig:
+    # 習慣の子タスクを、今日から何日先まで先行生成するか。
+    generate_ahead_days: int = 14
+
+
+@dataclass(frozen=True)
 class Config:
     instance: str = "default"
     backend: BackendConfig = field(default_factory=BackendConfig)
@@ -47,6 +53,7 @@ class Config:
     db: DbConfig = field(default_factory=DbConfig)
     log: LogConfig = field(default_factory=LogConfig)
     ui: UiConfig = field(default_factory=UiConfig)
+    habit: HabitConfig = field(default_factory=HabitConfig)
 
 
 _FRONTEND_HOST_REMOVED = (
@@ -87,6 +94,12 @@ def _hour(value: Any, name: str) -> int:
     return value
 
 
+def _ahead_days(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 365:
+        raise ConfigError(f"{name} は 1〜365 の整数で指定してください: {value!r}")
+    return value
+
+
 def _string(value: Any, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{name} は空でない文字列で指定してください: {value!r}")
@@ -99,7 +112,7 @@ def parse_config(raw: Any) -> Config:
         raw = {}
     if not isinstance(raw, dict):
         raise ConfigError("設定ファイルのトップレベルはマッピングで指定してください")
-    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log", "ui"}
+    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log", "ui", "habit"}
     if unknown:
         raise ConfigError(f"未知の項目があります: {', '.join(sorted(map(str, unknown)))}")
 
@@ -109,6 +122,7 @@ def parse_config(raw: Any) -> Config:
     db = _section(raw, "db", {"path"})
     log = _section(raw, "log", {"dir"})
     ui = _section(raw, "ui", {"day_end_hour"})
+    habit = _section(raw, "habit", {"generate_ahead_days"})
 
     cfg = Config(
         instance=_string(raw.get("instance", d.instance), "instance"),
@@ -120,6 +134,12 @@ def parse_config(raw: Any) -> Config:
         log=LogConfig(dir=_string(log.get("dir", d.log.dir), "log.dir")),
         ui=UiConfig(
             day_end_hour=_hour(ui.get("day_end_hour", d.ui.day_end_hour), "ui.day_end_hour")
+        ),
+        habit=HabitConfig(
+            generate_ahead_days=_ahead_days(
+                habit.get("generate_ahead_days", d.habit.generate_ahead_days),
+                "habit.generate_ahead_days",
+            )
         ),
     )
     if cfg.backend.port == cfg.frontend.port:

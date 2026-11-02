@@ -17,7 +17,7 @@ class MissingWaitCondition(InvalidTransition):
 
 
 # done は完了済み。やり直す場合は next にだけ戻せる。それ以外は相互に遷移できる。
-_ACTIVE = {"inbox", "next", "someday", "waiting", "habit"}
+_ACTIVE = {"inbox", "next", "someday", "waiting"}
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     **{s: (_ACTIVE - {s}) | {"done"} for s in _ACTIVE},
     "done": {"next"},

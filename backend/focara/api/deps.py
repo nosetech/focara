@@ -26,3 +26,5 @@ def get_session(engine: Annotated[Engine, Depends(get_engine)]) -> Iterator[Sess
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
+ConfigDep = Annotated[Config, Depends(get_config)]

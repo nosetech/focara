@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -10,11 +11,12 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
 )
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from focara.db.base import Base
 
-TASK_STATUSES = ("inbox", "next", "someday", "waiting", "habit", "done")
+TASK_STATUSES = ("inbox", "next", "someday", "waiting", "done")
 TIME_SLOTS = ("morning", "afternoon", "evening")
 TASK_LOG_ACTIONS = ("completed", "postponed")
 RECURRENCE_TYPES = ("weekly", "monthly", "yearly")
@@ -61,16 +63,17 @@ class Project(Base):
     tasks: Mapped[list["Task"]] = relationship(back_populates="project")
 
 
-class Task(Base):
-    __tablename__ = "tasks"
+class Habit(Base):
+    """習慣(親)。繰り返しルールと子タスクの既定値を持ち、子は定期処理で先行生成する。"""
+
+    __tablename__ = "habits"
     __table_args__ = (
-        CheckConstraint(_in("status", TASK_STATUSES), name="status"),
         CheckConstraint(
             "time_slot IS NULL OR " + _in("time_slot", TIME_SLOTS),
             name="time_slot",
         ),
         CheckConstraint(
-            "recurrence_type IS NULL OR " + _in("recurrence_type", RECURRENCE_TYPES),
+            _in("recurrence_type", RECURRENCE_TYPES),
             name="recurrence_type",
         ),
         CheckConstraint(
@@ -78,10 +81,7 @@ class Task(Base):
         ),
         # 週次は曜日ビットマスク必須、月次は日にち必須、年次は月日必須。他タイプの項目は NULL
         CheckConstraint(
-            "COALESCE((recurrence_type IS NULL AND recurrence_weekdays IS NULL"
-            " AND recurrence_month_day IS NULL AND recurrence_month IS NULL"
-            " AND recurrence_day IS NULL AND recurrence_end_type = 'none')"
-            " OR (recurrence_type = 'weekly' AND recurrence_weekdays BETWEEN 1 AND 127"
+            "COALESCE((recurrence_type = 'weekly' AND recurrence_weekdays BETWEEN 1 AND 127"
             " AND recurrence_month_day IS NULL AND recurrence_month IS NULL"
             " AND recurrence_day IS NULL)"
             " OR (recurrence_type = 'monthly' AND recurrence_weekdays IS NULL"
@@ -102,6 +102,74 @@ class Task(Base):
             " AND recurrence_end_count >= 1), 0)",
             name="recurrence_end_fields",
         ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True
+    )
+    priority: Mapped[int | None] = mapped_column(Integer)
+    estimate_minutes: Mapped[int | None] = mapped_column(Integer)
+    memo: Mapped[str | None] = mapped_column(Text)
+    # 子タスクの既定の時間帯(子ごとに変更可能)
+    time_slot: Mapped[str | None] = mapped_column(String)
+    # 繰り返しルール。weekdays はビットマスク(bit0=日 ... bit6=土。毎日=127)
+    recurrence_type: Mapped[str] = mapped_column(String, nullable=False)
+    recurrence_weekdays: Mapped[int | None] = mapped_column(Integer)
+    # 月次: 1〜31 の日にち、-1 は月末。その日がない月は月末に実行する
+    recurrence_month_day: Mapped[int | None] = mapped_column(Integer)
+    recurrence_month: Mapped[int | None] = mapped_column(Integer)
+    recurrence_day: Mapped[int | None] = mapped_column(Integer)
+    # 終了条件: none=設定なし / date=終了日 / count=生成する子の累計回数
+    recurrence_end_type: Mapped[str] = mapped_column(
+        String, nullable=False, default="none", server_default="none"
+    )
+    recurrence_end_date: Mapped[str | None] = mapped_column(String(10))
+    recurrence_end_count: Mapped[int | None] = mapped_column(Integer)
+    start_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    # 一時停止中は False(子を生成しない)
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa_true()
+    )
+    # 子を生成済みの最終日(YYYY-MM-DD)
+    generated_until: Mapped[str | None] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=_now, onupdate=_now, nullable=False
+    )
+
+    properties: Mapped[list["HabitProperty"]] = relationship(
+        back_populates="habit", cascade="all, delete-orphan"
+    )
+    logs: Mapped[list["TaskLog"]] = relationship(
+        back_populates="habit", cascade="all, delete-orphan"
+    )
+
+
+class HabitProperty(Base):
+    """子タスクに引き継ぐプロパティ名(値は子ごとに入力する)。"""
+
+    __tablename__ = "habit_properties"
+    __table_args__ = (Index("uq_habit_properties_habit_id_key", "habit_id", "key", unique=True),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    habit_id: Mapped[int] = mapped_column(
+        ForeignKey("habits.id", ondelete="CASCADE"), nullable=False
+    )
+    key: Mapped[str] = mapped_column(String, nullable=False)
+
+    habit: Mapped[Habit] = relationship(back_populates="properties")
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint(_in("status", TASK_STATUSES), name="status"),
+        CheckConstraint(
+            "time_slot IS NULL OR " + _in("time_slot", TIME_SLOTS),
+            name="time_slot",
+        ),
         Index(
             "ix_tasks_scheduled_date_time_slot_run_order",
             "scheduled_date",
@@ -109,6 +177,12 @@ class Task(Base):
             "run_order",
         ),
         Index("ix_tasks_status", "status"),
+        Index(
+            "uq_tasks_habit_id_occurrence_date",
+            "habit_id",
+            "occurrence_date",
+            unique=True,
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -131,21 +205,9 @@ class Task(Base):
     # 条件待ち: 待ち条件(相手の名前・メモ)と、待ち日時(UTC。経過すると next に戻る)
     wait_condition: Mapped[str | None] = mapped_column(Text)
     wait_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    # 繰り返し設定。タイプ(週次/月次/年次)ごとに使う項目が異なる
-    recurrence_type: Mapped[str | None] = mapped_column(String)
-    # 週次: 曜日のビットマスク(bit0=日, bit1=月, ... bit6=土)。複数選択可
-    recurrence_weekdays: Mapped[int | None] = mapped_column(Integer)
-    # 月次: 1〜31 の日にち、-1 は月末。その日がない月は月末に実行する
-    recurrence_month_day: Mapped[int | None] = mapped_column(Integer)
-    # 年次: 月(1〜12)と日(1〜31。2/29 を許容)
-    recurrence_month: Mapped[int | None] = mapped_column(Integer)
-    recurrence_day: Mapped[int | None] = mapped_column(Integer)
-    # 終了条件(共通): none=設定なし / date=終了日(YYYY-MM-DD) / count=繰り返す回数
-    recurrence_end_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="none", server_default="none"
-    )
-    recurrence_end_date: Mapped[str | None] = mapped_column(String(10))
-    recurrence_end_count: Mapped[int | None] = mapped_column(Integer)
+    # 習慣(親)から生成された子タスクの場合の親と、その実施日(YYYY-MM-DD)
+    habit_id: Mapped[int | None] = mapped_column(ForeignKey("habits.id", ondelete="SET NULL"))
+    occurrence_date: Mapped[str | None] = mapped_column(String(10))
     memo: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -156,9 +218,7 @@ class Task(Base):
     properties: Mapped[list["TaskProperty"]] = relationship(
         back_populates="task", cascade="all, delete-orphan"
     )
-    logs: Mapped[list["TaskLog"]] = relationship(
-        back_populates="task", cascade="all, delete-orphan"
-    )
+    logs: Mapped[list["TaskLog"]] = relationship(back_populates="task", passive_deletes=True)
 
 
 class TaskProperty(Base):
@@ -193,9 +253,14 @@ class TaskLog(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    # 子タスクを削除しても履歴が残るよう、習慣由来の記録は task_id を NULL にして habit_id で辿る
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"))
+    habit_id: Mapped[int | None] = mapped_column(ForeignKey("habits.id", ondelete="CASCADE"))
+    # 削除後も表示できるようタイトルを記録時点で保持する
+    task_title: Mapped[str] = mapped_column(String, nullable=False)
     action: Mapped[str] = mapped_column(String, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=_now, nullable=False)
 
-    task: Mapped[Task] = relationship(back_populates="logs")
+    task: Mapped[Task | None] = relationship(back_populates="logs")
+    habit: Mapped[Habit | None] = relationship(back_populates="logs")
