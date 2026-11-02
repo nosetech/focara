@@ -37,7 +37,7 @@ RULE_FIELDS = (
     "start_date",
 )
 # 子へ反映する項目
-SYNC_FIELDS = ("title", "estimate_minutes", "priority", "project_id", "time_slot")
+SYNC_FIELDS = ("title", "estimate_minutes", "priority", "project_id", "memo", "time_slot")
 RECENT_COUNT = 7
 
 

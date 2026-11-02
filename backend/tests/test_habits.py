@@ -260,3 +260,18 @@ def test_habit_task_log_cascade_on_parent_only(engine, client):
 
 def _today_bit() -> int:
     return 1 << ((date.today().weekday() + 1) % 7)
+
+
+def test_rule_change_includes_today_when_missing(client):
+    h = _habit(client)
+    today_kid = _children(client, h["id"])[0]
+    client.delete(f"/api/tasks/{today_kid['id']}")
+    assert client.post(f"/api/habits/{h['id']}/pause").status_code == 200
+    client.post(f"/api/habits/{h['id']}/resume")
+    assert _children(client, h["id"])[0]["occurrence_date"] == _iso()
+
+
+def test_memo_syncs_to_children(client):
+    h = _habit(client, memo="旧")
+    client.patch(f"/api/habits/{h['id']}", json={"memo": "新"})
+    assert {k["memo"] for k in _children(client, h["id"])} == {"新"}

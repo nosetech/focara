@@ -1,5 +1,6 @@
 """習慣(親)から子タスクを先行生成し、親の編集に子を同期させる。"""
 
+import logging
 from datetime import date, timedelta
 
 from sqlalchemy import delete, select
@@ -79,8 +80,17 @@ def generate_children(session: Session, habit: Habit, today: date, ahead_days: i
 def generate_all(session: Session, today: date, ahead_days: int) -> int:
     """有効な全習慣の子を生成する(起動時・日付変更時の定期処理)。"""
     habits = list(session.scalars(select(Habit).where(Habit.active.is_(True))))
-    created = sum(generate_children(session, h, today, ahead_days) for h in habits)
-    session.commit()
+    created = 0
+    for habit in habits:
+        # 1件の失敗で他の習慣の生成を止めないよう、習慣ごとにコミット・ロールバックする
+        try:
+            created += generate_children(session, habit, today, ahead_days)
+            session.commit()
+        except Exception:  # noqa: BLE001
+            session.rollback()
+            logging.getLogger(__name__).exception(
+                "習慣(id=%s)の子タスク生成に失敗しました", habit.id
+            )
     return created
 
 
@@ -100,7 +110,7 @@ def regenerate_future_children(session: Session, habit: Habit, today: date, ahea
         session.delete(child)
     session.flush()
     # 今日までに生成済みの範囲を基準に、今日の翌日から作り直す
-    habit.generated_until = _iso(today)
+    habit.generated_until = _iso(today - timedelta(days=1))  # 今日の分も対象にする
     return generate_children(session, habit, today, ahead_days)
 
 
@@ -118,7 +128,7 @@ def sync_fields_to_children(
     shared = {
         k: v
         for k, v in changed.items()
-        if k in ("title", "estimate_minutes", "priority", "project_id")
+        if k in ("title", "estimate_minutes", "priority", "project_id", "memo")
     }
     for child in session.scalars(_future_open_children(habit.id, today, include_today=True)):
         for key, value in shared.items():
