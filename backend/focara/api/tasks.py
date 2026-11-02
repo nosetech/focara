@@ -3,29 +3,26 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
 from focara.db.models import Task, TaskLog
-from focara.recurrence import clear_recurrence, spawn_next
 from focara.task_status import InvalidTransition, MissingWaitCondition, transition, validate_waiting
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
-Status = Literal["inbox", "next", "someday", "waiting", "habit", "done"]
+Status = Literal["inbox", "next", "someday", "waiting", "done"]
 TimeSlot = Literal["morning", "afternoon", "evening"]
-RecurrenceType = Literal["weekly", "monthly", "yearly"]
-RecurrenceEndType = Literal["none", "date", "count"]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 # 日付として保存する列(DB上は YYYY-MM-DD の文字列)
-DATE_FIELDS = ("scheduled_date", "recurrence_end_date")
+DATE_FIELDS = ("scheduled_date",)
 
 
 class TaskFields(BaseModel):
-    """作成・更新で共通の任意項目。繰り返し設定の整合性は DB の制約で検証する。"""
+    """作成・更新で共通の任意項目。"""
 
     project_id: int | None = None
     priority: int | None = None
@@ -37,14 +34,6 @@ class TaskFields(BaseModel):
     fixed_end_at: AwareDatetime | None = None
     wait_condition: str | None = None
     wait_until: AwareDatetime | None = None
-    recurrence_type: RecurrenceType | None = None
-    recurrence_weekdays: int | None = None
-    recurrence_month_day: int | None = None
-    recurrence_month: int | None = None
-    recurrence_day: int | None = None
-    recurrence_end_type: RecurrenceEndType = "none"
-    recurrence_end_date: date | None = None
-    recurrence_end_count: int | None = None
     memo: str | None = None
 
 
@@ -58,7 +47,6 @@ class TaskUpdate(TaskFields):
 
     title: Title | None = None
     status: Status | None = None
-    recurrence_end_type: RecurrenceEndType | None = None
 
 
 class TaskTransition(BaseModel):
@@ -76,6 +64,8 @@ class TaskOut(TaskFields):
     title: str
     status: Status
     project_order: int | None = None
+    habit_id: int | None = None
+    occurrence_date: date | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -105,7 +95,7 @@ def _commit(session: Session) -> None:
         session.commit()
     except IntegrityError as e:
         session.rollback()
-        raise HTTPException(422, f"不正な値です(プロジェクトまたは繰り返し設定): {e.orig}") from e
+        raise HTTPException(422, f"不正な値です(プロジェクト): {e.orig}") from e
 
 
 @router.get("", response_model=list[TaskOut])
@@ -114,6 +104,7 @@ def list_tasks(
     status: Status | None = None,
     project_id: int | None = None,
     scheduled_date: date | None = None,
+    habit_id: int | None = None,
 ) -> list[Task]:
     stmt = select(Task).order_by(Task.id)
     if status is not None:
@@ -124,6 +115,8 @@ def list_tasks(
         stmt = stmt.order_by(Task.project_order.is_(None), Task.project_order, Task.id)
     if scheduled_date is not None:
         stmt = stmt.where(Task.scheduled_date == scheduled_date.isoformat())
+    if habit_id is not None:
+        stmt = stmt.where(Task.habit_id == habit_id)
     return list(session.scalars(stmt))
 
 
@@ -154,8 +147,8 @@ def create_task(body: TaskCreate, session: SessionDep) -> Task:
 def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
     task = _get_or_404(session, task_id)
     values = body.model_dump(exclude_unset=True)
-    # title / status / recurrence_end_type は NULL にできない
-    for key in ("title", "status", "recurrence_end_type"):
+    # title / status は NULL にできない
+    for key in ("title", "status"):
         if key in values and values[key] is None:
             raise HTTPException(422, f"{key} は null にできません")
     new_status = values.pop("status", None)
@@ -174,7 +167,7 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         raise
     if new_status is not None and new_status != task.status:
         _transition(session, task, new_status)
-        _spawn_if_done(session, task)
+        log_if_done(session, task)
     elif task.status == "waiting":
         try:
             validate_waiting(task)
@@ -192,11 +185,17 @@ def _transition(session: Session, task: Task, new_status: str) -> None:
         raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
 
 
-def _spawn_if_done(session: Session, task: Task, note: str | None = None) -> None:
-    """タスクが完了したら完了を記録し、繰り返しタスクなら次の回を生成する。"""
+def add_log(session: Session, task: Task, action: str, note: str | None = None) -> None:
+    """完了・後回しを記録する。子タスクは親idも持たせ、子を削除しても履歴が残るようにする。"""
+    session.add(
+        TaskLog(task=task, habit_id=task.habit_id, task_title=task.title, action=action, note=note)
+    )
+
+
+def log_if_done(session: Session, task: Task, note: str | None = None) -> None:
+    """タスクが完了したら完了を記録する(習慣の次の回は定期処理で先行生成済み)。"""
     if task.status == "done":
-        session.add(TaskLog(task=task, action="completed", note=note))
-        spawn_next(session, task)
+        add_log(session, task, "completed", note)
 
 
 @router.post("/{task_id}/transition", response_model=TaskOut)
@@ -214,45 +213,16 @@ def transition_task(task_id: int, body: TaskTransition, session: SessionDep) -> 
         session.rollback()
         # 必須項目の不足は 422、遷移自体の禁止は 409
         raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
-    _spawn_if_done(session, task)
-    _commit(session)
-    return task
-
-
-class RecurrenceRule(BaseModel):
-    """繰り返しルールの設定・変更。整合性は DB の制約で検証する。"""
-
-    recurrence_type: RecurrenceType
-    recurrence_weekdays: int | None = None
-    recurrence_month_day: int | None = None
-    recurrence_month: int | None = None
-    recurrence_day: int | None = None
-    recurrence_end_type: RecurrenceEndType = "none"
-    recurrence_end_date: date | None = None
-    recurrence_end_count: int | None = None
-
-
-@router.put("/{task_id}/recurrence", response_model=TaskOut)
-def set_recurrence(task_id: int, body: RecurrenceRule, session: SessionDep) -> Task:
-    task = _get_or_404(session, task_id)
-    if task.status == "done":
-        raise HTTPException(409, "完了済みのタスクには繰り返しを設定できません")
-    for key, value in _to_columns(body.model_dump()).items():
-        setattr(task, key, value)
-    _commit(session)
-    return task
-
-
-@router.delete("/{task_id}/recurrence", response_model=TaskOut)
-def stop_recurrence(task_id: int, session: SessionDep) -> Task:
-    task = _get_or_404(session, task_id)
-    clear_recurrence(task)
+    log_if_done(session, task)
     _commit(session)
     return task
 
 
 @router.delete("/{task_id}", status_code=204)
 def delete_task(task_id: int, session: SessionDep) -> Response:
-    session.delete(_get_or_404(session, task_id))
+    task = _get_or_404(session, task_id)
+    # 習慣由来の履歴は残す。それ以外の記録はタスクと一緒に消す
+    session.execute(delete(TaskLog).where(TaskLog.task_id == task.id, TaskLog.habit_id.is_(None)))
+    session.delete(task)
     session.commit()
     return Response(status_code=204)

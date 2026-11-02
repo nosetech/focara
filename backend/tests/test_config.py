@@ -98,3 +98,22 @@ def test_ui_day_end_hour_invalid(value: object) -> None:
 def test_ui_unknown_key() -> None:
     with pytest.raises(ConfigError):
         parse_config({"ui": {"foo": 1}})
+
+
+def test_habit_default() -> None:
+    assert parse_config(None).habit.generate_ahead_days == 14
+
+
+def test_habit_applied() -> None:
+    assert parse_config({"habit": {"generate_ahead_days": 30}}).habit.generate_ahead_days == 30
+
+
+@pytest.mark.parametrize("value", [0, 366, -1, 1.5, "7", True, None])
+def test_habit_generate_ahead_days_invalid(value: object) -> None:
+    with pytest.raises(ConfigError):
+        parse_config({"habit": {"generate_ahead_days": value}})
+
+
+def test_habit_unknown_key() -> None:
+    with pytest.raises(ConfigError):
+        parse_config({"habit": {"foo": 1}})

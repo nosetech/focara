@@ -45,10 +45,10 @@ def test_transition_to_done_also_logs(client):
     assert len(client.get("/api/logs?action=completed").json()) == 1
 
 
-def test_complete_recurring_spawns_next(client):
-    a = _task(client, recurrence_type="weekly", recurrence_weekdays=127)
+def test_complete_does_not_spawn_next(client):
+    a = _task(client)
     client.post(f"/api/tasks/{a}/complete")
-    assert len(client.get("/api/tasks").json()) == 2
+    assert len(client.get("/api/tasks").json()) == 1
 
 
 def test_postpone_tomorrow_appends(client):
