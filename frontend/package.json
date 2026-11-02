@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H ${FRONTEND_HOST:-127.0.0.1} -p ${FRONTEND_PORT:-3800}",
-    "build": "next build",
-    "start": "next start -H ${FRONTEND_HOST:-127.0.0.1} -p ${FRONTEND_PORT:-3800}",
+    "build": "NODE_ENV=production next build",
+    "start": "NODE_ENV=production next start -H ${FRONTEND_HOST:-127.0.0.1} -p ${FRONTEND_PORT:-3800}",
     "lint": "eslint",
     "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",

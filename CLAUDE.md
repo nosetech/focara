@@ -32,7 +32,7 @@ frontend(`frontend/` で実行。npm):
 - `npm run lint`: ESLint
 - `npm run format:check`: Prettier チェック(`npm run format` で整形)
 - `npm run typecheck`: 型チェック(tsc)
-- `npm run build`: ビルド
+- `npm run build`: ビルド(`package.json` で `NODE_ENV=production` に固定。シェルが `NODE_ENV=development` でも成功する)
 - `npm test`: テスト
 
 ## 画面デザインの実装ルール
