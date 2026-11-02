@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { newDraft, propertyBody, toDraft } from "./taskDetail.ts";
+import {
+  canSaveWaiting,
+  newDraft,
+  propertyBody,
+  toDraft,
+  waitingBody,
+} from "./taskDetail.ts";
 
 test("名前が空の行は保存対象外", () => {
   assert.equal(propertyBody({ ...newDraft(1), key: "  " }), null);
@@ -145,4 +151,19 @@ test("繰り返しの説明文", () => {
     endDate: "2027-01-02",
   };
   assert.equal(repeatSummary(y), "毎年 3月9日 · 2027/01/02 まで");
+});
+
+test("条件待ちは条件が空・空白のみだと保存しない", () => {
+  assert.equal(canSaveWaiting(""), false);
+  assert.equal(canSaveWaiting("  \t "), false);
+  assert.equal(waitingBody(""), null);
+  assert.equal(waitingBody("   "), null);
+});
+
+test("条件待ちは条件を trim して送る", () => {
+  assert.equal(canSaveWaiting(" 返信 "), true);
+  assert.deepEqual(waitingBody(" 返信待ち "), {
+    status: "waiting",
+    wait_condition: "返信待ち",
+  });
 });
