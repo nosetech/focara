@@ -123,9 +123,70 @@ export function AssignScreen() {
     ...c,
     tasks:
       c.key === "none"
-        ? [...candidates, ...noSlot]
+        ? [...noSlot, ...candidates]
         : slotTasks(scheduled, c.key as TimeSlot),
   }));
+
+  const renderCard = (t: AssignTask, i: number, key: Column) => (
+    <div
+      key={t.id}
+      className={styles.card}
+      draggable
+      data-drag={dragId === t.id ? "" : undefined}
+      data-selected={selId === t.id ? "" : undefined}
+      onClick={() => setSelId(t.id)}
+      data-drop={
+        over?.col === key && over.index === i && dragId !== t.id
+          ? ""
+          : undefined
+      }
+      style={
+        t.status === "done"
+          ? { textDecoration: "line-through", opacity: 0.5 }
+          : undefined
+      }
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(t.id));
+        setDragId(t.id);
+      }}
+      onDragEnd={() => {
+        setDragId(null);
+        setOver(null);
+      }}
+      onDragOver={(e) => {
+        if (key === "none") return;
+        e.preventDefault();
+        e.stopPropagation();
+        setOver({ col: key, index: i });
+      }}
+      onDrop={key === "none" ? undefined : drop(key, i)}
+    >
+      <div className={styles.title}>{t.title}</div>
+      <div className={styles.meta}>
+        <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
+        <span className={styles.mono}>
+          {formatEstimate(t.estimate_minutes)}
+        </span>
+      </div>
+      {key === "none" && (
+        <div className={styles.slotBtns}>
+          {COLUMNS.filter((x) => x.key !== "none").map((s) => (
+            <button
+              key={s.key}
+              className={styles.slotBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                void move(t, s.key);
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const drop = (col: Column, index?: number) => (e: React.DragEvent) => {
     e.preventDefault();
@@ -166,69 +227,28 @@ export function AssignScreen() {
                 </span>
               </span>
             </div>
-            {c.tasks.map((t, i) => (
-              <div
-                key={t.id}
-                className={styles.card}
-                draggable
-                data-drag={dragId === t.id ? "" : undefined}
-                data-selected={selId === t.id ? "" : undefined}
-                onClick={() => setSelId(t.id)}
-                data-drop={
-                  over?.col === c.key && over.index === i && dragId !== t.id
-                    ? ""
-                    : undefined
-                }
-                style={
-                  t.status === "done"
-                    ? { textDecoration: "line-through", opacity: 0.5 }
-                    : undefined
-                }
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = "move";
-                  e.dataTransfer.setData("text/plain", String(t.id));
-                  setDragId(t.id);
-                }}
-                onDragEnd={() => {
-                  setDragId(null);
-                  setOver(null);
-                }}
-                onDragOver={(e) => {
-                  if (c.key === "none") return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setOver({ col: c.key, index: i });
-                }}
-                onDrop={c.key === "none" ? undefined : drop(c.key, i)}
-              >
-                {c.key === "none" && t.scheduled_date && (
-                  <div className={styles.meta}>この日・時間帯未設定</div>
-                )}
-                <div className={styles.title}>{t.title}</div>
-                <div className={styles.meta}>
-                  <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
-                  <span className={styles.mono}>
-                    {formatEstimate(t.estimate_minutes)}
+            {c.key === "none" && noSlot.length > 0 && (
+              <>
+                <div className={styles.unslotGroup}>
+                  <div className={styles.groupHead}>
+                    <span>この日・時間帯未設定</span>
+                    <span className={styles.count}>
+                      <span className={styles.mono}>{noSlot.length}</span>件
+                    </span>
+                  </div>
+                  {noSlot.map((t, i) => renderCard(t, i, c.key))}
+                </div>
+                <div className={styles.groupHead} data-candidate="">
+                  <span>候補</span>
+                  <span className={styles.count}>
+                    <span className={styles.mono}>{candidates.length}</span>件
                   </span>
                 </div>
-                {c.key === "none" && (
-                  <div className={styles.slotBtns}>
-                    {COLUMNS.filter((x) => x.key !== "none").map((s) => (
-                      <button
-                        key={s.key}
-                        className={styles.slotBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void move(t, s.key);
-                        }}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              </>
+            )}
+            {(c.key === "none" ? candidates : c.tasks).map((t, i) =>
+              renderCard(t, i, c.key),
+            )}
             {c.tasks.length === 0 && (
               <div className={styles.empty}>
                 {c.key === "none"

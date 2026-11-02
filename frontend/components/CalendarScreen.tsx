@@ -23,7 +23,7 @@ import styles from "./CalendarScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
 type Target = { day: string; slot: TimeSlot };
-const NO_SLOT = { key: null, label: "時間未設定" } as const;
+const NO_SLOT = { key: null, label: "時間帯未設定" } as const;
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 const sameTarget = (a: Target | null, day: string, slot: TimeSlot) =>
@@ -169,7 +169,12 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
             return (
               <div key={s.key ?? "none"} className={styles.slot}>
                 <div className={styles.slotLabel}>
-                  <span className={styles.slotName}>{s.label}</span>
+                  <span
+                    className={styles.slotName}
+                    data-unslot={s.key === null ? "" : undefined}
+                  >
+                    {s.label}
+                  </span>
                   <span className={styles.slotCount}>
                     {items.length}件 ·{" "}
                     <span className={styles.mono}>{estimateOf(items)}</span>
@@ -324,7 +329,11 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
         <div />
         {days.map(head)}
         {[...SLOTS, ...(hasNoSlot ? [NO_SLOT] : [])].map((s) => [
-          <div key={s.key ?? "none"} className={styles.slotHead}>
+          <div
+            key={s.key ?? "none"}
+            className={styles.slotHead}
+            data-unslot={s.key === null ? "" : undefined}
+          >
             {s.label}
           </div>,
           ...days.map((d) => cell(d, s)),
@@ -336,8 +345,12 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
       >
         <div />
         {[...SLOTS, ...(hasNoSlot ? [NO_SLOT] : [])].map((s) => (
-          <div key={s.key ?? "none"} className={styles.slotHead}>
-            {s.label}
+          <div
+            key={s.key ?? "none"}
+            className={styles.slotHead}
+            data-unslot={s.key === null ? "" : undefined}
+          >
+            {s.key === null ? "未設定" : s.label}
           </div>
         ))}
         {days.map((d) => [
