@@ -29,7 +29,7 @@ export const rangeDays = (mode: "day" | "week", d: Date): Date[] =>
 export function cellTasks(
   tasks: readonly CalendarTask[],
   day: string,
-  slot: TimeSlot,
+  slot: TimeSlot | null,
 ): CalendarTask[] {
   return tasks
     .filter((t) => t.scheduled_date === day && t.time_slot === slot)
@@ -46,7 +46,7 @@ export function cellTasks(
     });
 }
 
-/** 日付だけの枠(時間帯未設定)のタスクを除いた、日の件数。 */
+/** 日の件数(時間帯未設定のタスクも含む)。 */
 export const dayCount = (tasks: readonly CalendarTask[], day: string) =>
   tasks.filter((t) => t.scheduled_date === day).length;
 

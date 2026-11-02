@@ -137,3 +137,28 @@
 .card[data-selected] {
   border-color: var(--ink3);
 }
+
+.unslotGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--sunk);
+  border: 1px dashed var(--line);
+}
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink2);
+}
+
+.groupHead[data-candidate] {
+  padding: 8px 4px 0;
+}

@@ -58,3 +58,15 @@ test("dayCount / isMovable", () => {
   assert.equal(isMovable(t(3)), true);
   assert.equal(isMovable(t(4, { fixed_at: "2026-10-27T10:00:00Z" })), false);
 });
+
+test("cellTasks: slot=null は時間帯未設定のその日のタスクのみ", () => {
+  const list = [
+    t(1, { scheduled_date: "2026-10-26", time_slot: null }),
+    t(2, { scheduled_date: "2026-10-27", time_slot: null }),
+    t(3, { scheduled_date: "2026-10-26", time_slot: "morning" }),
+  ];
+  assert.deepEqual(
+    cellTasks(list, "2026-10-26", null).map((x) => x.id),
+    [1],
+  );
+});

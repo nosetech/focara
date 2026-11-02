@@ -5,6 +5,7 @@ import {
   isCandidate,
   slotTasks,
   totalEstimate,
+  unslotted,
   type AssignTask,
 } from "./assign.ts";
 
@@ -55,4 +56,17 @@ test("insertAt: 指定位置・末尾・既存の移動", () => {
   assert.deepEqual(insertAt([1, 2, 3], 9), [1, 2, 3, 9]);
   assert.deepEqual(insertAt([1, 2, 3], 1, 3), [2, 3, 1]);
   assert.deepEqual(insertAt([1, 2], 9, 99), [1, 2, 9]);
+});
+
+test("unslotted: 日付ありで時間帯未設定のみ", () => {
+  const list = [
+    t(1, { scheduled_date: "2026-10-26", time_slot: null, run_order: 2 }),
+    t(2, { scheduled_date: "2026-10-26", time_slot: "morning" }),
+    t(3, { scheduled_date: "2026-10-26", time_slot: null }),
+    t(4),
+  ];
+  assert.deepEqual(
+    unslotted(list).map((x) => x.id),
+    [1, 3],
+  );
 });
