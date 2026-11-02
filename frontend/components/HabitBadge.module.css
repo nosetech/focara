@@ -1,0 +1,26 @@
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ink2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 3px;
+  color: var(--ink3);
+  vertical-align: middle;
+}

@@ -9,7 +9,6 @@ import {
   somedayBody,
   tomorrowParam,
   restoreBody,
-  spawnsNext,
   formatDateLabel,
   formatMinutes,
   type RunTask,
@@ -28,9 +27,7 @@ const t = (id: number, status: string, est: number | null): RunTask => ({
   scheduled_date: null,
   run_order: null,
   fixed_end_at: null,
-  recurrence_type: null,
-  recurrence_end_type: "none",
-  recurrence_end_count: null,
+  habit_id: null,
 });
 
 test("buildRunView splits done from queue and sums remaining", () => {
@@ -55,21 +52,6 @@ test("currentSlot / formatters", () => {
   assert.equal(formatMinutes(90), "1時間30分");
   assert.equal(formatMinutes(45), "45分");
   assert.equal(formatDateLabel(new Date(2026, 9, 15)), "10月15日（木）");
-});
-
-test("spawnsNext: 繰り返しの最終回は次を生成しない", () => {
-  const base = t(1, "habit", null);
-  assert.equal(spawnsNext(base), false);
-  assert.equal(spawnsNext({ ...base, recurrence_type: "daily" }), true);
-  assert.equal(
-    spawnsNext({
-      ...base,
-      recurrence_type: "daily",
-      recurrence_end_type: "count",
-      recurrence_end_count: 1,
-    }),
-    false,
-  );
 });
 
 test("restoreBody / dragOffset", () => {

@@ -18,6 +18,7 @@ import { useOrganize } from "./OrganizeContext";
 import { TaskDetailHost } from "./TaskDetailHost";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { HabitBadge } from "./HabitBadge";
 import styles from "./AssignScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -162,7 +163,10 @@ export function AssignScreen() {
       }}
       onDrop={key === "none" ? undefined : drop(key, i)}
     >
-      <div className={styles.title}>{t.title}</div>
+      <div className={styles.title}>
+        {t.title}
+        {t.habit_id != null && <HabitBadge />}
+      </div>
       <div className={styles.meta}>
         <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
         <span className={styles.mono}>

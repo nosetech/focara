@@ -4,6 +4,7 @@ export interface ProjectTask extends InboxTask {
   project_order: number | null;
   scheduled_date: string | null;
   time_slot: string | null;
+  habit_id: number | null;
 }
 
 export interface ProjectSummary {
@@ -17,14 +18,13 @@ export const PROJECT_GROUPS = [
   { status: "next", label: "次にやる" },
   { status: "waiting", label: "条件待ち" },
   { status: "someday", label: "いつか" },
-  { status: "habit", label: "習慣" },
   { status: "inbox", label: "inbox" },
   { status: "done", label: "完了" },
 ] as const;
 
-/** 進捗。習慣は繰り返すものなので件数に含めない(デザインと同じ)。 */
+/** 進捗。習慣から生成された子(habit_id あり)は繰り返すものなので件数に含めない。 */
 export function projectProgress(tasks: readonly ProjectTask[]) {
-  const counted = tasks.filter((t) => t.status !== "habit");
+  const counted = tasks.filter((t) => t.habit_id == null);
   const done = counted.filter((t) => t.status === "done").length;
   return {
     done,

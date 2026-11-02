@@ -23,7 +23,6 @@ import {
   restoreBody,
   somedayBody,
   tomorrowParam,
-  spawnsNext,
   toDateParam,
   type RunTask,
   type RunView,
@@ -34,6 +33,7 @@ import { priorityLabel } from "@/lib/inbox";
 import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
 import { EmptyState, ErrorState, LoadingState } from "./StateView";
+import { HabitBadge } from "./HabitBadge";
 import styles from "./RunScreen.module.css";
 
 type Load =
@@ -93,9 +93,7 @@ export function RunScreen() {
       try {
         await apiFetch(`/tasks/${task.id}/complete`, { method: "POST" });
         showToast({
-          msg: spawnsNext(task)
-            ? "完了しました · 次の回を生成しました"
-            : "完了しました · 今日の記録に追加",
+          msg: "完了しました · 今日の記録に追加",
         });
         await fetchAll(true);
       } catch {
@@ -374,7 +372,10 @@ function Ready({
         className={styles.upRow}
         style={{ opacity: t === shown[0] ? 0.82 : 0.46 }}
       >
-        <span className={styles.upTitle}>{t.title}</span>
+        <span className={styles.upTitle}>
+          {t.title}
+          {t.habit_id != null && <HabitBadge icon />}
+        </span>
         {t.fixed_at && (
           <span
             className={styles.mono}
@@ -435,6 +436,7 @@ function Ready({
             {cur.project_id != null
               ? (projects.get(cur.project_id) ?? "未分類")
               : "未分類"}
+            {cur.habit_id != null && <HabitBadge />}
           </div>
           <h1 className={styles.title}>{cur.title}</h1>
           <div className={styles.chips}>
@@ -537,7 +539,10 @@ function Ready({
                     data-done={isDone ? "" : undefined}
                   >
                     <span className={styles.flowMark} />
-                    <span className={styles.flowTitle}>{t.title}</span>
+                    <span className={styles.flowTitle}>
+                      {t.title}
+                      {t.habit_id != null && <HabitBadge icon />}
+                    </span>
                     <span className={styles.est}>{estimate(t)}</span>
                   </div>
                 );

@@ -9,6 +9,7 @@ export interface AssignTask {
   scheduled_date: string | null;
   time_slot: TimeSlot | null;
   run_order: number | null;
+  habit_id: number | null;
 }
 
 /** 割り当て先。none は未割り当て(候補)。 */
