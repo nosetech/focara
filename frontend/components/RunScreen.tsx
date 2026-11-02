@@ -30,6 +30,7 @@ import {
   type TimeSlot,
 } from "@/lib/run";
 import { formatRange, overlappingIds } from "@/lib/fixed";
+import { priorityLabel } from "@/lib/inbox";
 import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
 import { EmptyState, ErrorState, LoadingState } from "./StateView";
@@ -350,7 +351,8 @@ function Ready({
   if (overlaps.has(cur.id))
     chips.push({ label: "他の予定と重なっています", danger: true });
   if (cur.time_slot) chips.push({ label: SLOT_LABEL[cur.time_slot] });
-  if (cur.priority != null) chips.push({ label: `優先度 ${cur.priority}` });
+  const priLabel = priorityLabel(cur.priority);
+  if (priLabel) chips.push({ label: `優先度 ${priLabel}` });
   if (cur.estimate_minutes != null) chips.push({ label: estimate(cur) });
   if (cur.memo) chips.push({ label: "メモあり" });
 
