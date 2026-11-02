@@ -63,9 +63,10 @@ export interface OrganizeCounts {
   habits: number;
 }
 
-/** ナビに出す件数。assign は日付未設定の next(完了済みを除く)。 */
+/** ナビに出す件数。assign は日付未設定の next(完了済みを除く)。habits は有効な習慣(親)の数。 */
 export function countTasks(
   tasks: readonly { status: string; scheduled_date?: string | null }[],
+  habits: readonly { active: boolean }[] = [],
 ): OrganizeCounts {
   const n = (f: (t: (typeof tasks)[number]) => boolean) =>
     tasks.filter(f).length;
@@ -74,7 +75,7 @@ export function countTasks(
     assign: n((t) => t.status === "next" && !t.scheduled_date),
     waiting: n((t) => t.status === "waiting"),
     someday: n((t) => t.status === "someday"),
-    habits: n((t) => t.status === "habit"),
+    habits: habits.filter((h) => h.active).length,
   };
 }
 

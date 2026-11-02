@@ -19,6 +19,7 @@ const t = (id: number, o: Partial<ProjectTask> = {}): ProjectTask => ({
   project_order: null,
   scheduled_date: null,
   time_slot: null,
+  habit_id: null,
   ...o,
 });
 
@@ -26,7 +27,8 @@ test("進捗: 習慣は件数に含めない", () => {
   const p = projectProgress([
     t(1, { status: "done" }),
     t(2),
-    t(3, { status: "habit" }),
+    t(3, { habit_id: 7 }),
+    t(4, { habit_id: 7, status: "done" }),
   ]);
   assert.deepEqual(p, { done: 1, total: 2, pct: 50 });
   assert.equal(projectProgress([]).pct, 0);

@@ -429,13 +429,6 @@
   padding: 0 8px;
 }
 
-.repeat {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 4px 0 18px;
-}
-
 .field {
   display: flex;
   flex-direction: column;
@@ -504,37 +497,6 @@
 .cellLast {
   grid-column: span 4;
   font-family: inherit;
-}
-
-.cal {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 6px 8px 10px;
-  background: var(--bg);
-}
-
-.calHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 40px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.calHead button {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink2);
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.calHead button:hover {
-  background: var(--sunk);
 }
 
 .summary {
@@ -648,4 +610,82 @@
 
 .root[data-variant="panel"] .footer {
   padding-bottom: 16px;
+}
+
+/* 習慣から生成された子タスク(TaskDetail.dc.html) */
+.habitCard {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px 10px 14px;
+  border-radius: 12px;
+  background: var(--sunk);
+  color: var(--ink2);
+}
+
+.habitText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habitKicker {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+}
+
+.habitLine {
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.habitOpen {
+  flex: none;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.occRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.occNote {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.occReset {
+  flex: none;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }

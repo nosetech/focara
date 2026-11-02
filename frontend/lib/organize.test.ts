@@ -15,19 +15,21 @@ test("整理画面のキーを判定できる", () => {
 });
 
 test("件数はステータスごとに数え、assign は日付未設定の next だけ", () => {
-  const c = countTasks([
-    { status: "inbox" },
-    { status: "inbox" },
-    { status: "next", scheduled_date: null },
-    { status: "next", scheduled_date: "2026-10-26" },
-    { status: "habit" },
-  ]);
+  const c = countTasks(
+    [
+      { status: "inbox" },
+      { status: "inbox" },
+      { status: "next", scheduled_date: null },
+      { status: "next", scheduled_date: "2026-10-26" },
+    ],
+    [{ active: true }, { active: true }, { active: false }],
+  );
   assert.deepEqual(c, {
     inbox: 2,
     assign: 1,
     waiting: 0,
     someday: 0,
-    habits: 1,
+    habits: 2,
   });
 });
 

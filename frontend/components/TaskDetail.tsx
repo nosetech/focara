@@ -1,28 +1,20 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { habitRuleText, slotName, type Habit } from "@/lib/habits";
 import { fixedBody, splitFixed, type FixedDraft } from "@/lib/fixed";
 import { PRIORITIES } from "@/lib/inbox";
 import { SLOTS, type TimeSlot } from "@/lib/run";
 import {
-  MONTH_DAYS,
   PROPERTY_TYPES,
   SAVE_LABEL,
   STATUS_CHIPS,
-  WEEKDAYS,
-  defaultRepeat,
   newDraft,
   propertyBody,
-  repeatBody,
-  repeatFromTask,
   waitingBody,
-  repeatSummary,
   toDraft,
-  type RepeatDraft,
-  type RepeatEndType,
-  type RepeatSource,
-  type RepeatType,
   type PropertyDraft,
   type PropertyType,
   type SaveState,
@@ -32,7 +24,7 @@ import styles from "./TaskDetail.module.css";
 
 const MEMO_DEBOUNCE_MS = 800;
 
-interface TaskData extends RepeatSource {
+interface TaskData {
   id: number;
   title: string;
   status: string;
@@ -45,6 +37,8 @@ interface TaskData extends RepeatSource {
   fixed_at: string | null;
   fixed_end_at: string | null;
   wait_condition: string | null;
+  habit_id: number | null;
+  occurrence_date: string | null;
 }
 
 interface ProjectOption {
@@ -53,19 +47,6 @@ interface ProjectOption {
 }
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ready" };
-
-const END_TYPES: { key: RepeatEndType; label: string }[] = [
-  { key: "none", label: "設定なし" },
-  { key: "date", label: "日付" },
-  { key: "count", label: "回数" },
-];
-
-const REPEAT_TYPES: { key: "" | RepeatType; label: string }[] = [
-  { key: "", label: "なし" },
-  { key: "weekly", label: "週次" },
-  { key: "monthly", label: "月次" },
-  { key: "yearly", label: "年次" },
-];
 
 const CLOSE_ICON = (
   <svg
@@ -102,12 +83,12 @@ export function TaskDetail({
   const [priority, setPriority] = useState<number | null>(null);
   const [estimate, setEstimate] = useState("");
   const estimateSaved = useRef("");
-  const [ymDraft, setYmDraft] = useState<string | null>(null);
-  const [ydDraft, setYdDraft] = useState<string | null>(null);
   const [cond, setCond] = useState("");
-  const [repeat, setRepeat] = useState<RepeatDraft | null>(null);
-  const [calMonth, setCalMonth] = useState(1);
-  const [repeatError, setRepeatError] = useState<string | null>(null);
+  const router = useRouter();
+  // 習慣(親)から生成された子のとき、その親と、この回の既定の日付
+  const [habit, setHabit] = useState<Habit | null>(null);
+  const [occurrence, setOccurrence] = useState<string | null>(null);
+  const [isChild, setIsChild] = useState(false);
   const [memo, setMemo] = useState("");
   const [rows, setRows] = useState<PropertyDraft[]>([]);
   const [openRows, setOpenRows] = useState<Set<string>>(new Set());
@@ -147,12 +128,18 @@ export function TaskDetail({
         apiFetch<TaskProperty[]>(`/tasks/${taskId}/properties`),
         apiFetch<ProjectOption[]>("/projects"),
       ]);
+      const parent =
+        task.habit_id != null
+          ? await apiFetch<Habit>(`/habits/${task.habit_id}`).catch(() => null)
+          : null;
       const f = splitFixed(
         task.fixed_at,
         task.fixed_end_at,
         task.scheduled_date,
       );
-      const rep = repeatFromTask(task);
+      setIsChild(task.habit_id != null);
+      setHabit(parent);
+      setOccurrence(task.occurrence_date);
       setTitle(task.title);
       setStatus(task.status);
       savedStatus.current = task.status;
@@ -168,8 +155,6 @@ export function TaskDetail({
         task.estimate_minutes == null ? "" : String(task.estimate_minutes);
       setEstimate(estimateSaved.current);
       setCond(task.wait_condition ?? "");
-      setRepeat(rep);
-      setCalMonth(rep?.month ?? 1);
       setMemo(task.memo ?? "");
       setFixed(f);
       hasSlot.current = task.time_slot != null;
@@ -498,38 +483,6 @@ export function TaskDetail({
     condTimer.current = setTimeout(flushCond, MEMO_DEBOUNCE_MS);
   };
 
-  /** 繰り返しを保存する。null なら解除する。 */
-  const saveRepeat = (next: RepeatDraft | null) => {
-    setRepeat(next);
-    if (next === null) {
-      setRepeatError(null);
-      void run("repeat", async () => {
-        await apiFetch(`/tasks/${taskId}/recurrence`, { method: "DELETE" });
-      });
-      return;
-    }
-    const result = repeatBody(next);
-    if ("error" in result) {
-      setRepeatError(result.error);
-      return;
-    }
-    setRepeatError(null);
-    void run("repeat", async () => {
-      await apiFetch(`/tasks/${taskId}/recurrence`, {
-        method: "PUT",
-        body: result.body,
-      });
-    });
-  };
-
-  const pickRepeatType = (key: "" | RepeatType) => {
-    setCalMonth(1);
-    if (key === "") return saveRepeat(null);
-    const next = defaultRepeat(key, fixed.date || null, repeat ?? undefined);
-    setCalMonth(next.month);
-    saveRepeat(next);
-  };
-
   const flush = () => {
     flushMemo();
     flushTitle();
@@ -608,7 +561,11 @@ export function TaskDetail({
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const repeatMonthDays = MONTH_DAYS[(repeat?.month ?? 1) - 1];
+  // この回だけ日付・枠を既定から変えているか
+  const occChanged =
+    isChild &&
+    ((occurrence != null && fixed.date !== occurrence) ||
+      (habit != null && slot !== habit.time_slot));
 
   return (
     <div className={styles.root} data-variant={variant}>
@@ -703,20 +660,68 @@ export function TaskDetail({
                 }}
                 onBlur={flushTitle}
               />
-              <div className={styles.chips}>
-                {STATUS_CHIPS.map((c) => (
-                  <button
-                    key={c.key}
-                    className={styles.chip}
-                    data-on={status === c.key ? "" : undefined}
-                    aria-pressed={status === c.key}
-                    disabled={done}
-                    onClick={() => pickStatus(c.key)}
+              {!isChild && (
+                <div className={styles.chips}>
+                  {STATUS_CHIPS.map((c) => (
+                    <button
+                      key={c.key}
+                      className={styles.chip}
+                      data-on={status === c.key ? "" : undefined}
+                      aria-pressed={status === c.key}
+                      disabled={done}
+                      onClick={() => pickStatus(c.key)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isChild && (
+                <div className={styles.habitCard}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
+                    <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7" />
+                  </svg>
+                  <div className={styles.habitText}>
+                    <span className={styles.habitKicker}>習慣から生成</span>
+                    <span className={styles.habitLine}>
+                      {habit
+                        ? `${habit.title} · ${habitRuleText(habit)}`
+                        : "習慣"}
+                    </span>
+                  </div>
+                  {habit && (
+                    <button
+                      className={styles.habitOpen}
+                      onClick={() => {
+                        flush();
+                        router.push(`/organize/habits?open=${habit.id}`);
+                      }}
+                    >
+                      習慣を開く
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      >
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className={styles.list}>
                 <div className={styles.item}>
@@ -776,7 +781,9 @@ export function TaskDetail({
                 </div>
 
                 <div className={styles.item}>
-                  <span className={styles.itemLabel}>日付</span>
+                  <span className={styles.itemLabel}>
+                    {isChild ? "日付(この回)" : "日付"}
+                  </span>
                   <input
                     type="date"
                     className={`${styles.input} ${styles.mono} ${styles.grow}`}
@@ -789,7 +796,9 @@ export function TaskDetail({
                 </div>
 
                 <div className={`${styles.item} ${styles.tall}`}>
-                  <span className={styles.itemLabel}>枠</span>
+                  <span className={styles.itemLabel}>
+                    {isChild ? "枠(この回)" : "枠"}
+                  </span>
                   <div
                     className={`${styles.seg} ${styles.grow}`}
                     role="group"
@@ -807,6 +816,35 @@ export function TaskDetail({
                   </div>
                 </div>
 
+                {isChild && (
+                  <div className={styles.occRow}>
+                    <span className={styles.occNote}>
+                      {occChanged
+                        ? `この回だけ変更中(既定: ${occurrenceLabel(occurrence)} ${slotName(habit?.time_slot ?? null)})。次回以降は習慣の設定どおりです。`
+                        : "日付と枠の変更はこの回だけに適用されます。次回以降は習慣の設定どおりです。"}
+                    </span>
+                    {occChanged && (
+                      <button
+                        className={styles.occReset}
+                        onClick={() => {
+                          saveFixed({
+                            ...fixed,
+                            date: occurrence ?? fixed.date,
+                          });
+                          if (habit && habit.time_slot !== slot) {
+                            setSlot(habit.time_slot);
+                            hasSlot.current = habit.time_slot != null;
+                            void patchTask("slot", {
+                              time_slot: habit.time_slot,
+                            });
+                          }
+                        }}
+                      >
+                        習慣の既定に戻す
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className={styles.item}>
                   <span className={styles.itemLabel}>予定時刻</span>
                   <input
@@ -884,288 +922,6 @@ export function TaskDetail({
                     onBlur={saveEstimate}
                   />
                   <span className={styles.unit}>分</span>
-                </div>
-
-                <div className={styles.itemBlock}>
-                  <div className={styles.item} style={{ borderBottom: "none" }}>
-                    <span className={styles.itemLabel}>繰り返し</span>
-                    <select
-                      className={`${styles.input} ${styles.grow}`}
-                      value={repeat?.type ?? ""}
-                      aria-label="繰り返し"
-                      onChange={(e) =>
-                        pickRepeatType(e.target.value as "" | RepeatType)
-                      }
-                    >
-                      {REPEAT_TYPES.map((t) => (
-                        <option key={t.key} value={t.key}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {repeat && (
-                    <div className={styles.repeat}>
-                      {repeat.type === "weekly" && (
-                        <div className={styles.field}>
-                          <span className={styles.fieldLabel}>
-                            曜日(複数選択)
-                          </span>
-                          <div className={styles.days}>
-                            {WEEKDAYS.map((l, i) => {
-                              const on = repeat.days.includes(i);
-                              return (
-                                <button
-                                  key={l}
-                                  aria-pressed={on}
-                                  data-on={on ? "" : undefined}
-                                  onClick={() => {
-                                    if (on && repeat.days.length === 1) return;
-                                    saveRepeat({
-                                      ...repeat,
-                                      days: on
-                                        ? repeat.days.filter((d) => d !== i)
-                                        : [...repeat.days, i],
-                                    });
-                                  }}
-                                >
-                                  {l}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {repeat.type === "monthly" && (
-                        <div className={styles.field}>
-                          <span className={styles.fieldLabel}>日にち</span>
-                          <div className={styles.grid}>
-                            {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                              (d) => (
-                                <button
-                                  key={d}
-                                  className={styles.cell}
-                                  data-on={repeat.mday === d ? "" : undefined}
-                                  onClick={() =>
-                                    saveRepeat({ ...repeat, mday: d })
-                                  }
-                                >
-                                  {d}
-                                </button>
-                              ),
-                            )}
-                            <button
-                              className={`${styles.cell} ${styles.cellLast}`}
-                              data-on={repeat.mday == null ? "" : undefined}
-                              onClick={() =>
-                                saveRepeat({ ...repeat, mday: null })
-                              }
-                            >
-                              月末
-                            </button>
-                          </div>
-                          {repeat.mday != null && repeat.mday > 28 && (
-                            <span className={styles.fieldNote}>
-                              その日がない月は月末に実行します。
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {repeat.type === "yearly" && (
-                        <div className={styles.field}>
-                          <span className={styles.fieldLabel}>月と日</span>
-                          <div className={styles.inline}>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min={1}
-                              max={12}
-                              className={`${styles.input} ${styles.mono}`}
-                              style={{ width: 64 }}
-                              aria-label="月"
-                              value={ymDraft ?? repeat.month}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                const n = Math.round(Number(v));
-                                if (v === "" || !(n >= 1 && n <= 12)) {
-                                  setYmDraft(v);
-                                  return;
-                                }
-                                setYmDraft(null);
-                                setYdDraft(null);
-                                setCalMonth(n);
-                                saveRepeat({
-                                  ...repeat,
-                                  month: n,
-                                  day: Math.min(repeat.day, MONTH_DAYS[n - 1]),
-                                });
-                              }}
-                            />
-                            <span className={styles.unit}>月</span>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min={1}
-                              max={repeatMonthDays}
-                              className={`${styles.input} ${styles.mono}`}
-                              style={{ width: 64, marginLeft: 6 }}
-                              aria-label="日"
-                              value={ydDraft ?? repeat.day}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                const n = Math.round(Number(v));
-                                if (
-                                  v === "" ||
-                                  !(n >= 1 && n <= repeatMonthDays)
-                                ) {
-                                  setYdDraft(v);
-                                  return;
-                                }
-                                setYdDraft(null);
-                                saveRepeat({ ...repeat, day: n });
-                              }}
-                            />
-                            <span className={styles.unit}>日</span>
-                          </div>
-                          <div className={styles.cal}>
-                            <div className={styles.calHead}>
-                              <button
-                                aria-label="前の月"
-                                onClick={() =>
-                                  setCalMonth((m) => (m === 1 ? 12 : m - 1))
-                                }
-                              >
-                                ‹
-                              </button>
-                              <span>{calMonth}月</span>
-                              <button
-                                aria-label="次の月"
-                                onClick={() =>
-                                  setCalMonth((m) => (m === 12 ? 1 : m + 1))
-                                }
-                              >
-                                ›
-                              </button>
-                            </div>
-                            <div className={styles.grid}>
-                              {Array.from(
-                                { length: MONTH_DAYS[calMonth - 1] },
-                                (_, i) => i + 1,
-                              ).map((d) => (
-                                <button
-                                  key={d}
-                                  className={`${styles.cell} ${styles.mono}`}
-                                  data-on={
-                                    repeat.month === calMonth &&
-                                    repeat.day === d
-                                      ? ""
-                                      : undefined
-                                  }
-                                  onClick={() =>
-                                    saveRepeat({
-                                      ...repeat,
-                                      month: calMonth,
-                                      day: d,
-                                    })
-                                  }
-                                >
-                                  {d}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className={styles.field}>
-                        <span className={styles.fieldLabel}>終了</span>
-                        <div
-                          className={styles.seg}
-                          role="group"
-                          aria-label="終了"
-                        >
-                          {END_TYPES.map((t) => (
-                            <button
-                              key={t.key}
-                              style={{ flex: 1, width: "auto" }}
-                              data-on={
-                                repeat.endType === t.key ? "" : undefined
-                              }
-                              onClick={() =>
-                                saveRepeat({
-                                  ...repeat,
-                                  endType: t.key,
-                                  endDate:
-                                    t.key === "date" && !repeat.endDate
-                                      ? defaultEndDate(fixed.date)
-                                      : repeat.endDate,
-                                  endCount:
-                                    t.key === "count" && repeat.endCount == null
-                                      ? 10
-                                      : repeat.endCount,
-                                })
-                              }
-                            >
-                              {t.label}
-                            </button>
-                          ))}
-                        </div>
-                        {repeat.endType === "date" && (
-                          <div className={styles.inline}>
-                            <input
-                              type="date"
-                              className={`${styles.input} ${styles.mono} ${styles.grow}`}
-                              value={repeat.endDate}
-                              min={fixed.date || undefined}
-                              aria-label="終了日"
-                              onChange={(e) =>
-                                saveRepeat({
-                                  ...repeat,
-                                  endDate: e.target.value,
-                                })
-                              }
-                            />
-                            <span className={styles.unit}>まで</span>
-                          </div>
-                        )}
-                        {repeat.endType === "count" && (
-                          <div className={styles.inline}>
-                            <input
-                              type="number"
-                              min={1}
-                              step={1}
-                              className={`${styles.input} ${styles.mono}`}
-                              style={{ width: 80 }}
-                              value={repeat.endCount ?? ""}
-                              aria-label="終了回数"
-                              onChange={(e) =>
-                                saveRepeat({
-                                  ...repeat,
-                                  endCount:
-                                    e.target.value === ""
-                                      ? null
-                                      : Math.max(1, Number(e.target.value)),
-                                })
-                              }
-                            />
-                            <span className={styles.unit}>回で終了</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {repeatError ? (
-                        <div className={styles.rowError} role="alert">
-                          {repeatError}
-                        </div>
-                      ) : (
-                        <div className={styles.summary}>
-                          {repeatSummary(repeat)}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {status === "waiting" && (
@@ -1372,7 +1128,7 @@ export function TaskDetail({
                     >
                       <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
                     </svg>
-                    削除
+                    {isChild ? "この回を削除" : "削除"}
                   </button>
                   {!done && (
                     <button
@@ -1400,10 +1156,10 @@ export function TaskDetail({
   );
 }
 
-/** 終了日の初期値: 開始日(未設定なら今日)の約3か月後。 */
-function defaultEndDate(date: string): string {
-  const d = date ? new Date(`${date}T00:00`) : new Date();
-  const e = new Date(d.getFullYear(), d.getMonth() + 3, d.getDate() + 1);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${e.getFullYear()}-${p(e.getMonth() + 1)}-${p(e.getDate())}`;
+/** 「M/D(曜)」。日付がなければ空。 */
+function occurrenceLabel(date: string | null): string {
+  if (!date) return "";
+  const d = new Date(`${date}T00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getMonth() + 1}/${d.getDate()}(${"日月火水木金土"[d.getDay()]})`;
 }

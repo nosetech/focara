@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AssignScreen } from "@/components/AssignScreen";
 import { CalendarScreen } from "@/components/CalendarScreen";
+import { HabitsScreen } from "@/components/HabitsScreen";
 import { InboxScreen } from "@/components/InboxScreen";
 import { ProjectsScreen } from "@/components/ProjectsScreen";
 import { StatusListScreen } from "@/components/StatusListScreen";
@@ -21,7 +22,7 @@ export default async function OrganizeScreenPage({
   if (screen === "projects") return <ProjectsScreen />;
   if (screen === "waiting" || screen === "someday")
     return <StatusListScreen status={screen} />;
-  if (screen === "habits") return <StatusListScreen status="habit" />;
+  if (screen === "habits") return <HabitsScreen />;
   if (screen === "day" || screen === "week")
     return <CalendarScreen mode={screen} />;
   const label = ORGANIZE_SCREENS.find((s) => s.key === screen)?.label;

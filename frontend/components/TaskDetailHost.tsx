@@ -15,7 +15,7 @@ function subscribe(onChange: () => void) {
 }
 
 /** 整理画面シェルのブレークポイント(900px)でデスクトップ幅かを返す。 */
-function useIsDesktop() {
+export function useIsDesktop() {
   return useSyncExternalStore(
     subscribe,
     () => window.matchMedia(DESKTOP_QUERY).matches,

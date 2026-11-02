@@ -35,7 +35,7 @@ const KEYS = [
   { k: "1", l: "次にやる" },
   { k: "2", l: "いつか" },
   { k: "3", l: "条件待ち" },
-  { k: "4", l: "習慣" },
+  { k: "4", l: "習慣にする" },
   { k: "N", l: "inboxに追加" },
   { k: "Esc", l: "選択解除" },
 ];
@@ -45,7 +45,6 @@ const STATUS_OPTIONS = [
   { v: "next", l: "次にやる" },
   { v: "waiting", l: "条件待ち" },
   { v: "someday", l: "いつか" },
-  { v: "habit", l: "習慣" },
 ];
 
 const PRIORITY_OPTIONS = ["高", "中", "低"];
@@ -103,8 +102,11 @@ export function OrganizeShell({
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   const refreshCounts = useCallback(() => {
-    apiFetch<{ status: string; scheduled_date?: string | null }[]>("/tasks")
-      .then((tasks) => setCounts(countTasks(tasks)))
+    Promise.all([
+      apiFetch<{ status: string; scheduled_date?: string | null }[]>("/tasks"),
+      apiFetch<{ active: boolean }[]>("/habits"),
+    ])
+      .then(([tasks, habits]) => setCounts(countTasks(tasks, habits)))
       .catch(() => {});
   }, []);
 

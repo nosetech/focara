@@ -13,6 +13,7 @@ export interface CalendarTask {
   run_order: number | null;
   fixed_at: string | null;
   fixed_end_at: string | null;
+  habit_id: number | null;
 }
 
 /** 基準日を含む週(月〜日)の日付。 */

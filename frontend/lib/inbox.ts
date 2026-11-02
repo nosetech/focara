@@ -37,7 +37,7 @@ export const TRIAGE_STATUSES = [
   { status: "next", label: "次にやる", key: "1" },
   { status: "someday", label: "いつか", key: "2" },
   { status: "waiting", label: "条件待ち", key: "3" },
-  { status: "habit", label: "習慣", key: "4" },
+  { status: "habit", label: "習慣にする", key: "4" },
 ] as const;
 
 export const formatEstimate = (m: number | null) =>

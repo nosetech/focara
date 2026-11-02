@@ -19,6 +19,7 @@ import { useOrganize } from "./OrganizeContext";
 import { TaskDetailHost } from "./TaskDetailHost";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { HabitBadge } from "./HabitBadge";
 import styles from "./CalendarScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -208,6 +209,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
                         data-done={t.status === "done" ? "" : undefined}
                       >
                         {t.title}
+                        {t.habit_id != null && <HabitBadge />}
                       </span>
                       <span className={styles.meta}>
                         {[
@@ -292,6 +294,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
             <span className={styles.mono}>
               {formatRange(t.fixed_at as string, t.fixed_end_at)}
             </span>{" "}
+            {t.habit_id != null && <HabitBadge icon />}
             {t.title}
           </div>
         ))}
@@ -303,6 +306,7 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
             {...selectProps(t)}
             {...dragProps(t)}
           >
+            {t.habit_id != null && <HabitBadge icon />}
             {t.title}
           </div>
         ))}

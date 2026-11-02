@@ -18,6 +18,7 @@ const t = (id: number, o: Partial<CalendarTask> = {}): CalendarTask => ({
   scheduled_date: "2026-10-27",
   time_slot: "morning",
   run_order: null,
+  habit_id: null,
   fixed_at: null,
   fixed_end_at: null,
   ...o,

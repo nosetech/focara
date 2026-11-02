@@ -18,6 +18,7 @@ const t = (id: number, o: Partial<AssignTask> = {}): AssignTask => ({
   scheduled_date: null,
   time_slot: null,
   run_order: null,
+  habit_id: null,
   ...o,
 });
 

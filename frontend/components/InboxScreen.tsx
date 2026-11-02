@@ -19,6 +19,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { HabitSheetHost } from "./HabitSheetHost";
 import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./InboxScreen.module.css";
 
@@ -45,6 +46,8 @@ export function InboxScreen() {
   const [waitFor, setWaitFor] = useState<number[] | null>(null);
   const [waitText, setWaitText] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** 「習慣にする」で作成シートを開いている元のinboxタスク */
+  const [habitFrom, setHabitFrom] = useState<InboxTask | null>(null);
   const busy = useRef(false);
 
   const fetchTasks = useCallback(async (initial: boolean) => {
@@ -88,6 +91,17 @@ export function InboxScreen() {
   const assign = useCallback(
     async (ids: number[], status: string, waitCondition?: string) => {
       if (ids.length === 0 || busy.current) return;
+      if (status === "habit") {
+        // 習慣にするのは1件ずつ。親の作成シートを開き、作成後に元のタスクを取り除く
+        const src = tasks.find((t) => t.id === ids[0]);
+        if (ids.length > 1 || !src) {
+          showToast({ msg: "習慣にするのは1件ずつ選んでください" });
+          return;
+        }
+        setWaitFor(null);
+        setHabitFrom(src);
+        return;
+      }
       if (status === "waiting" && !waitCondition?.trim()) {
         setWaitText("");
         setWaitFor(ids);
@@ -132,7 +146,7 @@ export function InboxScreen() {
         showToast({ msg: "移動できませんでした。もう一度お試しください" });
       }
     },
-    [rows, refreshCounts, showToast, fetchTasks],
+    [rows, tasks, refreshCounts, showToast, fetchTasks],
   );
 
   const bulkPatch = async (ids: number[], body: Record<string, unknown>) => {
@@ -370,10 +384,47 @@ export function InboxScreen() {
         </div>
       )}
 
+      <HabitSheetHost
+        key={habitFrom?.id ?? "none"}
+        open={habitFrom != null}
+        mode="new"
+        fromInbox
+        seed={
+          habitFrom
+            ? {
+                title: habitFrom.title,
+                projectId: habitFrom.project_id,
+                priority: habitFrom.priority,
+                estimate: habitFrom.estimate_minutes,
+              }
+            : undefined
+        }
+        onCreated={(created) => {
+          const src = habitFrom;
+          setHabitFrom(null);
+          if (!src) return;
+          void apiFetch(`/tasks/${src.id}`, { method: "DELETE" })
+            .then(() => {
+              setTasks((ts) => ts.filter((t) => t.id !== src.id));
+              setChecked((c) => c.filter((id) => id !== src.id));
+              setFocus((f) => nextFocus(f, rows.length - 1));
+              showToast({
+                msg: `習慣「${created.title}」を作成しました · inboxから取り除きました`,
+              });
+            })
+            .catch(() =>
+              showToast({
+                msg: `習慣「${created.title}」を作成しましたが、元のタスクを取り除けませんでした`,
+              }),
+            )
+            .finally(() => refreshCounts());
+        }}
+        onClose={() => setHabitFrom(null)}
+      />
       <TaskDetailHost
-        taskId={current?.id ?? null}
-        showEmpty
-        sheetOpen={sheetOpen}
+        taskId={habitFrom ? null : (current?.id ?? null)}
+        showEmpty={habitFrom == null}
+        sheetOpen={sheetOpen && habitFrom == null}
         onClose={() => {
           setSheetOpen(false);
           void fetchTasks(false);
