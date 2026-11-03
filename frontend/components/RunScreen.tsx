@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type PointerEvent,
   type ReactNode,
 } from "react";
@@ -18,7 +19,9 @@ import {
   dragOffset,
   formatDateLabel,
   formatMinutes,
+  formatNow,
   isDayOver,
+  progressPercent,
   moveBody,
   restoreBody,
   somedayBody,
@@ -34,6 +37,9 @@ import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
 import { EmptyState, ErrorState, LoadingState } from "./StateView";
 import { HabitBadge } from "./HabitBadge";
+import { useShell } from "./ShellContext";
+import { getResolvedTheme, setTheme, subscribeTheme } from "@/lib/theme";
+import Link from "next/link";
 import styles from "./RunScreen.module.css";
 
 type Load =
@@ -183,6 +189,12 @@ export function RunScreen() {
     return () => clearTimeout(toastTimer.current);
   }, [fetchAll]);
 
+  // 時計・時間帯を1分ごとに更新
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const curTask =
     load.state === "ready" ? buildRunView(load.tasks).queue[0] : undefined;
 
@@ -206,11 +218,32 @@ export function RunScreen() {
   }, [curTask, busy, detailId, complete, postpone]);
 
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
+  const { openQuickAdd } = useShell();
+  const headView = load.state === "ready" ? buildRunView(load.tasks) : null;
 
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
+        <Link href="/organize" className={styles.backLink}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+          整理画面
+        </Link>
+        <span className={styles.vsep} />
         <div className={styles.date}>{now ? formatDateLabel(now) : ""}</div>
+        <div className={styles.clock} suppressHydrationWarning>
+          {now ? formatNow(now) : ""}
+        </div>
         <div className={styles.slotMarks}>
           {SLOTS.map((s) => (
             <span key={s.key} data-on={s.key === slot ? "" : undefined}>
@@ -218,6 +251,50 @@ export function RunScreen() {
             </span>
           ))}
         </div>
+        <div className={styles.headSpacer} />
+        {headView && headView.total > 0 && (
+          <div className={styles.headProgress}>
+            <span>
+              <span className={styles.mono}>
+                {headView.done.length}/{headView.total}
+              </span>{" "}
+              完了
+            </span>
+            <div className={styles.headBar}>
+              <div
+                style={{
+                  width: `${progressPercent(headView.done.length, headView.total)}%`,
+                }}
+              />
+            </div>
+            <span>
+              残り{" "}
+              <span className={styles.mono}>
+                {formatMinutes(headView.remainMinutes)}
+              </span>
+            </span>
+          </div>
+        )}
+        <button
+          type="button"
+          className={styles.headAdd}
+          onClick={openQuickAdd}
+          aria-label="inboxに追加"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          inboxに追加
+          <kbd>N</kbd>
+        </button>
+        <HeaderTheme />
       </header>
       {load.state === "loading" && <LoadingState />}
       {load.state === "error" && (
@@ -262,6 +339,49 @@ export function RunScreen() {
       )}
       <Toast toast={toast} />
     </div>
+  );
+}
+
+function HeaderTheme() {
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    getResolvedTheme,
+    () => null,
+  );
+  const next = theme === "dark" ? "light" : "dark";
+  return (
+    <button
+      type="button"
+      className={styles.headTheme}
+      onClick={() => setTheme(next)}
+      aria-label="テーマ切替"
+      suppressHydrationWarning
+    >
+      {theme === "dark" ? (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        >
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      ) : (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        >
+          <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+        </svg>
+      )}
+    </button>
   );
 }
 

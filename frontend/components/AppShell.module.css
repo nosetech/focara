@@ -186,6 +186,16 @@
   .spacer {
     flex: 1;
   }
+
+  /* 実行画面: サイドバーなし */
+  .shell[data-run] .sidebar {
+    display: none;
+  }
+
+  .shell[data-run] .main {
+    height: 100dvh;
+    overflow: auto;
+  }
 }
 
 @media (max-width: 899.98px) {

@@ -29,6 +29,16 @@
   font-weight: 700;
 }
 
+.backLink,
+.vsep,
+.clock,
+.headSpacer,
+.headProgress,
+.headAdd,
+.headTheme {
+  display: none;
+}
+
 .mono {
   font-family: var(--font-mono), monospace;
 }
@@ -386,10 +396,115 @@
 @media (min-width: 900px) {
   .header {
     height: 64px;
-    padding: 0 28px;
+    padding: 0 20px 0 12px;
     align-items: center;
     border-bottom: 1px solid var(--line);
-    gap: 16px;
+    gap: 20px;
+    flex: none;
+  }
+
+  .backLink {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px 0 8px;
+    border-radius: 10px;
+    color: var(--ink2);
+    font-size: 14px;
+  }
+
+  .backLink:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .vsep {
+    display: block;
+    width: 1px;
+    height: 24px;
+    background: var(--line);
+  }
+
+  .clock {
+    display: block;
+    font-family: var(--font-mono), monospace;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+
+  .headSpacer {
+    display: block;
+    flex: 1;
+  }
+
+  .headProgress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+
+  .headProgress .mono {
+    color: var(--ink2);
+  }
+
+  .headBar {
+    width: 110px;
+    flex: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .headBar > div {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+
+  .headAdd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .headAdd kbd {
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .headTheme {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink2);
+    cursor: pointer;
+  }
+
+  .headTheme:hover {
+    background: var(--sunk);
   }
 
   .date {

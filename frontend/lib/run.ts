@@ -56,6 +56,17 @@ export function formatClock(iso: string): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/** 現在時刻の表示(HH:MM)。 */
+export function formatNow(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 進捗バーの割合(0〜100)。総数0なら0。 */
+export function progressPercent(done: number, total: number): number {
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+}
+
 export interface RunView {
   done: RunTask[];
   queue: RunTask[]; // 未完了。先頭が「いま着手」

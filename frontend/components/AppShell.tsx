@@ -7,6 +7,7 @@ import { OrganizeShell } from "./OrganizeShell";
 import { QuickAdd } from "./QuickAdd";
 import { ThemeToggle } from "./ThemeToggle";
 import { Brand } from "./Brand";
+import { ShellContext } from "./ShellContext";
 import styles from "./AppShell.module.css";
 
 const NAV_ITEMS = [
@@ -55,19 +56,41 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  // 実行画面はデザイン上サイドバーを持たない(操作はヘッダーに置く)
+  const isRun = pathname === "/";
+
   return (
-    <div className={styles.shell}>
-      <nav className={styles.sidebar} aria-label="メインナビゲーション">
-        <Brand
-          className={styles.brand}
-          versionClassName={styles.brandVersion}
-        />
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
+    <ShellContext.Provider value={{ openQuickAdd: () => setQuickAdd(true) }}>
+      <div className={styles.shell} data-run={isRun ? "" : undefined}>
+        <nav className={styles.sidebar} aria-label="メインナビゲーション">
+          <Brand
+            className={styles.brand}
+            versionClassName={styles.brandVersion}
+          />
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={styles.sideLink}
+              aria-current={isActive(item.href) ? "page" : undefined}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                {item.icon}
+              </svg>
+              {item.label}
+            </Link>
+          ))}
+          <button
             className={styles.sideLink}
-            aria-current={isActive(item.href) ? "page" : undefined}
+            onClick={() => setQuickAdd(true)}
+            aria-label="inboxに追加"
           >
             <svg
               width="16"
@@ -77,77 +100,60 @@ export function AppShell({ children }: { children: ReactNode }) {
               stroke="currentColor"
               strokeWidth="1.7"
             >
-              {item.icon}
+              <path d="M12 5v14M5 12h14" />
             </svg>
-            {item.label}
-          </Link>
-        ))}
+            inboxに追加
+            <kbd className={styles.kbd}>N</kbd>
+          </button>
+          <div className={styles.spacer} />
+          <ThemeToggle />
+        </nav>
+
+        <main className={styles.main}>{children}</main>
+
+        <nav className={styles.bottomNav} aria-label="メインナビゲーション">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={styles.bottomLink}
+              aria-current={isActive(item.href) ? "page" : undefined}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                {item.icon}
+              </svg>
+              {item.label}
+            </Link>
+          ))}
+          <ThemeToggle />
+        </nav>
+
         <button
-          className={styles.sideLink}
+          className={styles.fab}
           onClick={() => setQuickAdd(true)}
           aria-label="inboxに追加"
         >
           <svg
-            width="16"
-            height="16"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.7"
+            strokeWidth="2"
           >
             <path d="M12 5v14M5 12h14" />
           </svg>
-          inboxに追加
-          <kbd className={styles.kbd}>N</kbd>
         </button>
-        <div className={styles.spacer} />
-        <ThemeToggle />
-      </nav>
 
-      <main className={styles.main}>{children}</main>
-
-      <nav className={styles.bottomNav} aria-label="メインナビゲーション">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={styles.bottomLink}
-            aria-current={isActive(item.href) ? "page" : undefined}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-            >
-              {item.icon}
-            </svg>
-            {item.label}
-          </Link>
-        ))}
-        <ThemeToggle />
-      </nav>
-
-      <button
-        className={styles.fab}
-        onClick={() => setQuickAdd(true)}
-        aria-label="inboxに追加"
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
-
-      {quickAdd && <QuickAdd onClose={() => setQuickAdd(false)} />}
-    </div>
+        {quickAdd && <QuickAdd onClose={() => setQuickAdd(false)} />}
+      </div>
+    </ShellContext.Provider>
   );
 }
