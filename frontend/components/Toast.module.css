@@ -2,7 +2,7 @@
   position: fixed;
   left: 20px;
   right: 20px;
-  bottom: calc(64px + 96px + env(safe-area-inset-bottom));
+  bottom: calc(116px + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: space-between;

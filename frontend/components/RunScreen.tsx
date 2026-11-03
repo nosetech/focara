@@ -220,11 +220,21 @@ export function RunScreen() {
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
   const { openQuickAdd } = useShell();
   const headView = load.state === "ready" ? buildRunView(load.tasks) : null;
+  // 「いま着手」の画面を出しているか(出していなければ追加ボタンだけの下部バーを出す)
+  const showsRun =
+    !!headView &&
+    headView.total > 0 &&
+    headView.queue.length > 0 &&
+    !(now && isDayOver(now, headView.queue.length, resumed, dayEndHour));
 
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <Link href="/organize" className={styles.backLink}>
+        <Link
+          href="/organize"
+          className={styles.backLink}
+          aria-label="整理画面に戻る"
+        >
           <svg
             width="18"
             height="18"
@@ -237,7 +247,7 @@ export function RunScreen() {
           >
             <path d="M15 5l-7 7 7 7" />
           </svg>
-          整理画面
+          <span className={styles.backText}>整理画面</span>
         </Link>
         <span className={styles.vsep} />
         <div className={styles.date}>{now ? formatDateLabel(now) : ""}</div>
@@ -337,8 +347,37 @@ export function RunScreen() {
           }}
         />
       )}
+      {!showsRun && (
+        <div className={styles.addOnlyBar}>
+          <AddButton />
+        </div>
+      )}
       <Toast toast={toast} />
     </div>
+  );
+}
+
+/** モバイルの下部バーのinbox追加ボタン(デスクトップはヘッダーにある)。 */
+function AddButton() {
+  const { openQuickAdd } = useShell();
+  return (
+    <button
+      type="button"
+      className={styles.addBtn}
+      onClick={openQuickAdd}
+      aria-label="inboxに追加"
+    >
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      >
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </button>
   );
 }
 
@@ -602,6 +641,21 @@ function Ready({
             後回し
             <kbd>S</kbd>
           </button>
+          <AddButton />
+        </div>
+
+        <div className={styles.hint}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M20 12H6M11 6l-6 6 6 6" />
+          </svg>
+          左へスワイプで後回し · タップで詳細
         </div>
 
         <section className={styles.after}>

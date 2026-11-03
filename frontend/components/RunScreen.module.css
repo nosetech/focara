@@ -6,9 +6,9 @@
 
 .header {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 14px 24px 0;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 0 8px;
   height: 48px;
 }
 
@@ -29,14 +29,67 @@
   font-weight: 700;
 }
 
-.backLink,
 .vsep,
 .clock,
-.headSpacer,
 .headProgress,
 .headAdd,
-.headTheme {
+.backText,
+.hint {
   display: none;
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+.backLink,
+.headTheme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.date {
+  margin-right: 8px;
+}
+
+.hint {
+  display: flex;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--ink3);
+  gap: 6px;
+  align-items: center;
+}
+
+.addBtn {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addOnlyBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
+  z-index: 30;
 }
 
 .mono {
@@ -153,8 +206,8 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom));
-  padding: 12px 20px;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
   display: flex;
   gap: 12px;
   background: var(--bg);
@@ -404,14 +457,22 @@
   }
 
   .backLink {
-    display: flex;
-    align-items: center;
+    width: auto;
     gap: 6px;
     height: 40px;
     padding: 0 12px 0 8px;
     border-radius: 10px;
-    color: var(--ink2);
     font-size: 14px;
+  }
+
+  .backText {
+    display: inline;
+  }
+
+  .hint,
+  .addBtn,
+  .addOnlyBar {
+    display: none;
   }
 
   .backLink:hover {
@@ -431,11 +492,6 @@
     font-family: var(--font-mono), monospace;
     font-size: 14px;
     color: var(--ink2);
-  }
-
-  .headSpacer {
-    display: block;
-    flex: 1;
   }
 
   .headProgress {
@@ -491,16 +547,9 @@
   }
 
   .headTheme {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 40px;
     height: 40px;
-    border: none;
     border-radius: 10px;
-    background: transparent;
-    color: var(--ink2);
-    cursor: pointer;
   }
 
   .headTheme:hover {
