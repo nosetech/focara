@@ -6,9 +6,9 @@
 
 .header {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 14px 24px 0;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 0 8px;
   height: 48px;
 }
 
@@ -27,6 +27,69 @@
 .slotMarks [data-on] {
   color: var(--ink);
   font-weight: 700;
+}
+
+.vsep,
+.clock,
+.headProgress,
+.headAdd,
+.backText,
+.hint {
+  display: none;
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+.backLink,
+.headTheme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.date {
+  margin-right: 8px;
+}
+
+.hint {
+  display: flex;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--ink3);
+  gap: 6px;
+  align-items: center;
+}
+
+.addBtn {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addOnlyBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
+  z-index: 30;
 }
 
 .mono {
@@ -143,8 +206,8 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom));
-  padding: 12px 20px;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
   display: flex;
   gap: 12px;
   background: var(--bg);
@@ -386,10 +449,111 @@
 @media (min-width: 900px) {
   .header {
     height: 64px;
-    padding: 0 28px;
+    padding: 0 20px 0 12px;
     align-items: center;
     border-bottom: 1px solid var(--line);
-    gap: 16px;
+    gap: 20px;
+    flex: none;
+  }
+
+  .backLink {
+    width: auto;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px 0 8px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .backText {
+    display: inline;
+  }
+
+  .hint,
+  .addBtn,
+  .addOnlyBar {
+    display: none;
+  }
+
+  .backLink:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .vsep {
+    display: block;
+    width: 1px;
+    height: 24px;
+    background: var(--line);
+  }
+
+  .clock {
+    display: block;
+    font-family: var(--font-mono), monospace;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+
+  .headProgress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+
+  .headProgress .mono {
+    color: var(--ink2);
+  }
+
+  .headBar {
+    width: 110px;
+    flex: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .headBar > div {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+
+  .headAdd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .headAdd kbd {
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .headTheme {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .headTheme:hover {
+    background: var(--sunk);
   }
 
   .date {
@@ -784,5 +948,216 @@
 
   .grabber {
     display: none;
+  }
+}
+
+/* 空状態(今日の予定なし) */
+.empty {
+  flex: 1;
+  padding: 120px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty h1 {
+  font-size: 26px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.empty p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink2);
+  margin-top: 12px;
+}
+
+.emptyActions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyActions .dayPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dayHint {
+  display: none;
+}
+
+.dayHint[data-always] {
+  display: block;
+  margin-top: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink2);
+}
+
+.openDetail {
+  display: none;
+}
+
+.addHeading {
+  font-size: 13px;
+  color: var(--ink2);
+  margin-top: 18px;
+}
+
+.addInput {
+  margin-top: 10px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.slotPicker {
+  display: flex;
+  gap: 4px;
+  background: var(--sunk);
+  border-radius: 10px;
+  padding: 3px;
+  margin-top: 8px;
+}
+
+.slotPicker button {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.slotPicker button[data-on] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.addError {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+@media (min-width: 900px) {
+  .empty {
+    padding: 120px 80px 48px;
+    max-width: 720px;
+  }
+
+  .empty h1 {
+    font-size: 36px;
+  }
+
+  .emptyBr {
+    display: none;
+  }
+
+  .empty p {
+    font-size: 15px;
+    margin-top: 14px;
+  }
+
+  .emptyActions {
+    margin-top: 36px;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .emptyActions .dayPrimary,
+  .emptyActions .dayGhost {
+    width: auto;
+    height: 52px;
+    padding: 0 24px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  .openDetail {
+    display: block;
+    height: 56px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--ink2);
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .openDetail:hover {
+    color: var(--ink);
+  }
+
+  /* 1日の予定を終えた画面(デスクトップ): 一覧は右の「今日の流れ」に任せる */
+  .dayOver {
+    padding: 0;
+    max-width: 640px;
+  }
+
+  .dayOver h1 {
+    font-size: 36px;
+    margin-top: 2px;
+  }
+
+  .dayOver .counts {
+    gap: 48px;
+    margin-top: 32px;
+  }
+
+  .dayOver .counts b {
+    font-size: 40px;
+  }
+
+  .dayOver .counts span {
+    font-size: 13px;
+  }
+
+  .dayHint {
+    display: block;
+    margin-top: 36px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--ink2);
+  }
+
+  .dayHint[data-always] {
+    margin-top: 24px;
+    font-size: 15px;
+  }
+
+  .dayOver .leftList {
+    display: none;
+  }
+
+  .dayOver .dayActions {
+    flex-direction: row;
+    margin-top: 28px;
+    padding-top: 0;
+    gap: 12px;
+  }
+
+  .dayOver .dayPrimary,
+  .dayOver .dayGhost {
+    width: auto;
+    height: 52px;
+    padding: 0 24px;
+    border-radius: 14px;
+    font-size: 15px;
   }
 }

@@ -11,6 +11,8 @@ import {
   restoreBody,
   formatDateLabel,
   formatMinutes,
+  formatNow,
+  progressPercent,
   type RunTask,
 } from "./run.ts";
 
@@ -85,4 +87,16 @@ test("予定を変える: 翌日・指定日・いつか", () => {
   });
   assert.equal(somedayBody().status, "someday");
   assert.equal(somedayBody().scheduled_date, null);
+});
+
+test("formatNow は HH:MM でゼロ埋めする", () => {
+  assert.equal(formatNow(new Date(2026, 0, 5, 9, 3)), "09:03");
+  assert.equal(formatNow(new Date(2026, 0, 5, 18, 45)), "18:45");
+});
+
+test("progressPercent は総数0で0、それ以外は四捨五入", () => {
+  assert.equal(progressPercent(0, 0), 0);
+  assert.equal(progressPercent(1, 3), 33);
+  assert.equal(progressPercent(2, 3), 67);
+  assert.equal(progressPercent(3, 3), 100);
 });
