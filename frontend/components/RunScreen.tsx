@@ -35,7 +35,7 @@ import { formatRange, overlappingIds } from "@/lib/fixed";
 import { priorityLabel } from "@/lib/inbox";
 import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
-import { EmptyState, ErrorState, LoadingState } from "./StateView";
+import { ErrorState, LoadingState } from "./StateView";
 import { HabitBadge } from "./HabitBadge";
 import { useShell } from "./ShellContext";
 import { getResolvedTheme, setTheme, subscribeTheme } from "@/lib/theme";
@@ -65,6 +65,7 @@ export function RunScreen() {
   const [resumed, setResumed] = useState(false);
   const [dayEndHour, setDayEndHour] = useState(DEFAULT_DAY_END_HOUR);
   const [resched, setResched] = useState(false);
+  const [addToday, setAddToday] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchAll = useCallback(async (silent = false) => {
@@ -327,6 +328,7 @@ export function RunScreen() {
           dayEndHour={dayEndHour}
           onResume={() => setResumed(true)}
           onResched={() => setResched(true)}
+          onAddToday={() => setAddToday(true)}
         />
       )}
       {resched && load.state === "ready" && (
@@ -335,6 +337,17 @@ export function RunScreen() {
           busy={busy}
           onMove={reschedule}
           onClose={() => setResched(false)}
+        />
+      )}
+      {addToday && (
+        <AddTodaySheet
+          initialSlot={slot ?? "morning"}
+          onClose={() => setAddToday(false)}
+          onAdded={() => {
+            setAddToday(false);
+            showToast({ msg: "今日の予定に追加しました" });
+            void fetchAll(true);
+          }}
         />
       )}
       {detailId != null && (
@@ -437,6 +450,7 @@ function Ready({
   dayEndHour,
   onResume,
   onResched,
+  onAddToday,
 }: {
   tasks: RunTask[];
   projects: Map<number, string>;
@@ -450,23 +464,29 @@ function Ready({
   dayEndHour: number;
   onResume: () => void;
   onResched: () => void;
+  onAddToday: () => void;
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
 
   if (now && isDayOver(now, view.queue.length, resumed, dayEndHour)) {
-    return <DayOver view={view} onResume={onResume} onResched={onResched} />;
+    return (
+      <div className={styles.runLayout}>
+        <div className={styles.runMain}>
+          <DayOver view={view} onResume={onResume} onResched={onResched} />
+        </div>
+        <Flow
+          tasks={tasks}
+          slot={slot}
+          curId={null}
+          onOpenDetail={onOpenDetail}
+        />
+      </div>
+    );
   }
 
   if (view.total === 0) {
-    return (
-      <EmptyState
-        title="今日の予定はありません"
-        description="今日やるものを選びましょう。"
-        href="/organize"
-        actionLabel="inboxを整理する"
-      />
-    );
+    return <RunEmpty onAddToday={onAddToday} />;
   }
 
   if (!cur) {
@@ -550,12 +570,6 @@ function Ready({
       </div>,
     );
   });
-
-  // デスクトップの「今日の流れ」(完了済みを含め時間帯ごと)
-  const flow = SLOTS.map((s) => {
-    const g = tasks.filter((t) => t.time_slot === s.key);
-    return { ...s, tasks: g };
-  }).filter((s) => s.tasks.length);
 
   return (
     <div className={styles.runLayout}>
@@ -641,6 +655,12 @@ function Ready({
             後回し
             <kbd>S</kbd>
           </button>
+          <button
+            className={styles.openDetail}
+            onClick={() => onOpenDetail(cur.id)}
+          >
+            詳細を開く
+          </button>
           <AddButton />
         </div>
 
@@ -684,47 +704,197 @@ function Ready({
         </div>
       </div>
 
-      <aside className={styles.flow} aria-label="今日の流れ">
-        <div className={styles.afterLabel}>今日の流れ</div>
-        {flow.map((s) => {
-          const remain = s.tasks
-            .filter((t) => t.status !== "done")
-            .reduce((a, t) => a + (t.estimate_minutes ?? 0), 0);
-          const on = s.key === slot;
-          return (
-            <div key={s.key}>
-              <div className={styles.flowHeader} data-on={on ? "" : undefined}>
-                <span>{s.label}</span>
-                <i />
-                <span className={styles.mono}>
-                  {s.tasks.every((t) => t.status === "done")
-                    ? "完了"
-                    : `残り ${formatMinutes(remain)}`}
-                </span>
-              </div>
-              {s.tasks.map((t) => {
-                const isDone = t.status === "done";
-                const isCur = t.id === cur.id;
-                return (
-                  <div
-                    key={t.id}
-                    className={styles.flowRow}
-                    data-cur={isCur ? "" : undefined}
-                    data-done={isDone ? "" : undefined}
-                  >
-                    <span className={styles.flowMark} />
-                    <span className={styles.flowTitle}>
-                      {t.title}
-                      {t.habit_id != null && <HabitBadge icon />}
-                    </span>
-                    <span className={styles.est}>{estimate(t)}</span>
-                  </div>
-                );
-              })}
+      <Flow
+        tasks={tasks}
+        slot={slot}
+        curId={cur.id}
+        onOpenDetail={onOpenDetail}
+      />
+    </div>
+  );
+}
+
+/** デスクトップの「今日の流れ」(完了済みを含め時間帯ごと)。 */
+function Flow({
+  tasks,
+  slot,
+  curId,
+  onOpenDetail,
+}: {
+  tasks: RunTask[];
+  slot: TimeSlot | null;
+  curId: number | null;
+  onOpenDetail: (id: number) => void;
+}) {
+  const flow = SLOTS.map((s) => ({
+    ...s,
+    tasks: tasks.filter((t) => t.time_slot === s.key),
+  })).filter((s) => s.tasks.length);
+  return (
+    <aside className={styles.flow} aria-label="今日の流れ">
+      <div className={styles.afterLabel}>今日の流れ</div>
+      {flow.map((s) => {
+        const remain = s.tasks
+          .filter((t) => t.status !== "done")
+          .reduce((a, t) => a + (t.estimate_minutes ?? 0), 0);
+        const on = s.key === slot;
+        return (
+          <div key={s.key}>
+            <div className={styles.flowHeader} data-on={on ? "" : undefined}>
+              <span>{s.label}</span>
+              <i />
+              <span className={styles.mono}>
+                {s.tasks.every((t) => t.status === "done")
+                  ? "完了"
+                  : `残り ${formatMinutes(remain)}`}
+              </span>
             </div>
-          );
-        })}
-      </aside>
+            {s.tasks.map((t) => {
+              const isDone = t.status === "done";
+              const isCur = t.id === curId;
+              return (
+                <div
+                  key={t.id}
+                  className={styles.flowRow}
+                  data-cur={isCur ? "" : undefined}
+                  data-done={isDone ? "" : undefined}
+                  onClick={() => onOpenDetail(t.id)}
+                >
+                  <span className={styles.flowMark} />
+                  <span className={styles.flowTitle}>
+                    {t.title}
+                    {t.habit_id != null && <HabitBadge icon />}
+                  </span>
+                  <span className={styles.est}>{estimate(t)}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </aside>
+  );
+}
+
+/** 今日の予定が空のときの表示。inboxの未整理件数を出し、整理か今日への追加へ誘導する。 */
+function RunEmpty({ onAddToday }: { onAddToday: () => void }) {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    apiFetch<unknown[]>("/tasks", { query: { status: "inbox" } })
+      .then((r) => setCount(r.length))
+      .catch(() => setCount(null));
+  }, []);
+  return (
+    <div className={styles.empty}>
+      <h1>
+        今日の予定は
+        <br className={styles.emptyBr} />
+        ありません
+      </h1>
+      <p>
+        {count != null && count > 0 ? (
+          <>
+            inboxに未整理のタスクが <span className={styles.mono}>{count}</span>{" "}
+            件あります。
+          </>
+        ) : null}
+        今日やるものを選びましょう。
+      </p>
+      <div className={styles.emptyActions}>
+        <Link href="/organize/inbox" className={styles.dayPrimary}>
+          inboxを整理する
+        </Link>
+        <button className={styles.dayGhost} onClick={onAddToday}>
+          今日の予定を追加
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 今日の予定に直接追加するシート(時間帯を選ぶ)。 */
+function AddTodaySheet({
+  initialSlot,
+  onClose,
+  onAdded,
+}: {
+  initialSlot: TimeSlot;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [slot, setSlot] = useState<TimeSlot>(initialSlot);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => ref.current?.focus(), []);
+
+  const submit = async () => {
+    const t = title.trim();
+    if (!t || saving) return;
+    setSaving(true);
+    setError(false);
+    try {
+      const task = await apiFetch<{ id: number }>("/tasks", {
+        method: "POST",
+        body: { title: t },
+      });
+      await apiFetch(`/tasks/${task.id}/schedule`, {
+        method: "PUT",
+        body: { scheduled_date: toDateParam(new Date()), time_slot: slot },
+      });
+      onAdded();
+    } catch {
+      setError(true);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={styles.sheetRoot}>
+      <div className={styles.sheetBackdrop} onClick={onClose} />
+      <div
+        className={styles.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-label="今日の予定を追加"
+      >
+        <div className={styles.grabber} />
+        <p className={styles.addHeading}>今日の予定に追加</p>
+        <textarea
+          ref={ref}
+          className={styles.addInput}
+          value={title}
+          rows={3}
+          placeholder="思いついたことを書く"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <div className={styles.slotPicker}>
+          {SLOTS.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              data-on={o.key === slot ? "" : undefined}
+              onClick={() => setSlot(o.key)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {error && (
+          <p className={styles.addError} role="alert">
+            追加できませんでした。もう一度お試しください
+          </p>
+        )}
+        <button
+          className={styles.dayPrimary}
+          style={{ marginTop: 20, opacity: title.trim() ? 1 : 0.4 }}
+          disabled={saving || !title.trim()}
+          onClick={() => void submit()}
+        >
+          {saving ? "追加中" : "今日に追加"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -753,6 +923,11 @@ function DayOver({
           <span>未完了</span>
         </div>
       </div>
+      {view.queue.length > 0 && (
+        <p className={styles.dayHint}>
+          終わっていないタスクは右の「今日の流れ」に残っています。続けるか、行き先を決めましょう。
+        </p>
+      )}
       <div className={styles.leftList}>
         {view.queue.map((t) => (
           <div key={t.id} className={styles.leftRow}>
@@ -761,6 +936,11 @@ function DayOver({
           </div>
         ))}
       </div>
+      {view.queue.length === 0 && (
+        <p className={styles.dayHint} data-always="">
+          おつかれさまでした。やったことは今日の記録に残っています。
+        </p>
+      )}
       <div className={styles.dayActions}>
         <button className={styles.dayPrimary} onClick={onResume}>
           終わっていないタスクをやる
