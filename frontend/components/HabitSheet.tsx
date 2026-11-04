@@ -22,7 +22,12 @@ import {
 import { PRIORITIES } from "@/lib/inbox";
 import { slotForTime } from "@/lib/fixed";
 import { SLOTS } from "@/lib/run";
-import { SAVE_LABEL, WEEKDAYS, type SaveState } from "@/lib/taskDetail";
+import {
+  PROPERTY_TYPES,
+  SAVE_LABEL,
+  WEEKDAYS,
+  type SaveState,
+} from "@/lib/taskDetail";
 import styles from "./TaskDetail.module.css";
 import own from "./HabitSheet.module.css";
 
@@ -77,27 +82,29 @@ const Chevron = ({ up }: { up: boolean }) => (
  * 空・重複の入力中は、その行にエラーを出して確定(保存)しない。
  */
 function PropertyRows({
-  keys,
+  props,
   onChange,
 }: {
-  keys: string[];
-  onChange: (keys: string[]) => void;
+  props: HabitDraft["properties"];
+  onChange: (props: HabitDraft["properties"]) => void;
 }) {
-  // 確定できない入力中の文字列(行番号 → 文字列)
+  // 確定できない入力中の項目名(行番号 → 文字列)
   const [bad, setBad] = useState<Record<number, string>>({});
-  const commit = (next: string[]) => {
+  const commit = (next: HabitDraft["properties"]) => {
     setBad({});
     onChange(next);
   };
+  const patch = (i: number, p: Partial<HabitDraft["properties"][number]>) =>
+    commit(props.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const move = (i: number, d: number) => {
-    const next = [...keys];
+    const next = [...props];
     [next[i], next[i + d]] = [next[i + d], next[i]];
     commit(next);
   };
   return (
     <div className={own.props}>
-      {keys.map((name, i) => {
-        const val = i in bad ? bad[i] : name;
+      {props.map((prop, i) => {
+        const val = i in bad ? bad[i] : prop.key;
         const err =
           i in bad
             ? bad[i].trim()
@@ -117,11 +124,11 @@ function PropertyRows({
                 onChange={(e) => {
                   const v = e.target.value;
                   const t = v.trim();
-                  if (!t || keys.some((k, j) => j !== i && k === t)) {
+                  if (!t || props.some((k, j) => j !== i && k.key === t)) {
                     setBad({ ...bad, [i]: v });
                     return;
                   }
-                  commit(keys.map((k, j) => (j === i ? t : k)));
+                  patch(i, { key: t });
                 }}
               />
               <button
@@ -135,7 +142,7 @@ function PropertyRows({
               <button
                 className={own.iconBtn}
                 aria-label="下へ"
-                disabled={i === keys.length - 1}
+                disabled={i === props.length - 1}
                 onClick={() => move(i, 1)}
               >
                 <Chevron up={false} />
@@ -143,7 +150,7 @@ function PropertyRows({
               <button
                 className={own.iconBtn}
                 aria-label="削除"
-                onClick={() => commit(keys.filter((_, j) => j !== i))}
+                onClick={() => commit(props.filter((_, j) => j !== i))}
               >
                 <svg
                   width="14"
@@ -162,15 +169,46 @@ function PropertyRows({
                 {err}
               </span>
             )}
+            <div className={own.typeRow}>
+              <div className={styles.seg} role="group" aria-label="種別">
+                {PROPERTY_TYPES.map((t) => (
+                  <button
+                    key={t.key}
+                    data-on={prop.type === t.key ? "" : undefined}
+                    onClick={() =>
+                      patch(i, {
+                        type: t.key,
+                        unit: t.key === "number" ? prop.unit : "",
+                      })
+                    }
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {prop.type === "number" && (
+                <>
+                  <span className={own.tiny}>単位</span>
+                  <input
+                    className={styles.input}
+                    style={{ width: 72 }}
+                    value={prop.unit}
+                    placeholder="kg"
+                    aria-label="単位"
+                    onChange={(e) => patch(i, { unit: e.target.value })}
+                  />
+                </>
+              )}
+            </div>
           </div>
         );
       })}
       <button
         className={own.addBtn}
         onClick={() => {
-          let n = keys.length + 1;
-          while (keys.includes(`項目${n}`)) n++;
-          commit([...keys, `項目${n}`]);
+          let n = props.length + 1;
+          while (props.some((p) => p.key === `項目${n}`)) n++;
+          commit([...props, { key: `項目${n}`, type: "string", unit: "" }]);
         }}
       >
         <svg
@@ -584,7 +622,7 @@ export function HabitSheet({
                   プロパティ
                 </span>
                 <PropertyRows
-                  keys={draft.properties}
+                  props={draft.properties}
                   onChange={(properties) => change({ properties })}
                 />
               </div>

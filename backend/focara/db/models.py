@@ -164,13 +164,22 @@ class HabitProperty(Base):
     """子タスクに引き継ぐプロパティ名(値は子ごとに入力する)。"""
 
     __tablename__ = "habit_properties"
-    __table_args__ = (Index("uq_habit_properties_habit_id_key", "habit_id", "key", unique=True),)
+    __table_args__ = (
+        CheckConstraint(_in("value_type", PROPERTY_TYPES), name="value_type"),
+        CheckConstraint("unit IS NULL OR value_type = 'number'", name="unit"),
+        Index("uq_habit_properties_habit_id_key", "habit_id", "key", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     habit_id: Mapped[int] = mapped_column(
         ForeignKey("habits.id", ondelete="CASCADE"), nullable=False
     )
     key: Mapped[str] = mapped_column(String, nullable=False)
+    # 子へ引き継ぐ種別と単位(単位は number のみ)。値は子ごとに入力する
+    value_type: Mapped[str] = mapped_column(
+        String, nullable=False, default="string", server_default="string"
+    )
+    unit: Mapped[str | None] = mapped_column(String)
 
     habit: Mapped[Habit] = relationship(back_populates="properties")
 

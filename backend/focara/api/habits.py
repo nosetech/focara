@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -70,12 +70,25 @@ class HabitFields(BaseModel):
     recurrence_end_count: int | None = None
 
 
+class PropertySpec(BaseModel):
+    """子へ引き継ぐプロパティの定義(項目名・種別・単位)。値は持たない。"""
+
+    key: str
+    value_type: Literal["string", "number", "date"] = "string"
+    unit: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_str(cls, v):
+        return {"key": v} if isinstance(v, str) else v
+
+
 class HabitCreate(HabitFields):
     title: Title
     recurrence_type: RecurrenceType
     recurrence_end_type: RecurrenceEndType = "none"
     start_date: date | None = None  # 省略時は今日
-    properties: list[str] = []
+    properties: list[PropertySpec] = []
 
 
 class HabitUpdate(HabitFields):
@@ -85,7 +98,7 @@ class HabitUpdate(HabitFields):
     recurrence_type: RecurrenceType | None = None
     recurrence_end_type: RecurrenceEndType | None = None
     start_date: date | None = None
-    properties: list[str] | None = None
+    properties: list[PropertySpec] | None = None
 
 
 class Occurrence(BaseModel):
@@ -104,7 +117,7 @@ class HabitOut(HabitFields):
     start_date: date
     active: bool
     generated_until: date | None = None
-    properties: list[str] = []
+    properties: list[PropertySpec] = []
     # 直近の実施状況(今日以前の子を新しい順に最大7件)
     recent: list[Occurrence] = []
     created_at: datetime
@@ -114,7 +127,7 @@ class HabitOut(HabitFields):
 def _to_out(session: Session, habit: Habit) -> HabitOut:
     columns = {c.key: getattr(habit, c.key) for c in Habit.__table__.columns}
     out = HabitOut.model_validate(columns)
-    out.properties = [p.key for p in habit.properties]
+    out.properties = [_spec(p) for p in habit.properties]
     rows = session.execute(
         select(Task.id, Task.occurrence_date, Task.status)
         .where(Task.habit_id == habit.id, Task.occurrence_date <= date.today().isoformat())
@@ -136,11 +149,22 @@ def _columns(values: dict) -> dict:
     return {k: v.isoformat() if isinstance(v, date) else v for k, v in values.items()}
 
 
-def _unique_keys(keys: list[str]) -> list[str]:
-    keys = [k.strip() for k in keys]
-    if any(not k for k in keys):
-        raise HTTPException(422, "プロパティ名は空にできません")
-    return list(dict.fromkeys(keys))
+def _spec(p: HabitProperty) -> PropertySpec:
+    return PropertySpec(key=p.key, value_type=p.value_type, unit=p.unit)
+
+
+def _clean_specs(specs: list[PropertySpec]) -> list[PropertySpec]:
+    """名前を整え、空を拒否し、同名は先頭だけ残す。単位は数値のみ。"""
+    out: dict[str, PropertySpec] = {}
+    for sp in specs:
+        key = sp.key.strip()
+        if not key:
+            raise HTTPException(422, "プロパティ名は空にできません")
+        unit = (sp.unit or "").strip() or None
+        if unit and sp.value_type != "number":
+            raise HTTPException(422, "単位は数値プロパティにのみ指定できます")
+        out.setdefault(key, PropertySpec(key=key, value_type=sp.value_type, unit=unit))
+    return list(out.values())
 
 
 def _check_fixed_time(start: str | None, end: str | None) -> None:
@@ -150,11 +174,13 @@ def _check_fixed_time(start: str | None, end: str | None) -> None:
         raise HTTPException(422, "終了時刻は開始時刻より後にしてください")
 
 
-def _replace_properties(session: Session, habit: Habit, keys: list[str]) -> None:
+def _replace_properties(session: Session, habit: Habit, specs: list[PropertySpec]) -> None:
     # 同じ名前を作り直すとき、unique 制約に当たらないよう先に削除を反映する
     habit.properties = []
     session.flush()
-    habit.properties = [HabitProperty(key=k) for k in _unique_keys(keys)]
+    habit.properties = [
+        HabitProperty(key=p.key, value_type=p.value_type, unit=p.unit) for p in specs
+    ]
 
 
 def _commit(session: Session) -> None:
@@ -183,7 +209,10 @@ def create_habit(body: HabitCreate, session: SessionDep, cfg: ConfigDep) -> Habi
         values["time_slot"] = slot_for_time(body.fixed_start_time)
     today = date.today()
     habit = Habit(**_columns(values), start_date=(body.start_date or today).isoformat())
-    habit.properties = [HabitProperty(key=k) for k in _unique_keys(body.properties)]
+    habit.properties = [
+        HabitProperty(key=p.key, value_type=p.value_type, unit=p.unit)
+        for p in _clean_specs(body.properties)
+    ]
     session.add(habit)
     # CHECK 制約違反は flush で検出する(生成前に不正なルールを弾く)
     try:
@@ -203,12 +232,11 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
     for key in ("title", "recurrence_type", "recurrence_end_type", "start_date"):
         if key in values and values[key] is None:
             raise HTTPException(422, f"{key} は null にできません")
-    keys = values.pop("properties", None)
-    if keys is not None:
-        keys = _unique_keys(keys)
+    values.pop("properties", None)
+    keys = _clean_specs(body.properties) if body.properties is not None else None
     old_time_slot = habit.time_slot
     old_start, old_end = habit.fixed_start_time, habit.fixed_end_time
-    old_keys = [p.key for p in habit.properties]
+    old_specs = [(p.key, p.value_type, p.unit) for p in habit.properties]
     _check_fixed_time(
         values.get("fixed_start_time", old_start), values.get("fixed_end_time", old_end)
     )
@@ -230,7 +258,7 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
     if sync:
         sync_fields_to_children(session, habit, today, sync, old_time_slot, old_start, old_end)
     if keys is not None:
-        sync_properties_to_children(session, habit, today, old_keys)
+        sync_properties_to_children(session, habit, today, old_specs)
     if any(k in changed for k in RULE_FIELDS):
         regenerate_future_children(session, habit, today, cfg.habit.generate_ahead_days)
     _commit(session)

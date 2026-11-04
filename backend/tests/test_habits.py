@@ -84,7 +84,7 @@ def test_invalid_rule_rejected(client):
 
 def test_properties_copied_without_values(client):
     h = _habit(client, properties=["体重", "体重", "回数"])
-    assert h["properties"] == ["体重", "回数"]
+    assert [p["key"] for p in h["properties"]] == ["体重", "回数"]
     kid = _children(client, h["id"])[0]
     props = client.get(f"/api/tasks/{kid['id']}/properties").json()
     assert sorted((p["key"], p["value"]) for p in props) == [("体重", None), ("回数", None)]
@@ -370,7 +370,7 @@ def test_property_keys_sync_to_children(client):
 
     res = client.patch(f"/api/habits/{h['id']}", json={"properties": ["回数", "メモ"]})
     assert res.status_code == 200, res.text
-    assert res.json()["properties"] == ["回数", "メモ"]
+    assert [p["key"] for p in res.json()["properties"]] == ["回数", "メモ"]
 
     def keys(task_id: int) -> list[str]:
         return sorted(p["key"] for p in client.get(f"/api/tasks/{task_id}/properties").json())
@@ -384,4 +384,61 @@ def test_property_reorder_keeps_order(client):
     h = _habit(client, properties=["a", "b"])
     res = client.patch(f"/api/habits/{h['id']}", json={"properties": ["b", "a"]})
     assert res.status_code == 200, res.text
-    assert res.json()["properties"] == ["b", "a"]
+    assert [p["key"] for p in res.json()["properties"]] == ["b", "a"]
+
+
+def test_property_types_and_units_inherited_and_synced(client):
+    h = _habit(
+        client,
+        properties=[
+            {"key": "体重", "value_type": "number", "unit": "kg"},
+            {"key": "日付", "value_type": "date"},
+            "メモ",
+        ],
+    )
+    assert h["properties"] == [
+        {"key": "体重", "value_type": "number", "unit": "kg"},
+        {"key": "日付", "value_type": "date", "unit": None},
+        {"key": "メモ", "value_type": "string", "unit": None},
+    ]
+    kids = _children(client, h["id"])
+
+    def props(task_id: int) -> dict:
+        rows = client.get(f"/api/tasks/{task_id}/properties").json()
+        return {p["key"]: (p["value_type"], p["unit"], p["value"]) for p in rows}
+
+    assert props(kids[0]["id"]) == {
+        "体重": ("number", "kg", None),
+        "日付": ("date", None, None),
+        "メモ": ("string", None, None),
+    }
+    # 値が入った子の項目は、種別・単位を変えても触らない
+    weight = next(
+        p for p in client.get(f"/api/tasks/{kids[1]['id']}/properties").json() if p["key"] == "体重"
+    )
+    assert (
+        client.patch(
+            f"/api/tasks/{kids[1]['id']}/properties/{weight['id']}", json={"value": "60"}
+        ).status_code
+        == 200
+    )
+    res = client.patch(
+        f"/api/habits/{h['id']}",
+        json={"properties": [{"key": "体重", "value_type": "number", "unit": "g"}]},
+    )
+    assert res.status_code == 200, res.text
+    assert props(kids[0]["id"]) == {"体重": ("number", "g", None)}
+    assert props(kids[1]["id"])["体重"] == ("number", "kg", "60")
+
+
+def test_property_unit_only_for_number(client):
+    res = client.post(
+        "/api/habits",
+        json={"title": "x", **DAILY, "properties": [{"key": "a", "unit": "kg"}]},
+    )
+    assert res.status_code == 422
+    res = client.post(
+        "/api/habits",
+        json={"title": "x", **DAILY, "properties": [{"key": "a", "value_type": "bad"}]},
+    )
+    assert res.status_code == 422

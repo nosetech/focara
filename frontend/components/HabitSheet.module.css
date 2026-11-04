@@ -258,3 +258,15 @@
   flex: 1;
   min-width: 0;
 }
+
+.typeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeRow button {
+  flex: none;
+  min-width: 44px;
+  padding: 0 10px;
+}

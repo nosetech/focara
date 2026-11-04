@@ -172,18 +172,31 @@ test("予定時刻とプロパティを編集値と往復し、本文に含め�
   const h = habit({
     fixed_start_time: "09:00",
     fixed_end_time: "10:00",
-    properties: ["体重", "回数"],
+    properties: [
+      { key: "体重", value_type: "number", unit: "kg" },
+      { key: "メモ", value_type: "string", unit: null },
+    ],
   });
   const d = draftFromHabit(h);
   assert.deepEqual(
     [d.fixedStart, d.fixedEnd, d.properties],
-    ["09:00", "10:00", ["体重", "回数"]],
+    [
+      "09:00",
+      "10:00",
+      [
+        { key: "体重", type: "number", unit: "kg" },
+        { key: "メモ", type: "string", unit: "" },
+      ],
+    ],
   );
   const r = draftBody(d);
   assert.ok("body" in r);
   assert.equal(r.body.fixed_start_time, "09:00");
   assert.equal(r.body.fixed_end_time, "10:00");
-  assert.deepEqual(r.body.properties, ["体重", "回数"]);
+  assert.deepEqual(r.body.properties, [
+    { key: "体重", value_type: "number", unit: "kg" },
+    { key: "メモ", value_type: "string", unit: null },
+  ]);
   const e = emptyDraft(new Date(2026, 9, 1));
   assert.deepEqual([e.fixedStart, e.fixedEnd, e.properties], ["", "", []]);
   const none = draftBody({ ...e, title: "x" });
@@ -211,13 +224,17 @@ test("予定時刻の検証(終了のみ・終了が開始以前・書式不正)
 });
 
 test("プロパティ名は空・重複を許さない", () => {
-  assert.equal(propertyError(["a", "b"]), null);
-  assert.ok(propertyError(["a", " "]));
-  assert.ok(propertyError(["a", "a "]));
+  const k = (...keys: string[]) => keys.map((key) => ({ key }));
+  assert.equal(propertyError(k("a", "b")), null);
+  assert.ok(propertyError(k("a", " ")));
+  assert.ok(propertyError(k("a", "a ")));
   const d = {
     ...emptyDraft(new Date(2026, 9, 1)),
     title: "x",
-    properties: ["a", "a"],
+    properties: [
+      { key: "a", type: "string" as const, unit: "" },
+      { key: "a", type: "string" as const, unit: "" },
+    ],
   };
   assert.ok("error" in draftBody(d));
 });
@@ -225,13 +242,26 @@ test("プロパティ名は空・重複を許さない", () => {
 test("習慣にする: プロパティ名と予定時刻を引き継ぎ、値は引き継がない", () => {
   const at = new Date(2026, 9, 5, 14, 30).toISOString();
   const end = new Date(2026, 9, 5, 15, 15).toISOString();
+  const p = (
+    key: string,
+    value_type: "string" | "number" | "date",
+    unit: string | null = null,
+  ) => ({
+    key,
+    value_type,
+    unit,
+  });
   const seed = seedFromTask({ fixed_at: at, fixed_end_at: end }, [
-    "体重",
-    "体重",
-    " ",
+    p("体重", "number", "kg"),
+    p("体重", "string"),
+    p(" ", "string"),
+    p("期限", "date"),
   ]);
   assert.deepEqual(seed, {
-    properties: ["体重"],
+    properties: [
+      { key: "体重", type: "number", unit: "kg" },
+      { key: "期限", type: "date", unit: "" },
+    ],
     fixedStart: "14:30",
     fixedEnd: "15:15",
     slot: "afternoon",

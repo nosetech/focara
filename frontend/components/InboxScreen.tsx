@@ -19,6 +19,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import type { PropertyType } from "@/lib/taskDetail";
 import { seedFromTask, type HabitDraft } from "@/lib/habits";
 import { HabitSheetHost } from "./HabitSheetHost";
 import { TaskDetailHost } from "./TaskDetailHost";
@@ -100,12 +101,11 @@ export function InboxScreen() {
         apiFetch<{ fixed_at: string | null; fixed_end_at: string | null }>(
           `/tasks/${src.id}`,
         ),
-        apiFetch<{ key: string }[]>(`/tasks/${src.id}/properties`),
+        apiFetch<
+          { key: string; value_type: PropertyType; unit: string | null }[]
+        >(`/tasks/${src.id}/properties`),
       ]);
-      seed = seedFromTask(
-        task,
-        props.map((p) => p.key),
-      );
+      seed = seedFromTask(task, props);
     } catch {
       // 取得できなくても、タイトルなどだけで作成シートを開く
     }
