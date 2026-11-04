@@ -46,6 +46,8 @@ export function InboxScreen() {
   const [waitFor, setWaitFor] = useState<number[] | null>(null);
   const [waitText, setWaitText] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** デスクトップの右ペインに詳細を出すか。「×」で閉じ、行のクリック・Enterで開く */
+  const [panelOpen, setPanelOpen] = useState(true);
   /** 「習慣にする」で作成シートを開いている元のinboxタスク */
   const [habitFrom, setHabitFrom] = useState<InboxTask | null>(null);
   const busy = useRef(false);
@@ -180,6 +182,11 @@ export function InboxScreen() {
         return;
       }
       if (rows.length === 0 || waitFor) return;
+      if (e.key === "Enter" && !el?.closest("button, a")) {
+        e.preventDefault();
+        setPanelOpen(true);
+        return;
+      }
       const at = Math.min(focus, rows.length - 1);
       if (e.key === "j" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -279,6 +286,7 @@ export function InboxScreen() {
                 onClick={() => {
                   setFocus(i);
                   setSheetOpen(true);
+                  setPanelOpen(true);
                 }}
               >
                 <button
@@ -422,11 +430,12 @@ export function InboxScreen() {
         onClose={() => setHabitFrom(null)}
       />
       <TaskDetailHost
-        taskId={habitFrom ? null : (current?.id ?? null)}
+        taskId={habitFrom || !panelOpen ? null : (current?.id ?? null)}
         showEmpty={habitFrom == null}
         sheetOpen={sheetOpen && habitFrom == null}
         onClose={() => {
           setSheetOpen(false);
+          setPanelOpen(false);
           void fetchTasks(false);
           void refreshCounts();
         }}
