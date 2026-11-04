@@ -144,3 +144,117 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.blockRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.props {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.propCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.propRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.propRow input {
+  flex: 1;
+  min-width: 0;
+  margin-right: 4px;
+}
+
+.propRow input[data-bad] {
+  border-color: var(--danger);
+}
+
+.iconBtn {
+  width: 32px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.addBtn {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 10px 0 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.propNote,
+.slotNote,
+.timeNote {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink3);
+}
+
+.propError {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.slotNote,
+.timeNote {
+  padding-left: 96px;
+}
+
+.tiny {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.timeRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeRow input {
+  flex: 1;
+  min-width: 0;
+}

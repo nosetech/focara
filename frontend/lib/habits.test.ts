@@ -7,6 +7,10 @@ import {
   dotCounts,
   draftSummary,
   emptyDraft,
+  fixedTimeError,
+  fixedTimeText,
+  propertyError,
+  seedFromTask,
   recentDots,
   ruleFromHabit,
   ruleText,
@@ -21,6 +25,9 @@ const habit = (over: Partial<Habit> = {}): Habit => ({
   estimate_minutes: 20,
   memo: null,
   time_slot: "morning",
+  fixed_start_time: null,
+  fixed_end_time: null,
+  properties: [],
   recurrence_type: "weekly",
   recurrence_weekdays: 127,
   recurrence_month_day: null,
@@ -159,4 +166,91 @@ test("要約にルール・枠・開始日・終了条件を並べる", () => {
     draftSummary(d, 18),
     "毎日 · 午前中に作成 · 2026/10/15 から · 累計60回で終了(現在 18回)",
   );
+});
+
+test("予定時刻とプロパティを編集値と往復し、本文に含める", () => {
+  const h = habit({
+    fixed_start_time: "09:00",
+    fixed_end_time: "10:00",
+    properties: ["体重", "回数"],
+  });
+  const d = draftFromHabit(h);
+  assert.deepEqual(
+    [d.fixedStart, d.fixedEnd, d.properties],
+    ["09:00", "10:00", ["体重", "回数"]],
+  );
+  const r = draftBody(d);
+  assert.ok("body" in r);
+  assert.equal(r.body.fixed_start_time, "09:00");
+  assert.equal(r.body.fixed_end_time, "10:00");
+  assert.deepEqual(r.body.properties, ["体重", "回数"]);
+  const e = emptyDraft(new Date(2026, 9, 1));
+  assert.deepEqual([e.fixedStart, e.fixedEnd, e.properties], ["", "", []]);
+  const none = draftBody({ ...e, title: "x" });
+  assert.ok("body" in none);
+  assert.equal(none.body.fixed_start_time, null);
+});
+
+test("予定時刻の検証(終了のみ・終了が開始以前・書式不正)", () => {
+  assert.equal(fixedTimeError("", ""), null);
+  assert.equal(fixedTimeError("09:00", ""), null);
+  assert.equal(fixedTimeError("09:00", "10:00"), null);
+  assert.ok(fixedTimeError("", "10:00"));
+  assert.ok(fixedTimeError("10:00", "10:00"));
+  assert.ok(fixedTimeError("11:00", "10:00"));
+  assert.ok(fixedTimeError("9:00", ""));
+  const d = {
+    ...emptyDraft(new Date(2026, 9, 1)),
+    title: "x",
+    fixedEnd: "10:00",
+  };
+  assert.ok("error" in draftBody(d));
+  assert.equal(fixedTimeText("09:00", "10:00"), "09:00–10:00");
+  assert.equal(fixedTimeText("09:00", ""), "09:00–");
+  assert.equal(fixedTimeText("", ""), "");
+});
+
+test("プロパティ名は空・重複を許さない", () => {
+  assert.equal(propertyError(["a", "b"]), null);
+  assert.ok(propertyError(["a", " "]));
+  assert.ok(propertyError(["a", "a "]));
+  const d = {
+    ...emptyDraft(new Date(2026, 9, 1)),
+    title: "x",
+    properties: ["a", "a"],
+  };
+  assert.ok("error" in draftBody(d));
+});
+
+test("習慣にする: プロパティ名と予定時刻を引き継ぎ、値は引き継がない", () => {
+  const at = new Date(2026, 9, 5, 14, 30).toISOString();
+  const end = new Date(2026, 9, 5, 15, 15).toISOString();
+  const seed = seedFromTask({ fixed_at: at, fixed_end_at: end }, [
+    "体重",
+    "体重",
+    " ",
+  ]);
+  assert.deepEqual(seed, {
+    properties: ["体重"],
+    fixedStart: "14:30",
+    fixedEnd: "15:15",
+    slot: "afternoon",
+  });
+  assert.deepEqual(seedFromTask({ fixed_at: null, fixed_end_at: null }, []), {
+    properties: [],
+  });
+  const next = new Date(2026, 9, 6, 1, 0).toISOString();
+  assert.equal(
+    seedFromTask({ fixed_at: at, fixed_end_at: next }, []).fixedEnd,
+    "",
+  );
+});
+
+test("要約は予定時刻があれば枠の代わりに時刻を出す", () => {
+  const d = {
+    ...emptyDraft(new Date(2026, 9, 1)),
+    fixedStart: "09:00",
+    fixedEnd: "10:00",
+  };
+  assert.match(draftSummary(d, 0), /09:00–10:00に作成/);
 });
