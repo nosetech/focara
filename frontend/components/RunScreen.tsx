@@ -23,6 +23,7 @@ import {
   isDayOver,
   progressPercent,
   moveBody,
+  postponeBody,
   restoreBody,
   somedayBody,
   tomorrowParam,
@@ -119,7 +120,7 @@ export function RunScreen() {
       try {
         await apiFetch(`/tasks/${task.id}/postpone`, {
           method: "POST",
-          body: { target: "end_of_day" },
+          body: postponeBody(new Date()),
         });
         showToast({
           msg: `「${task.title}」を後回しにしました`,

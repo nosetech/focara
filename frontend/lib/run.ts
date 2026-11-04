@@ -87,6 +87,11 @@ export function buildRunView(tasks: RunTask[]): RunView {
 }
 
 /** 後回しを元に戻すためのPATCH本文。移動前の位置と日時固定を復元する。 */
+/** 後回し: 現在の時間帯の最後に移動する(時間帯はクライアントの時計で決める)。 */
+export function postponeBody(now: Date) {
+  return { target: "end_of_day", time_slot: currentSlot(now) };
+}
+
 export function restoreBody(t: RunTask) {
   return {
     scheduled_date: t.scheduled_date,

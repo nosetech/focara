@@ -6,7 +6,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { habitRuleText, slotName, type Habit } from "@/lib/habits";
 import { fixedBody, splitFixed, type FixedDraft } from "@/lib/fixed";
 import { PRIORITIES } from "@/lib/inbox";
-import { SLOTS, type TimeSlot } from "@/lib/run";
+import { SLOTS, postponeBody, type TimeSlot } from "@/lib/run";
 import {
   PROPERTY_TYPES,
   SAVE_LABEL,
@@ -570,7 +570,7 @@ export function TaskDetail({
     act(() =>
       apiFetch(`/tasks/${taskId}/postpone`, {
         method: "POST",
-        body: { target: "end_of_day" },
+        body: postponeBody(new Date()),
       }),
     );
 

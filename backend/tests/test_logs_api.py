@@ -85,6 +85,28 @@ def test_postpone_end_of_day_and_date(client):
     assert client.post(f"/api/tasks/{a}/postpone", json={"target": "date"}).status_code == 422
 
 
+def test_postpone_end_of_day_uses_given_slot_and_appends(client):
+    for slot in ("morning", "afternoon"):
+        other = _task(client, f"other-{slot}")
+        client.put(
+            f"/api/tasks/{other}/schedule",
+            json={"scheduled_date": "2026-10-20", "time_slot": slot, "run_order": 4},
+        )
+        a = _task(client, f"a-{slot}")
+        client.put(
+            f"/api/tasks/{a}/schedule",
+            json={"scheduled_date": "2026-10-20", "time_slot": slot, "run_order": 0},
+        )
+        res = client.post(
+            f"/api/tasks/{a}/postpone", json={"target": "end_of_day", "time_slot": slot}
+        ).json()
+        assert (res["scheduled_date"], res["time_slot"], res["run_order"]) == (
+            "2026-10-20",
+            slot,
+            5,
+        )
+
+
 def test_postpone_done_rejected(client):
     a = _task(client)
     client.post(f"/api/tasks/{a}/complete")
