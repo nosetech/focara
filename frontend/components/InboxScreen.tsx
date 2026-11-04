@@ -19,6 +19,8 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import type { PropertyType } from "@/lib/taskDetail";
+import { seedFromTask, type HabitDraft } from "@/lib/habits";
 import { HabitSheetHost } from "./HabitSheetHost";
 import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./InboxScreen.module.css";
@@ -50,6 +52,8 @@ export function InboxScreen() {
   const [panelOpen, setPanelOpen] = useState(true);
   /** 「習慣にする」で作成シートを開いている元のinboxタスク */
   const [habitFrom, setHabitFrom] = useState<InboxTask | null>(null);
+  /** 「習慣にする」で引き継ぐプロパティ名と予定時刻 */
+  const [habitSeed, setHabitSeed] = useState<Partial<HabitDraft>>({});
   const busy = useRef(false);
 
   const fetchTasks = useCallback(async (initial: boolean) => {
@@ -89,6 +93,26 @@ export function InboxScreen() {
   const patchLocal = (id: number, patch: Partial<InboxTask>) =>
     setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
 
+  /** 元のタスクのプロパティ名・予定時刻を取得してから、習慣の作成シートを開く。 */
+  const openHabit = useCallback(async (src: InboxTask) => {
+    let seed: Partial<HabitDraft> = {};
+    try {
+      const [task, props] = await Promise.all([
+        apiFetch<{ fixed_at: string | null; fixed_end_at: string | null }>(
+          `/tasks/${src.id}`,
+        ),
+        apiFetch<
+          { key: string; value_type: PropertyType; unit: string | null }[]
+        >(`/tasks/${src.id}/properties`),
+      ]);
+      seed = seedFromTask(task, props);
+    } catch {
+      // 取得できなくても、タイトルなどだけで作成シートを開く
+    }
+    setHabitSeed(seed);
+    setHabitFrom(src);
+  }, []);
+
   /** ステータスを振り分ける。成功したタスクは inbox から消える。 */
   const assign = useCallback(
     async (ids: number[], status: string, waitCondition?: string) => {
@@ -101,7 +125,7 @@ export function InboxScreen() {
           return;
         }
         setWaitFor(null);
-        setHabitFrom(src);
+        void openHabit(src);
         return;
       }
       if (status === "waiting" && !waitCondition?.trim()) {
@@ -148,7 +172,7 @@ export function InboxScreen() {
         showToast({ msg: "移動できませんでした。もう一度お試しください" });
       }
     },
-    [rows, tasks, refreshCounts, showToast, fetchTasks],
+    [rows, tasks, refreshCounts, showToast, fetchTasks, openHabit],
   );
 
   const bulkPatch = async (ids: number[], body: Record<string, unknown>) => {
@@ -387,6 +411,7 @@ export function InboxScreen() {
                 projectId: habitFrom.project_id,
                 priority: habitFrom.priority,
                 estimate: habitFrom.estimate_minutes,
+                ...habitSeed,
               }
             : undefined
         }
@@ -420,7 +445,7 @@ export function InboxScreen() {
           // 詳細で編集した最新の内容で作成シートを開く(一覧の値は取り直し前で古いことがある)
           const base = tasks.find((t) => t.id === src.id);
           setWaitFor(null);
-          setHabitFrom({
+          void openHabit({
             status: "inbox",
             created_at: "",
             ...base,

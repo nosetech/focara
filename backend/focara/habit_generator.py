@@ -1,17 +1,36 @@
 """習慣(親)から子タスクを先行生成し、親の編集に子を同期させる。"""
 
 import logging
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from focara.db.models import Habit, Task, TaskProperty
+from focara.db.models import Habit, HabitProperty, Task, TaskProperty
 from focara.recurrence import next_occurrence
 
 
 def _iso(d: date) -> str:
     return d.isoformat()
+
+
+def slot_for_time(hhmm: str) -> str:
+    """開始時刻(HH:MM)から時間帯を決める(フロントの currentSlot と同じ境界)。"""
+    hour = int(hhmm[:2])
+    return "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
+
+
+def fixed_datetime(day: date | str, hhmm: str | None) -> datetime | None:
+    """実施日と HH:MM(サーバーのローカル時刻)から UTC の日時を作る。"""
+    if hhmm is None:
+        return None
+    d = date.fromisoformat(day) if isinstance(day, str) else day
+    local = datetime.combine(d, time.fromisoformat(hhmm)).astimezone()
+    return local.astimezone(UTC)
+
+
+def _child_property(p: HabitProperty) -> TaskProperty:
+    return TaskProperty(key=p.key, value=None, value_type=p.value_type, unit=p.unit)
 
 
 def generate_children(session: Session, habit: Habit, today: date, ahead_days: int) -> int:
@@ -55,10 +74,12 @@ def generate_children(session: Session, habit: Habit, today: date, ahead_days: i
                     memo=habit.memo,
                     scheduled_date=_iso(d),
                     time_slot=habit.time_slot,
+                    fixed_at=fixed_datetime(d, habit.fixed_start_time),
+                    fixed_end_at=fixed_datetime(d, habit.fixed_end_time),
                     habit_id=habit.id,
                     occurrence_date=_iso(d),
                     # プロパティは名前だけ引き継ぎ、値は子ごとに入力する
-                    properties=[TaskProperty(key=p.key, value=None) for p in habit.properties],
+                    properties=[_child_property(p) for p in habit.properties],
                 )
             )
             total += 1
@@ -120,10 +141,12 @@ def sync_fields_to_children(
     today: date,
     changed: dict[str, object],
     old_time_slot: str | None,
+    old_start: str | None = None,
+    old_end: str | None = None,
 ) -> None:
     """タイトル・見積・優先度・プロジェクトを今日以降の未完了の子へ反映する。
 
-    既定枠は、枠が旧い既定値のままの子にだけ反映する(個別変更した子は触らない)。
+    既定枠・予定時刻は、旧い既定値のままの子にだけ反映する(個別変更した子は触らない)。
     """
     shared = {
         k: v
@@ -135,6 +158,47 @@ def sync_fields_to_children(
             setattr(child, key, value)
         if "time_slot" in changed and child.time_slot == old_time_slot:
             child.time_slot = changed["time_slot"]
+        if "fixed_start_time" in changed or "fixed_end_time" in changed:
+            _sync_fixed(child, habit, old_start, old_end)
+
+
+def _sync_fixed(child: Task, habit: Habit, old_start: str | None, old_end: str | None) -> None:
+    day = child.scheduled_date
+    if day is None:
+        return
+    # 子の時刻が旧い既定値のままのときだけ、親の新しい時刻にする
+    if child.fixed_at != fixed_datetime(day, old_start):
+        return
+    if child.fixed_end_at != fixed_datetime(day, old_end):
+        return
+    child.fixed_at = fixed_datetime(day, habit.fixed_start_time)
+    child.fixed_end_at = fixed_datetime(day, habit.fixed_end_time)
+
+
+def sync_properties_to_children(
+    session: Session, habit: Habit, today: date, old: list[tuple[str, str, str | None]]
+) -> None:
+    """プロパティ項目の変更を今日以降の未完了の子へ反映する。
+
+    追加した項目は値なしで追加し、削除した項目は値が空の子だけ削除する(入力済みは残す)。
+    種別・単位を変えた項目は、値が空の子だけ変更する。名前の変更は削除+追加として扱う。
+    """
+    new = {p.key: (p.value_type, p.unit) for p in habit.properties}
+    old_map = {k: (t, u) for k, t, u in old}
+    if new == old_map:
+        return
+    for child in session.scalars(_future_open_children(habit.id, today, include_today=True)):
+        for prop in list(child.properties):
+            empty = prop.value is None or prop.value == ""
+            if prop.key not in new:
+                if prop.key in old_map and empty:
+                    child.properties.remove(prop)
+            elif empty and (prop.value_type, prop.unit) != new[prop.key]:
+                prop.value_type, prop.unit = new[prop.key]
+        have = {p.key for p in child.properties}
+        for hp in habit.properties:
+            if hp.key not in have:
+                child.properties.append(_child_property(hp))
 
 
 def remove_future_children(session: Session, habit: Habit, today: date) -> None:

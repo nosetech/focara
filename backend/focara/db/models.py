@@ -79,6 +79,16 @@ class Habit(Base):
         CheckConstraint(
             _in("recurrence_end_type", RECURRENCE_END_TYPES), name="recurrence_end_type"
         ),
+        CheckConstraint(
+            "COALESCE((fixed_start_time IS NULL AND fixed_end_time IS NULL)"
+            " OR ((fixed_start_time GLOB '[01][0-9]:[0-5][0-9]'"
+            " OR fixed_start_time GLOB '2[0-3]:[0-5][0-9]')"
+            " AND (fixed_end_time IS NULL"
+            " OR ((fixed_end_time GLOB '[01][0-9]:[0-5][0-9]'"
+            " OR fixed_end_time GLOB '2[0-3]:[0-5][0-9]')"
+            " AND fixed_end_time > fixed_start_time))), 0)",
+            name="fixed_time",
+        ),
         # 週次は曜日ビットマスク必須、月次は日にち必須、年次は月日必須。他タイプの項目は NULL
         CheckConstraint(
             "COALESCE((recurrence_type = 'weekly' AND recurrence_weekdays BETWEEN 1 AND 127"
@@ -114,6 +124,9 @@ class Habit(Base):
     memo: Mapped[str | None] = mapped_column(Text)
     # 子タスクの既定の時間帯(子ごとに変更可能)
     time_slot: Mapped[str | None] = mapped_column(String)
+    # 予定時刻(HH:MM のローカル時刻)。開始があると time_slot は開始から決まる。終了だけの指定は不可
+    fixed_start_time: Mapped[str | None] = mapped_column(String(5))
+    fixed_end_time: Mapped[str | None] = mapped_column(String(5))
     # 繰り返しルール。weekdays はビットマスク(bit0=日 ... bit6=土。毎日=127)
     recurrence_type: Mapped[str] = mapped_column(String, nullable=False)
     recurrence_weekdays: Mapped[int | None] = mapped_column(Integer)
@@ -140,7 +153,7 @@ class Habit(Base):
     )
 
     properties: Mapped[list["HabitProperty"]] = relationship(
-        back_populates="habit", cascade="all, delete-orphan"
+        back_populates="habit", cascade="all, delete-orphan", order_by="HabitProperty.id"
     )
     logs: Mapped[list["TaskLog"]] = relationship(
         back_populates="habit", cascade="all, delete-orphan"
@@ -151,13 +164,22 @@ class HabitProperty(Base):
     """子タスクに引き継ぐプロパティ名(値は子ごとに入力する)。"""
 
     __tablename__ = "habit_properties"
-    __table_args__ = (Index("uq_habit_properties_habit_id_key", "habit_id", "key", unique=True),)
+    __table_args__ = (
+        CheckConstraint(_in("value_type", PROPERTY_TYPES), name="value_type"),
+        CheckConstraint("unit IS NULL OR value_type = 'number'", name="unit"),
+        Index("uq_habit_properties_habit_id_key", "habit_id", "key", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     habit_id: Mapped[int] = mapped_column(
         ForeignKey("habits.id", ondelete="CASCADE"), nullable=False
     )
     key: Mapped[str] = mapped_column(String, nullable=False)
+    # 子へ引き継ぐ種別と単位(単位は number のみ)。値は子ごとに入力する
+    value_type: Mapped[str] = mapped_column(
+        String, nullable=False, default="string", server_default="string"
+    )
+    unit: Mapped[str | None] = mapped_column(String)
 
     habit: Mapped[Habit] = relationship(back_populates="properties")
 

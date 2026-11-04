@@ -10,15 +10,24 @@ import {
   draftFromHabit,
   draftSummary,
   emptyDraft,
+  fixedTimeError,
   maxDayOfMonth,
   recentDots,
+  slotName,
   type Habit,
+  type HabitBody,
   type HabitDraft,
   type HabitRule,
 } from "@/lib/habits";
 import { PRIORITIES } from "@/lib/inbox";
+import { slotForTime } from "@/lib/fixed";
 import { SLOTS } from "@/lib/run";
-import { SAVE_LABEL, WEEKDAYS, type SaveState } from "@/lib/taskDetail";
+import {
+  PROPERTY_TYPES,
+  SAVE_LABEL,
+  WEEKDAYS,
+  type SaveState,
+} from "@/lib/taskDetail";
 import styles from "./TaskDetail.module.css";
 import own from "./HabitSheet.module.css";
 
@@ -55,6 +64,170 @@ export interface HabitSheetProps {
 const errMessage = (e: unknown) =>
   e instanceof Error && e.message ? e.message : "保存できませんでした";
 
+const Chevron = ({ up }: { up: boolean }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+  >
+    <path d={up ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
+  </svg>
+);
+
+/**
+ * プロパティの項目名の編集。名前だけを持ち、値は子タスクの詳細で入力する。
+ * 空・重複の入力中は、その行にエラーを出して確定(保存)しない。
+ */
+function PropertyRows({
+  props,
+  onChange,
+}: {
+  props: HabitDraft["properties"];
+  onChange: (props: HabitDraft["properties"]) => void;
+}) {
+  // 確定できない入力中の項目名(行番号 → 文字列)
+  const [bad, setBad] = useState<Record<number, string>>({});
+  const commit = (next: HabitDraft["properties"]) => {
+    setBad({});
+    onChange(next);
+  };
+  const patch = (i: number, p: Partial<HabitDraft["properties"][number]>) =>
+    commit(props.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const move = (i: number, d: number) => {
+    const next = [...props];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    commit(next);
+  };
+  return (
+    <div className={own.props}>
+      {props.map((prop, i) => {
+        const val = i in bad ? bad[i] : prop.key;
+        const err =
+          i in bad
+            ? bad[i].trim()
+              ? "同じ名前の項目があります"
+              : "項目名を入力してください"
+            : "";
+        return (
+          <div key={i} className={own.propCell}>
+            <div className={own.propRow}>
+              <input
+                className={styles.input}
+                value={val}
+                placeholder="項目名"
+                aria-label="項目名"
+                aria-invalid={err ? true : undefined}
+                data-bad={err ? "" : undefined}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const t = v.trim();
+                  if (!t || props.some((k, j) => j !== i && k.key === t)) {
+                    setBad({ ...bad, [i]: v });
+                    return;
+                  }
+                  patch(i, { key: t });
+                }}
+              />
+              <button
+                className={own.iconBtn}
+                aria-label="上へ"
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+              >
+                <Chevron up />
+              </button>
+              <button
+                className={own.iconBtn}
+                aria-label="下へ"
+                disabled={i === props.length - 1}
+                onClick={() => move(i, 1)}
+              >
+                <Chevron up={false} />
+              </button>
+              <button
+                className={own.iconBtn}
+                aria-label="削除"
+                onClick={() => commit(props.filter((_, j) => j !== i))}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+            {err && (
+              <span className={own.propError} role="alert">
+                {err}
+              </span>
+            )}
+            <div className={own.typeRow}>
+              <div className={styles.seg} role="group" aria-label="種別">
+                {PROPERTY_TYPES.map((t) => (
+                  <button
+                    key={t.key}
+                    data-on={prop.type === t.key ? "" : undefined}
+                    onClick={() =>
+                      patch(i, {
+                        type: t.key,
+                        unit: t.key === "number" ? prop.unit : "",
+                      })
+                    }
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {prop.type === "number" && (
+                <>
+                  <span className={own.tiny}>単位</span>
+                  <input
+                    className={styles.input}
+                    style={{ width: 72 }}
+                    value={prop.unit}
+                    placeholder="kg"
+                    aria-label="単位"
+                    onChange={(e) => patch(i, { unit: e.target.value })}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <button
+        className={own.addBtn}
+        onClick={() => {
+          let n = props.length + 1;
+          while (props.some((p) => p.key === `項目${n}`)) n++;
+          commit([...props, { key: `項目${n}`, type: "string", unit: "" }]);
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        項目を追加
+      </button>
+      <span className={own.propNote}>値は子タスクの詳細で入力します</span>
+    </div>
+  );
+}
+
 /** 習慣(親)の作成・編集シート。モバイルはボトムシート、デスクトップは右ペイン。 */
 export function HabitSheet({
   variant,
@@ -81,7 +254,7 @@ export function HabitSheet({
   const [today] = useState(() => new Date());
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const dirty = useRef<Record<string, string | number | null> | null>(null);
+  const dirty = useRef<HabitBody | null>(null);
   const chain = useRef<Promise<void>>(Promise.resolve());
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const habitId = habit?.id;
@@ -153,6 +326,34 @@ export function HabitSheet({
     dirty.current = result.body;
     clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);
+  };
+
+  /** 終了時刻が開始以前で確定できない入力(エラー表示用) */
+  const [endBad, setEndBad] = useState<string | null>(null);
+  /** 開始時刻があれば、枠は開始時刻から決まる。 */
+  const slotShown =
+    draft.fixedStart && !fixedTimeError(draft.fixedStart, "")
+      ? slotForTime(draft.fixedStart)
+      : draft.slot;
+
+  const changeStart = (v: string) => {
+    if (!v) {
+      setEndBad(null);
+      change({ fixedStart: "", fixedEnd: "" });
+      return;
+    }
+    const end = endBad ?? draft.fixedEnd;
+    const endOk = end !== "" && end > v;
+    setEndBad(end !== "" && !endOk ? end : null);
+    change({ fixedStart: v, fixedEnd: endOk ? end : "", slot: slotForTime(v) });
+  };
+  const changeEnd = (v: string) => {
+    if (v && v <= draft.fixedStart) {
+      setEndBad(v);
+      return;
+    }
+    setEndBad(null);
+    change({ fixedEnd: v });
   };
 
   const setRule = (p: Partial<HabitRule>) =>
@@ -409,17 +610,79 @@ export function HabitSheet({
               />
               <span className={styles.unit}>分</span>
             </div>
+            <div className={own.block}>
+              <div
+                className={own.blockRow}
+                style={{ alignItems: "flex-start" }}
+              >
+                <span
+                  className={styles.itemLabel}
+                  style={{ lineHeight: "36px" }}
+                >
+                  プロパティ
+                </span>
+                <PropertyRows
+                  props={draft.properties}
+                  onChange={(properties) => change({ properties })}
+                />
+              </div>
+            </div>
+            <div className={own.block}>
+              <div className={own.blockRow}>
+                <span className={styles.itemLabel}>予定時刻</span>
+                <div className={own.timeRow}>
+                  <span className={own.tiny}>開始</span>
+                  <input
+                    type="time"
+                    className={`${styles.input} ${styles.mono}`}
+                    value={draft.fixedStart}
+                    aria-label="開始時刻"
+                    onChange={(e) => changeStart(e.target.value)}
+                  />
+                  <span className={styles.unit}>〜</span>
+                  <span className={own.tiny}>終了</span>
+                  <input
+                    type="time"
+                    className={`${styles.input} ${styles.mono}`}
+                    style={{
+                      opacity: draft.fixedStart ? 1 : 0.45,
+                      borderColor: endBad != null ? "var(--danger)" : undefined,
+                    }}
+                    value={endBad ?? draft.fixedEnd}
+                    disabled={!draft.fixedStart}
+                    aria-label="終了時刻"
+                    aria-invalid={endBad != null ? true : undefined}
+                    onChange={(e) => changeEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+              {(endBad != null || !draft.fixedStart) && (
+                <span
+                  className={own.timeNote}
+                  style={
+                    endBad != null ? { color: "var(--danger)" } : undefined
+                  }
+                  role={endBad != null ? "alert" : undefined}
+                >
+                  {endBad != null
+                    ? "終了は開始より後の時刻にしてください"
+                    : "開始を入れると終了も指定できます(どちらも任意)"}
+                </span>
+              )}
+            </div>
             <div className={`${styles.item} ${styles.tall}`}>
               <span className={styles.itemLabel}>既定の枠</span>
               <div
                 className={`${styles.seg} ${styles.grow}`}
                 role="group"
                 aria-label="既定の枠"
+                style={draft.fixedStart ? { opacity: 0.45 } : undefined}
               >
                 {SLOTS.map((s) => (
                   <button
                     key={s.key}
-                    data-on={draft.slot === s.key ? "" : undefined}
+                    disabled={draft.fixedStart !== ""}
+                    data-on={slotShown === s.key ? "" : undefined}
                     onClick={() =>
                       change({ slot: draft.slot === s.key ? null : s.key })
                     }
@@ -429,6 +692,11 @@ export function HabitSheet({
                 ))}
               </div>
             </div>
+            {draft.fixedStart !== "" && (
+              <div className={own.slotNote}>
+                開始時刻から{slotName(slotShown)}に作成します
+              </div>
+            )}
           </div>
 
           <div className={styles.label} style={{ marginTop: 22 }}>

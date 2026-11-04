@@ -6,6 +6,7 @@ import {
   DOT_TITLE,
   asListRow,
   dotCounts,
+  fixedTimeText,
   habitRuleText,
   recentDots,
   slotName,
@@ -142,7 +143,11 @@ export function HabitsScreen({
                     </div>
                     <div className={styles.meta}>
                       <span>
-                        {habitRuleText(h)} · {slotName(h.time_slot)}
+                        {habitRuleText(h)} ·{" "}
+                        {fixedTimeText(
+                          h.fixed_start_time ?? "",
+                          h.fixed_end_time ?? "",
+                        ) || slotName(h.time_slot)}
                       </span>
                       {projectName(h.project_id) && (
                         <span>{projectName(h.project_id)}</span>

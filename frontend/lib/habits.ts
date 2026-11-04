@@ -1,6 +1,14 @@
 import type { TimeSlot } from "./run.ts";
-import { toDateParam } from "./run.ts";
-import { MONTH_DAYS, WEEKDAYS } from "./taskDetail.ts";
+import { formatClock, toDateParam } from "./run.ts";
+import { slotForTime } from "./fixed.ts";
+import { MONTH_DAYS, WEEKDAYS, type PropertyType } from "./taskDetail.ts";
+
+/** 子へ引き継ぐプロパティの定義(項目名・種別・単位)。値は子で入力する。 */
+export interface HabitProperty {
+  key: string;
+  value_type: PropertyType;
+  unit: string | null;
+}
 
 /** 親(習慣)の直近の実施状況。今日以前の子を新しい順に返す。 */
 export interface HabitOccurrence {
@@ -18,6 +26,10 @@ export interface Habit {
   estimate_minutes: number | null;
   memo: string | null;
   time_slot: TimeSlot | null;
+  /** 予定時刻(ローカル時刻の HH:MM)。終了だけの指定は無い。 */
+  fixed_start_time: string | null;
+  fixed_end_time: string | null;
+  properties: HabitProperty[];
   recurrence_type: "weekly" | "monthly" | "yearly";
   recurrence_weekdays: number | null;
   recurrence_month_day: number | null;
@@ -54,6 +66,10 @@ export interface HabitDraft {
   priority: number | null;
   estimate: number | null;
   slot: TimeSlot | null;
+  fixedStart: string;
+  fixedEnd: string;
+  /** プロパティの定義(値は子タスクで入力する)。単位は数値のときだけ使う */
+  properties: { key: string; type: PropertyType; unit: string }[];
   rule: HabitRule;
   start: string;
   end: HabitEnd;
@@ -119,6 +135,13 @@ export function draftFromHabit(h: Habit): HabitDraft {
     priority: h.priority,
     estimate: h.estimate_minutes,
     slot: h.time_slot,
+    fixedStart: h.fixed_start_time ?? "",
+    fixedEnd: h.fixed_end_time ?? "",
+    properties: h.properties.map((p) => ({
+      key: p.key,
+      type: p.value_type,
+      unit: p.unit ?? "",
+    })),
     rule: ruleFromHabit(h),
     start: h.start_date,
     end: endFromHabit(h),
@@ -136,6 +159,9 @@ export function emptyDraft(
     priority: 2,
     estimate: 15,
     slot: "morning",
+    fixedStart: "",
+    fixedEnd: "",
+    properties: [],
     rule: { type: "daily" },
     start: toDateParam(today),
     end: { type: "none" },
@@ -166,7 +192,37 @@ export function defaultRule(
 
 export const maxDayOfMonth = (month: number) => MONTH_DAYS[month - 1] ?? 31;
 
-export type HabitBody = Record<string, string | number | null>;
+export type HabitBody = Record<
+  string,
+  string | number | HabitProperty[] | null
+>;
+
+/** プロパティ項目名の検証。問題があればメッセージを返す。 */
+export function propertyError(
+  props: readonly { key: string }[],
+): string | null {
+  const names = props.map((p) => p.key.trim());
+  if (names.some((k) => !k)) return "プロパティの名前を入力してください";
+  if (new Set(names).size !== names.length)
+    return "プロパティの名前が重複しています";
+  return null;
+}
+
+/** 予定時刻の検証。問題があればメッセージを返す。 */
+export function fixedTimeError(start: string, end: string): string | null {
+  const ok = (t: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+  if (start && !ok(start)) return "開始時刻が正しくありません";
+  if (end && !ok(end)) return "終了時刻が正しくありません";
+  if (end && !start) return "開始時刻を入力してください";
+  if (end && end <= start) return "終了時刻は開始時刻より後にしてください";
+  return null;
+}
+
+/** 予定時刻の表示。「09:00–10:00」「09:00–」、無ければ空文字。 */
+export function fixedTimeText(start: string, end: string): string {
+  if (!start) return "";
+  return `${start}–${end}`;
+}
 
 /** 編集値 → POST/PATCH /api/habits の本文。不正なら error。 */
 export function draftBody(
@@ -187,10 +243,22 @@ export function draftBody(
   if (d.end.type === "count" && !(d.end.count != null && d.end.count >= 1))
     return { error: "回数は1以上で入力してください" };
 
+  const fixedErr = fixedTimeError(d.fixedStart, d.fixedEnd);
+  if (fixedErr) return { error: fixedErr };
+  const propErr = propertyError(d.properties);
+  if (propErr) return { error: propErr };
+
   const r = d.rule;
   return {
     body: {
       title,
+      fixed_start_time: d.fixedStart || null,
+      fixed_end_time: d.fixedEnd || null,
+      properties: d.properties.map((p) => ({
+        key: p.key.trim(),
+        value_type: p.type,
+        unit: p.type === "number" ? p.unit.trim() || null : null,
+      })),
       project_id: d.projectId,
       priority: d.priority,
       estimate_minutes: d.estimate,
@@ -238,7 +306,9 @@ export function endText(end: HabitEnd, total: number): string {
 
 /** シート下部の要約。 */
 export function draftSummary(d: HabitDraft, total: number): string {
-  return `${ruleText(d.rule)} · ${slotName(d.slot)}に作成 · ${slash(d.start)} から · ${endText(d.end, total)}`;
+  const time = fixedTimeText(d.fixedStart, d.fixedEnd);
+  const when = time ? `${time}に作成` : `${slotName(d.slot)}に作成`;
+  return `${ruleText(d.rule)} · ${when} · ${slash(d.start)} から · ${endText(d.end, total)}`;
 }
 
 export type DotState = "done" | "miss" | "today";
@@ -272,4 +342,41 @@ export const DOT_TITLE: Record<DotState, string> = {
 /** 一覧で扱う共通の行(絞り込み・並び替えは inbox と同じ関数を使う)。 */
 export function asListRow(h: Habit) {
   return { ...h, status: h.active ? "habit" : "paused" };
+}
+
+/**
+ * タスクから習慣を作るときの初期値(プロパティの定義(名前・種別・単位)と予定時刻)。値は引き継がない。
+ * 予定時刻は同じ日の開始・終了だけを引き継ぎ、終了が開始以前なら終了は捨てる。
+ */
+export function seedFromTask(
+  task: { fixed_at: string | null; fixed_end_at: string | null },
+  props: readonly {
+    key: string;
+    value_type: PropertyType;
+    unit: string | null;
+  }[],
+): Partial<HabitDraft> {
+  const seen = new Set<string>();
+  const properties: HabitDraft["properties"] = [];
+  for (const p of props) {
+    const key = p.key.trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    properties.push({
+      key,
+      type: p.value_type,
+      unit: p.value_type === "number" ? (p.unit ?? "") : "",
+    });
+  }
+  const seed: Partial<HabitDraft> = { properties };
+  if (!task.fixed_at) return seed;
+  const start = formatClock(task.fixed_at);
+  let end = task.fixed_end_at ? formatClock(task.fixed_end_at) : "";
+  if (end <= start) end = "";
+  return {
+    ...seed,
+    fixedStart: start,
+    fixedEnd: end,
+    slot: slotForTime(start),
+  };
 }
