@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useOrganize } from "./OrganizeContext";
-import { TaskDetail } from "./TaskDetail";
+import { TaskDetail, type HabitSource } from "./TaskDetail";
 import styles from "./OrganizeShell.module.css";
 
 const DESKTOP_QUERY = "(min-width: 900px)";
@@ -32,12 +32,15 @@ export function TaskDetailHost({
   onClose,
   showEmpty = false,
   sheetOpen = true,
+  onMakeHabit,
 }: {
   taskId: number | null;
   onClose: () => void;
   showEmpty?: boolean;
   /** モバイルのシートを開くか。キーボード操作で常に選択中になる画面は、タップするまで閉じておく */
   sheetOpen?: boolean;
+  /** 渡すと、inbox のタスクの詳細に「習慣にする」を出す */
+  onMakeHabit?: (src: HabitSource) => void;
 }) {
   const { panelEl } = useOrganize();
   const desktop = useIsDesktop();
@@ -49,6 +52,7 @@ export function TaskDetailHost({
         variant={desktop ? "panel" : "sheet"}
         taskId={taskId}
         onClose={onClose}
+        onMakeHabit={onMakeHabit}
       />
     ) : null;
 

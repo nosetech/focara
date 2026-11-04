@@ -332,23 +332,6 @@ export function InboxScreen() {
                     <span>追加 {formatAdded(t.created_at)}</span>
                   </div>
                 </div>
-                {focused && (
-                  <div className={styles.actions}>
-                    {TRIAGE_STATUSES.map((s) => (
-                      <button
-                        key={s.status}
-                        className={styles.action}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void assign([t.id], s.status);
-                        }}
-                      >
-                        <kbd>{s.key}</kbd>
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </li>
             );
           })}
@@ -433,6 +416,17 @@ export function InboxScreen() {
         taskId={habitFrom || !panelOpen ? null : (current?.id ?? null)}
         showEmpty={habitFrom == null}
         sheetOpen={sheetOpen && habitFrom == null}
+        onMakeHabit={(src) => {
+          // 詳細で編集した最新の内容で作成シートを開く(一覧の値は取り直し前で古いことがある)
+          const base = tasks.find((t) => t.id === src.id);
+          setWaitFor(null);
+          setHabitFrom({
+            status: "inbox",
+            created_at: "",
+            ...base,
+            ...src,
+          });
+        }}
         onClose={() => {
           setSheetOpen(false);
           setPanelOpen(false);

@@ -48,6 +48,15 @@ interface ProjectOption {
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ready" };
 
+/** 詳細から「習慣にする」を押したときに渡す、現在のタスクの内容。 */
+export interface HabitSource {
+  id: number;
+  title: string;
+  project_id: number | null;
+  priority: number | null;
+  estimate_minutes: number | null;
+}
+
 const CLOSE_ICON = (
   <svg
     width="16"
@@ -65,10 +74,13 @@ const CLOSE_ICON = (
 export function TaskDetail({
   taskId,
   onClose,
+  onMakeHabit,
   variant = "sheet",
 }: {
   taskId: number;
   onClose: () => void;
+  /** 渡すと、inbox のタスクに「習慣にする」を出す。保存を終えてから現在の内容で呼ぶ */
+  onMakeHabit?: (src: HabitSource) => void;
   /** sheet: 画面下から出るシート(モバイル)/ panel: 整理画面の右ペインに埋め込む */
   variant?: "sheet" | "panel";
 }) {
@@ -529,6 +541,31 @@ export function TaskDetail({
         : apiFetch(`/tasks/${taskId}/complete`, { method: "POST" }),
     );
 
+  /** 習慣の作成シートを開く。未送信の保存が終わり、成功してから現在の内容で呼ぶ。 */
+  const makeHabit = async () => {
+    if (!onMakeHabit) return;
+    flush();
+    setBusy(true);
+    try {
+      await Promise.all([...chains.current.values()]);
+      if (failed.current.size > 0) {
+        setSave("error");
+        return;
+      }
+      const n =
+        estimateSaved.current === "" ? null : Number(estimateSaved.current);
+      onMakeHabit({
+        id: taskId,
+        title: title.trim(),
+        project_id: projectId,
+        priority,
+        estimate_minutes: n,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const postpone = () =>
     act(() =>
       apiFetch(`/tasks/${taskId}/postpone`, {
@@ -674,6 +711,28 @@ export function TaskDetail({
                       {c.label}
                     </button>
                   ))}
+                  {onMakeHabit && status === "inbox" && (
+                    <button
+                      className={styles.chipHabit}
+                      disabled={busy || done || title.trim() === ""}
+                      onClick={() => void makeHabit()}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7" />
+                      </svg>
+                      習慣にする
+                    </button>
+                  )}
                 </div>
               )}
               {isChild && (
