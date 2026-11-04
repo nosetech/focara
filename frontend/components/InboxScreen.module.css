@@ -79,12 +79,6 @@
   font-family: var(--font-mono), monospace;
 }
 
-.actions {
-  display: none;
-  gap: 6px;
-  flex: none;
-}
-
 .action {
   height: 32px;
   padding: 0 10px;
@@ -321,10 +315,6 @@
 }
 
 @media (min-width: 900px) {
-  .actions {
-    display: flex;
-  }
-
   .bulk {
     left: 260px;
     right: 428px;
