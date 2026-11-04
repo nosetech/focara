@@ -29,7 +29,8 @@ class CompleteBody(BaseModel):
 
 
 class PostponeBody(BaseModel):
-    """後回し先。end_of_day=その日の末尾(夜枠の最後) / tomorrow=翌日 / date=指定日。
+    """後回し先。end_of_day=その日の指定時間帯(time_slot)の最後(省略時は夜枠の最後)
+    / tomorrow=翌日 / date=指定日。
 
     翌日・指定日では time_slot を省略すると現在の時間帯(未設定なら朝)を使い、枠の末尾に並べる。
     """

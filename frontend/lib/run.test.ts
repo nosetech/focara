@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildRunView,
   currentSlot,
+  postponeBody,
   dragOffset,
   isDayOver,
   moveBody,
@@ -99,4 +100,13 @@ test("progressPercent は総数0で0、それ以外は四捨五入", () => {
   assert.equal(progressPercent(1, 3), 33);
   assert.equal(progressPercent(2, 3), 67);
   assert.equal(progressPercent(3, 3), 100);
+});
+
+test("postponeBody は現在の時間帯の最後へ送る", () => {
+  assert.deepEqual(postponeBody(new Date(2026, 9, 15, 9)), {
+    target: "end_of_day",
+    time_slot: "morning",
+  });
+  assert.equal(postponeBody(new Date(2026, 9, 15, 13)).time_slot, "afternoon");
+  assert.equal(postponeBody(new Date(2026, 9, 15, 20)).time_slot, "evening");
 });
