@@ -38,6 +38,7 @@ const habit = (over: Partial<Habit> = {}): Habit => ({
   recurrence_end_count: null,
   start_date: "2026-10-01",
   active: true,
+  auto_cancel_overdue: false,
   recent: [],
   created_at: "2026-10-01T00:00:00Z",
   updated_at: "2026-10-01T00:00:00Z",
@@ -153,8 +154,22 @@ test("直近の実施状況は古い順の完了/未完了/今日", () => {
     today,
   );
   assert.deepEqual(dots, ["done", "miss", "today"]);
-  assert.deepEqual(dotCounts(dots), { done: 1, total: 2 });
+  assert.deepEqual(dotCounts(dots), { done: 1, total: 2, cancelled: 0 });
   assert.deepEqual(recentDots([], today), []);
+});
+
+test("キャンセルは区別して表示し、実施率の分母に含める", () => {
+  const today = new Date(2026, 9, 15);
+  const dots = recentDots(
+    [
+      { task_id: 3, occurrence_date: "2026-10-15", status: "cancelled" },
+      { task_id: 2, occurrence_date: "2026-10-14", status: "cancelled" },
+      { task_id: 1, occurrence_date: "2026-10-13", status: "done" },
+    ],
+    today,
+  );
+  assert.deepEqual(dots, ["done", "cancelled", "cancelled"]);
+  assert.deepEqual(dotCounts(dots), { done: 1, total: 3, cancelled: 2 });
 });
 
 test("要約にルール・枠・開始日・終了条件を並べる", () => {
@@ -283,4 +298,12 @@ test("要約は予定時刻があれば枠の代わりに時刻を出す", () =>
     fixedEnd: "10:00",
   };
   assert.match(draftSummary(d, 0), /09:00–10:00に作成/);
+});
+
+test("自動キャンセルの設定を編集値と本文に引き継ぐ", () => {
+  const d = draftFromHabit(habit({ auto_cancel_overdue: true }));
+  assert.equal(d.autoCancel, true);
+  const r = draftBody(d);
+  assert.ok("body" in r && r.body.auto_cancel_overdue === true);
+  assert.equal(emptyDraft(new Date(2026, 9, 15)).autoCancel, false);
 });

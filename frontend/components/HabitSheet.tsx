@@ -908,6 +908,31 @@ export function HabitSheet({
               )}
             </div>
           </div>
+          <div className={styles.list} style={{ marginTop: 14 }}>
+            <div className={styles.item}>
+              <span className={styles.itemLabel}>期限切れの子</span>
+              <div
+                className={`${styles.seg} ${styles.grow}`}
+                role="group"
+                aria-label="期限切れの子の扱い"
+              >
+                <button
+                  style={{ whiteSpace: "nowrap" }}
+                  data-on={!draft.autoCancel ? "" : undefined}
+                  onClick={() => change({ autoCancel: false })}
+                >
+                  繰り越す
+                </button>
+                <button
+                  style={{ whiteSpace: "nowrap" }}
+                  data-on={draft.autoCancel ? "" : undefined}
+                  onClick={() => change({ autoCancel: true })}
+                >
+                  自動でキャンセル
+                </button>
+              </div>
+            </div>
+          </div>
           <div className={styles.summary} style={{ marginTop: 14 }}>
             {draftSummary(draft, total)}
           </div>

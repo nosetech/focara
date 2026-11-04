@@ -40,6 +40,8 @@ export interface Habit {
   recurrence_end_count: number | null;
   start_date: string;
   active: boolean;
+  /** 予定日を過ぎても未完了の子を、毎日の定期処理で自動キャンセルする */
+  auto_cancel_overdue: boolean;
   recent: HabitOccurrence[];
   created_at: string;
   updated_at: string;
@@ -73,6 +75,8 @@ export interface HabitDraft {
   rule: HabitRule;
   start: string;
   end: HabitEnd;
+  /** 期限切れの未完了の子を自動でキャンセルする(OFFは繰り越す) */
+  autoCancel: boolean;
 }
 
 const weekdaysFromMask = (mask: number) =>
@@ -145,6 +149,7 @@ export function draftFromHabit(h: Habit): HabitDraft {
     rule: ruleFromHabit(h),
     start: h.start_date,
     end: endFromHabit(h),
+    autoCancel: h.auto_cancel_overdue,
   };
 }
 
@@ -165,6 +170,7 @@ export function emptyDraft(
     rule: { type: "daily" },
     start: toDateParam(today),
     end: { type: "none" },
+    autoCancel: false,
     ...seed,
   };
 }
@@ -194,7 +200,7 @@ export const maxDayOfMonth = (month: number) => MONTH_DAYS[month - 1] ?? 31;
 
 export type HabitBody = Record<
   string,
-  string | number | HabitProperty[] | null
+  string | number | boolean | HabitProperty[] | null
 >;
 
 /** プロパティ項目名の検証。問題があればメッセージを返す。 */
@@ -283,6 +289,7 @@ export function draftBody(
       recurrence_end_date: d.end.type === "date" ? d.end.date : null,
       recurrence_end_count: d.end.type === "count" ? d.end.count : null,
       start_date: d.start,
+      auto_cancel_overdue: d.autoCancel,
     },
   };
 }
@@ -311,9 +318,9 @@ export function draftSummary(d: HabitDraft, total: number): string {
   return `${ruleText(d.rule)} · ${when} · ${slash(d.start)} から · ${endText(d.end, total)}`;
 }
 
-export type DotState = "done" | "miss" | "today";
+export type DotState = "done" | "miss" | "cancelled" | "today";
 
-/** 直近の実施状況(古い順)。今日の未実施は「today」、過去の未完了は「miss」。 */
+/** 直近の実施状況(古い順)。今日の未実施は「today」、過去の未完了は「miss」、キャンセルは「cancelled」。 */
 export function recentDots(
   recent: readonly HabitOccurrence[],
   today: Date,
@@ -322,20 +329,29 @@ export function recentDots(
   return [...recent]
     .sort((a, b) => a.occurrence_date.localeCompare(b.occurrence_date))
     .map((o) =>
-      o.status === "done" ? "done" : o.occurrence_date >= t ? "today" : "miss",
+      o.status === "done"
+        ? "done"
+        : o.status === "cancelled"
+          ? "cancelled"
+          : o.occurrence_date >= t
+            ? "today"
+            : "miss",
     );
 }
 
+/** 実施率の集計。キャンセルは分母(total)に含める(実施率 = 完了 ÷ (完了+未完了+キャンセル))。 */
 export function dotCounts(dots: readonly DotState[]) {
   return {
     done: dots.filter((x) => x === "done").length,
     total: dots.filter((x) => x !== "today").length,
+    cancelled: dots.filter((x) => x === "cancelled").length,
   };
 }
 
 export const DOT_TITLE: Record<DotState, string> = {
   done: "実施",
   miss: "未実施",
+  cancelled: "キャンセル",
   today: "今日(未実施)",
 };
 

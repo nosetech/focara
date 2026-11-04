@@ -88,6 +88,7 @@ export function TaskDetail({
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("inbox");
   const [done, setDone] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const [projectId, setProjectId] = useState<number | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [newProject, setNewProject] = useState<string | null>(null);
@@ -159,6 +160,7 @@ export function TaskDetail({
       liveStatus.current = task.status;
       liveCond.current = task.wait_condition ?? "";
       setDone(task.status === "done");
+      setCancelled(task.status === "cancelled");
       setProjectId(task.project_id);
       setProjects(projs);
       setSlot(task.time_slot);
@@ -539,6 +541,15 @@ export function TaskDetail({
             body: { status: "next" },
           })
         : apiFetch(`/tasks/${taskId}/complete`, { method: "POST" }),
+    );
+
+  /** 習慣の子をキャンセルする / キャンセルを取り消して未完了(next)に戻す。 */
+  const cancelChild = () =>
+    act(() =>
+      apiFetch(`/tasks/${taskId}/transition`, {
+        method: "POST",
+        body: { status: cancelled ? "next" : "cancelled" },
+      }),
     );
 
   /** 習慣の作成シートを開く。未送信の保存が終わり、成功してから現在の内容で呼ぶ。 */
@@ -1189,7 +1200,7 @@ export function TaskDetail({
                     </svg>
                     {isChild ? "この回を削除" : "削除"}
                   </button>
-                  {!done && (
+                  {!done && !cancelled && (
                     <button
                       className={styles.secondary}
                       disabled={busy}
@@ -1198,12 +1209,23 @@ export function TaskDetail({
                       後回し
                     </button>
                   )}
+                  {isChild && !done && !cancelled && (
+                    <button
+                      className={styles.secondary}
+                      disabled={busy}
+                      onClick={() => void cancelChild()}
+                    >
+                      キャンセル
+                    </button>
+                  )}
                   <button
                     className={styles.primaryBtn}
                     disabled={busy}
-                    onClick={() => void complete()}
+                    onClick={() =>
+                      void (cancelled ? cancelChild() : complete())
+                    }
                   >
-                    {done ? "未完了に戻す" : "完了"}
+                    {done || cancelled ? "未完了に戻す" : "完了"}
                   </button>
                 </>
               )}

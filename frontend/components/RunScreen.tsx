@@ -16,6 +16,7 @@ import {
   SLOT_LABEL,
   buildRunView,
   currentSlot,
+  canCancel,
   dragOffset,
   formatDateLabel,
   formatMinutes,
@@ -81,7 +82,8 @@ export function RunScreen() {
       ]);
       setLoad({
         state: "ready",
-        tasks,
+        // キャンセルした習慣の子は実行画面に出さない
+        tasks: tasks.filter((t) => t.status !== "cancelled"),
         projects: new Map(projects.map((p) => [p.id, p.name])),
       });
     } catch {
@@ -142,6 +144,45 @@ export function RunScreen() {
         return true;
       } catch {
         showToast({ msg: "後回しにできませんでした。もう一度お試しください" });
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchAll, showToast],
+  );
+
+  /** 習慣の子をキャンセルする。戻り値は成功したか。 */
+  const cancelTask = useCallback(
+    async (task: RunTask): Promise<boolean> => {
+      setBusy(true);
+      try {
+        await apiFetch(`/tasks/${task.id}/transition`, {
+          method: "POST",
+          body: { status: "cancelled" },
+        });
+        showToast({
+          msg: `「${task.title}」をキャンセルしました`,
+          undo: async () => {
+            clearTimeout(toastTimer.current);
+            setToast(null);
+            try {
+              await apiFetch(`/tasks/${task.id}/transition`, {
+                method: "POST",
+                body: { status: "next" },
+              });
+              await fetchAll(true);
+            } catch {
+              showToast({ msg: "元に戻せませんでした" });
+            }
+          },
+        });
+        await fetchAll(true);
+        return true;
+      } catch {
+        showToast({
+          msg: "キャンセルできませんでした。もう一度お試しください",
+        });
         return false;
       } finally {
         setBusy(false);
@@ -323,6 +364,7 @@ export function RunScreen() {
           busy={busy}
           onComplete={complete}
           onPostpone={postpone}
+          onCancel={cancelTask}
           onOpenDetail={setDetailId}
           now={now}
           resumed={resumed}
@@ -445,6 +487,7 @@ function Ready({
   busy,
   onComplete,
   onPostpone,
+  onCancel,
   onOpenDetail,
   now,
   resumed,
@@ -459,6 +502,7 @@ function Ready({
   busy: boolean;
   onComplete: (t: RunTask) => Promise<void>;
   onPostpone: (t: RunTask) => Promise<boolean>;
+  onCancel: (t: RunTask) => Promise<boolean>;
   onOpenDetail: (id: number) => void;
   now: Date | null;
   resumed: boolean;
@@ -603,6 +647,7 @@ function Ready({
           key={cur.id}
           disabled={busy}
           onSwiped={() => onPostpone(cur)}
+          onCancelSwiped={canCancel(cur) ? () => onCancel(cur) : undefined}
           onTap={() => onOpenDetail(cur.id)}
         >
           <div className={styles.project}>
@@ -676,7 +721,9 @@ function Ready({
           >
             <path d="M20 12H6M11 6l-6 6 6 6" />
           </svg>
-          左へスワイプで後回し · タップで詳細
+          {canCancel(cur)
+            ? "左へスワイプで後回し · 右へスワイプでキャンセル · タップで詳細"
+            : "左へスワイプで後回し · タップで詳細"}
         </div>
 
         <section className={styles.after}>
@@ -1012,16 +1059,19 @@ function ReschedSheet({
   );
 }
 
-/** 左スワイプで後回し。タッチ・マウス・ペンはPointer Eventsで共通に扱う。 */
+/** 左スワイプで後回し、右スワイプ(習慣の子のみ)でキャンセル。タッチ・マウス・ペンはPointer Eventsで共通に扱う。 */
 function SwipeCard({
   children,
   disabled,
   onSwiped,
+  onCancelSwiped,
   onTap,
 }: {
   children: ReactNode;
   disabled: boolean;
   onSwiped: () => Promise<boolean>;
+  /** 右スワイプでキャンセル(習慣の子のみ。無ければ右スワイプは出さない) */
+  onCancelSwiped?: () => Promise<boolean>;
   onTap: () => void;
 }) {
   const [dx, setDx] = useState(0);
@@ -1040,12 +1090,17 @@ function SwipeCard({
     if (startX.current == null) return;
     const d = e.clientX - startX.current;
     if (Math.abs(d) > TAP_SLOP) moved.current = true;
-    setDx(dragOffset(d));
+    setDx(dragOffset(d, !!onCancelSwiped));
   };
   const onUp = async () => {
     if (startX.current == null) return;
     startX.current = null;
     setDragging(false);
+    if (onCancelSwiped && dx > SWIPE_THRESHOLD) {
+      setDx(420);
+      if (!(await onCancelSwiped())) setDx(0);
+      return;
+    }
     if (dx > -SWIPE_THRESHOLD) {
       setDx(0);
       if (!moved.current) onTap();
@@ -1057,8 +1112,29 @@ function SwipeCard({
   };
 
   const armed = dx < -SWIPE_THRESHOLD;
+  const cancelArmed = !!onCancelSwiped && dx > SWIPE_THRESHOLD;
   return (
     <div className={styles.swipe}>
+      {onCancelSwiped && (
+        <div
+          className={styles.revealCancel}
+          data-armed={cancelArmed ? "" : undefined}
+          style={{ opacity: Math.min(1, Math.max(0, dx / 60)) }}
+          aria-hidden="true"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+          キャンセル
+        </div>
+      )}
       <div
         className={styles.reveal}
         data-armed={armed ? "" : undefined}

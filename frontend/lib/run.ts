@@ -77,11 +77,13 @@ export interface RunView {
 /** APIは時間帯→実行順で返すので、その順序を保ったまま完了/未完了に分ける。 */
 export function buildRunView(tasks: RunTask[]): RunView {
   const done = tasks.filter((t) => t.status === "done");
-  const queue = tasks.filter((t) => t.status !== "done");
+  // キャンセルした習慣の子は、完了と同様にキューから外し、進捗の母数にも含めない
+  const live = tasks.filter((t) => t.status !== "cancelled");
+  const queue = live.filter((t) => t.status !== "done");
   return {
     done,
     queue,
-    total: tasks.length,
+    total: live.length,
     remainMinutes: queue.reduce((a, t) => a + (t.estimate_minutes ?? 0), 0),
   };
 }
@@ -104,9 +106,17 @@ export function restoreBody(t: RunTask) {
 
 export const SWIPE_THRESHOLD = 96;
 
-/** 右方向は抵抗をかけ、左方向はそのまま追従させる。 */
-export function dragOffset(dx: number): number {
-  return dx > 0 ? dx * 0.2 : dx;
+/**
+ * 左方向はそのまま追従させる。右方向は、キャンセルできる(習慣の子)ときだけ追従し、
+ * それ以外は抵抗をかける。
+ */
+export function dragOffset(dx: number, canCancel = false): number {
+  return dx > 0 && !canCancel ? dx * 0.2 : dx;
+}
+
+/** キャンセルできるのは習慣の子タスクのみ。 */
+export function canCancel(t: { habit_id: number | null }): boolean {
+  return t.habit_id != null;
 }
 
 /** 未完了が残っていて、dayEndHour(時)以降になっている(「やる」を選んだ後は除く)。 */

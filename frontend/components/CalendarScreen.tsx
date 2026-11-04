@@ -56,7 +56,8 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
               }),
             ),
         );
-        setTasks(lists.flat());
+        // キャンセルした習慣の子は出さない
+        setTasks(lists.flat().filter((t) => t.status !== "cancelled"));
         setLoad("ready");
       } catch {
         if (initial) setLoad("error");

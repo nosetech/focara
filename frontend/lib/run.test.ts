@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildRunView,
+  canCancel,
   currentSlot,
   postponeBody,
   dragOffset,
@@ -67,6 +68,7 @@ test("restoreBody / dragOffset", () => {
   assert.equal(r.run_order, 2);
   assert.equal(dragOffset(100), 20);
   assert.equal(dragOffset(-100), -100);
+  assert.equal(dragOffset(100, true), 100);
 });
 
 test("isDayOver: 夜の枠が終わって未完了が残るときだけ", () => {
@@ -109,4 +111,23 @@ test("postponeBody は現在の時間帯の最後へ送る", () => {
   });
   assert.equal(postponeBody(new Date(2026, 9, 15, 13)).time_slot, "afternoon");
   assert.equal(postponeBody(new Date(2026, 9, 15, 20)).time_slot, "evening");
+});
+
+test("buildRunView excludes cancelled from queue and total", () => {
+  const v = buildRunView([
+    t(1, "done", 10),
+    t(2, "cancelled", 30),
+    t(3, "next", 5),
+  ]);
+  assert.deepEqual(
+    v.queue.map((x) => x.id),
+    [3],
+  );
+  assert.equal(v.total, 2);
+  assert.equal(v.remainMinutes, 5);
+});
+
+test("canCancel is only for habit children", () => {
+  assert.equal(canCancel({ habit_id: 3 }), true);
+  assert.equal(canCancel({ habit_id: null }), false);
 });

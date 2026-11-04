@@ -23,6 +23,12 @@
   border-color: var(--accent);
 }
 
+.dots i[data-state="cancelled"] {
+  background: var(--ink3);
+  border-color: var(--ink3);
+  opacity: 0.45;
+}
+
 .dots i[data-state="today"] {
   border: 1.5px dashed var(--line);
 }

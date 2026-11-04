@@ -48,7 +48,8 @@ export function AssignScreen() {
           }),
         ]);
         setCandidates(next.filter(isCandidate));
-        setScheduled(onDay);
+        // キャンセルした習慣の子は出さない
+        setScheduled(onDay.filter((t) => t.status !== "cancelled"));
         setLoad("ready");
       } catch {
         if (initial) setLoad("error");
