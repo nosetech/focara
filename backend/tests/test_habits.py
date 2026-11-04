@@ -9,7 +9,7 @@ from focara.api.deps import get_config, get_engine
 from focara.config import Config, HabitConfig
 from focara.db import create_db_engine, upgrade_db
 from focara.db.models import Habit, Task, TaskLog
-from focara.habit_generator import generate_all, generate_children
+from focara.habit_generator import auto_cancel_overdue, generate_all, generate_children
 from focara.main import app
 
 AHEAD = 14
@@ -442,3 +442,138 @@ def test_property_unit_only_for_number(client):
         json={"title": "x", **DAILY, "properties": [{"key": "a", "value_type": "bad"}]},
     )
     assert res.status_code == 422
+
+
+def _cancel(client, task_id: int):
+    return client.post(f"/api/tasks/{task_id}/transition", json={"status": "cancelled"})
+
+
+def test_cancel_child_and_restore(client):
+    h = _habit(client)
+    kid = _children(client, h["id"])[0]
+    res = _cancel(client, kid["id"])
+    assert res.status_code == 200
+    assert res.json()["status"] == "cancelled"
+    # done <-> cancelled の直接遷移は不可、cancelled -> next は可
+    assert (
+        client.post(f"/api/tasks/{kid['id']}/transition", json={"status": "done"}).status_code
+        == 409
+    )
+    res = client.post(f"/api/tasks/{kid['id']}/transition", json={"status": "next"})
+    assert res.json()["status"] == "next"
+    client.post(f"/api/tasks/{kid['id']}/complete")
+    assert _cancel(client, kid["id"]).status_code == 409
+
+
+def test_cancel_clears_wait_condition(client):
+    h = _habit(client)
+    kid = _children(client, h["id"])[0]
+    client.post(
+        f"/api/tasks/{kid['id']}/transition",
+        json={"status": "waiting", "wait_condition": "返事待ち"},
+    )
+    res = _cancel(client, kid["id"]).json()
+    assert (res["status"], res["wait_condition"], res["wait_until"]) == ("cancelled", None, None)
+
+
+def test_cancel_normal_task_rejected(client):
+    tid = client.post("/api/tasks", json={"title": "x"}).json()["id"]
+    assert _cancel(client, tid).status_code == 422
+    res = client.patch(f"/api/tasks/{tid}", json={"status": "cancelled"})
+    assert res.status_code == 422
+    assert client.get(f"/api/tasks/{tid}").json()["status"] == "inbox"
+
+
+def test_cancelled_child_excluded_from_schedule_and_postpone(client):
+    h = _habit(client)
+    kid = _children(client, h["id"])[0]
+    _cancel(client, kid["id"])
+    ids = [t["id"] for t in client.get(f"/api/schedule?date={_iso()}").json()]
+    assert kid["id"] not in ids
+    ids = [t["id"] for t in client.get(f"/api/schedule?date={_iso()}&include_done=true").json()]
+    assert kid["id"] in ids
+    assert client.post(f"/api/tasks/{kid['id']}/postpone", json={}).status_code == 409
+
+
+def test_recent_includes_cancelled(client):
+    h = _habit(client)
+    kid = _children(client, h["id"])[0]
+    _cancel(client, kid["id"])
+    (listed,) = client.get("/api/habits").json()
+    assert [(r["occurrence_date"], r["status"]) for r in listed["recent"]] == [
+        (_iso(), "cancelled")
+    ]
+
+
+def test_delete_habit_keeps_cancelled_child(client):
+    h = _habit(client)
+    kids = _children(client, h["id"])
+    _cancel(client, kids[0]["id"])
+    assert client.delete(f"/api/habits/{h['id']}").status_code == 204
+    tasks = client.get("/api/tasks").json()
+    assert [(t["occurrence_date"], t["habit_id"], t["status"]) for t in tasks] == [
+        (_iso(), None, "cancelled")
+    ]
+
+
+def test_auto_cancel_overdue(engine, client):
+    on = _habit(client, auto_cancel_overdue=True)
+    off = _habit(client, title="off")
+    assert on["auto_cancel_overdue"] is True and off["auto_cancel_overdue"] is False
+    tomorrow = date.today() + timedelta(days=1)
+    with Session(engine) as s:
+        # 当日分(今日)は対象外、昨日以前が対象
+        s.add(
+            Task(
+                title="old",
+                status="next",
+                habit_id=on["id"],
+                occurrence_date=_iso(-3),
+                scheduled_date=_iso(-3),
+            )
+        )
+        s.add(
+            Task(
+                title="old-off",
+                status="next",
+                habit_id=off["id"],
+                occurrence_date=_iso(-3),
+                scheduled_date=_iso(-3),
+            )
+        )
+        s.commit()
+        assert auto_cancel_overdue(s, tomorrow) == 2  # on の昨日(=今日)分 + -3 日の分
+        s.commit()
+        assert auto_cancel_overdue(s, tomorrow) == 0  # 冪等
+        by = {(t.habit_id, t.scheduled_date): t.status for t in s.query(Task)}
+    assert by[(on["id"], _iso(-3))] == "cancelled"
+    assert by[(on["id"], _iso())] == "cancelled"
+    assert by[(on["id"], _iso(1))] == "next"
+    assert by[(off["id"], _iso(-3))] == "next"
+    assert by[(off["id"], _iso())] == "next"
+
+
+def test_auto_cancel_skips_today(engine, client):
+    h = _habit(client, auto_cancel_overdue=True)
+    with Session(engine) as s:
+        assert auto_cancel_overdue(s, date.today()) == 0
+        assert s.query(Task).filter_by(habit_id=h["id"], status="cancelled").count() == 0
+
+
+def test_auto_cancel_flag_editable(client):
+    h = _habit(client)
+    res = client.patch(f"/api/habits/{h['id']}", json={"auto_cancel_overdue": True})
+    assert res.json()["auto_cancel_overdue"] is True
+    assert (
+        client.patch(f"/api/habits/{h['id']}", json={"auto_cancel_overdue": None}).status_code
+        == 422
+    )
+
+
+def test_progress_excludes_cancelled_habit_child(client):
+    pid = client.post("/api/projects", json={"name": "a"}).json()["id"]
+    hid = _habit(client, project_id=pid)["id"]
+    kids = client.get("/api/tasks", params={"habit_id": hid}).json()
+    before = client.get(f"/api/projects/{pid}").json()["task_count"]
+    client.post(f"/api/tasks/{kids[0]['id']}/transition", json={"status": "cancelled"})
+    assert client.get(f"/api/projects/{pid}").json()["task_count"] == before - 1

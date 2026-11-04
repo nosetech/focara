@@ -11,12 +11,13 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
 )
+from sqlalchemy import false as sa_false
 from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from focara.db.base import Base
 
-TASK_STATUSES = ("inbox", "next", "someday", "waiting", "done")
+TASK_STATUSES = ("inbox", "next", "someday", "waiting", "done", "cancelled")
 TIME_SLOTS = ("morning", "afternoon", "evening")
 TASK_LOG_ACTIONS = ("completed", "postponed")
 RECURRENCE_TYPES = ("weekly", "monthly", "yearly")
@@ -122,6 +123,10 @@ class Habit(Base):
     priority: Mapped[int | None] = mapped_column(Integer)
     estimate_minutes: Mapped[int | None] = mapped_column(Integer)
     memo: Mapped[str | None] = mapped_column(Text)
+    # True なら、予定日を過ぎても未完了の子を毎日の定期処理で cancelled にする(False は繰り越す)
+    auto_cancel_overdue: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     # 子タスクの既定の時間帯(子ごとに変更可能)
     time_slot: Mapped[str | None] = mapped_column(String)
     # 予定時刻(HH:MM のローカル時刻)。開始があると time_slot は開始から決まる。終了だけの指定は不可

@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from focara.db.models import Habit, HabitProperty, Task, TaskProperty
 from focara.recurrence import next_occurrence
 
+# 実績として残す(未完了ではない)ステータス
+CLOSED = ("done", "cancelled")
+
 
 def _iso(d: date) -> str:
     return d.isoformat()
@@ -120,7 +123,7 @@ def _future_open_children(habit_id: int, today: date, *, include_today: bool):
     cond = Task.scheduled_date >= day if include_today else Task.scheduled_date > day
     return (
         select(Task)
-        .where(Task.habit_id == habit_id, Task.status != "done", cond)
+        .where(Task.habit_id == habit_id, Task.status.notin_(CLOSED), cond)
         .execution_options(populate_existing=True)
     )
 
@@ -205,7 +208,7 @@ def remove_future_children(session: Session, habit: Habit, today: date) -> None:
     """一時停止・削除時: 未来(今日より後)で未完了の子を削除する。"""
     session.execute(
         delete(Task).where(
-            Task.habit_id == habit.id, Task.status != "done", Task.scheduled_date > _iso(today)
+            Task.habit_id == habit.id, Task.status.notin_(CLOSED), Task.scheduled_date > _iso(today)
         )
     )
 
@@ -214,3 +217,25 @@ def resume(session: Session, habit: Habit, today: date, ahead_days: int) -> int:
     """再開: 未来の子を作り直す。"""
     habit.active = True
     return regenerate_future_children(session, habit, today, ahead_days)
+
+
+def auto_cancel_overdue(session: Session, today: date) -> int:
+    """auto_cancel_overdue が ON の習慣について、予定日が今日より前の未完了の子を cancelled にする。
+
+    待ち条件はクリアする。再実行しても対象は未完了の子だけなので冪等。commit は呼び出し側。
+    """
+    children = session.scalars(
+        select(Task)
+        .join(Habit, Task.habit_id == Habit.id)
+        .where(
+            Habit.auto_cancel_overdue.is_(True),
+            Task.status.notin_(CLOSED),
+            Task.scheduled_date < _iso(today),
+        )
+    ).all()
+    for child in children:
+        child.status = "cancelled"
+        child.wait_condition = None
+        child.wait_until = None
+    session.flush()
+    return len(children)

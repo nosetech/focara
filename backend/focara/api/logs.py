@@ -79,8 +79,8 @@ def complete_task(task_id: int, session: SessionDep, body: CompleteBody | None =
 def postpone_task(task_id: int, body: PostponeBody, session: SessionDep) -> Task:
     """予定日・時間帯・実行順を付け替えて、後回しの記録を残す。"""
     task = _get_or_404(session, task_id)
-    if task.status == "done":
-        raise HTTPException(409, "完了済みのタスクは後回しにできません")
+    if task.status in ("done", "cancelled"):
+        raise HTTPException(409, "完了・キャンセル済みのタスクは後回しにできません")
     current = date.fromisoformat(task.scheduled_date) if task.scheduled_date else date.today()
     if body.target == "date":
         if body.scheduled_date is None:
