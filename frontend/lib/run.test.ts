@@ -131,3 +131,15 @@ test("canCancel is only for habit children", () => {
   assert.equal(canCancel({ habit_id: 3 }), true);
   assert.equal(canCancel({ habit_id: null }), false);
 });
+
+test("queue[0] は優先度に関係なく並び順どおりに決まる", () => {
+  const withPri = (id: number, priority: number | null): RunTask => ({
+    ...t(id, "next", null),
+    priority,
+  });
+  const v = buildRunView([withPri(1, 3), withPri(2, 1), withPri(3, null)]);
+  assert.deepEqual(
+    v.queue.map((x) => x.id),
+    [1, 2, 3],
+  );
+});
