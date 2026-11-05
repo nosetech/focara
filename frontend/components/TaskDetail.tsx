@@ -11,6 +11,7 @@ import {
   PROPERTY_TYPES,
   SAVE_LABEL,
   STATUS_CHIPS,
+  commitTitle,
   newDraft,
   propertyBody,
   waitingBody,
@@ -86,6 +87,8 @@ export function TaskDetail({
 }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [title, setTitle] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const savedTitle = useRef("");
   const [status, setStatus] = useState("inbox");
   const [done, setDone] = useState(false);
   const [cancelled, setCancelled] = useState(false);
@@ -154,6 +157,8 @@ export function TaskDetail({
       setHabit(parent);
       setOccurrence(task.occurrence_date);
       setTitle(task.title);
+      savedTitle.current = task.title;
+      setEditingTitle(false);
       setStatus(task.status);
       savedStatus.current = task.status;
       savedCond.current = task.wait_condition ?? "";
@@ -497,6 +502,26 @@ export function TaskDetail({
     condTimer.current = setTimeout(flushCond, MEMO_DEBOUNCE_MS);
   };
 
+  const startEditTitle = () => setEditingTitle(true);
+
+  /** 編集を確定する。空なら保存せず編集前の値に戻す。 */
+  const commitTitleEdit = () => {
+    const r = commitTitle(title, savedTitle.current);
+    titleDirty.current = null;
+    setTitle(r.title);
+    setEditingTitle(false);
+    if (r.save) {
+      savedTitle.current = r.title;
+      void patchTask("title", { title: r.title });
+    }
+  };
+
+  const cancelTitleEdit = () => {
+    titleDirty.current = null;
+    setTitle(savedTitle.current);
+    setEditingTitle(false);
+  };
+
   const flush = () => {
     flushMemo();
     flushTitle();
@@ -690,24 +715,64 @@ export function TaskDetail({
                   変更がまだ保存されていません。「再試行」で送り直せます。
                 </div>
               )}
-              <textarea
-                className={styles.titleInput}
-                value={title}
-                rows={2}
-                placeholder="タスク名を入力"
-                aria-label="タスク名"
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  titleDirty.current = e.target.value;
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }
-                }}
-                onBlur={flushTitle}
-              />
+              {editingTitle ? (
+                <div className={styles.titleEditRow}>
+                  <textarea
+                    className={styles.titleInput}
+                    value={title}
+                    rows={2}
+                    autoFocus
+                    placeholder="タスク名を入力"
+                    aria-label="タスク名"
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      titleDirty.current = e.target.value;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        commitTitleEdit();
+                      } else if (e.key === "Escape") {
+                        e.stopPropagation();
+                        cancelTitleEdit();
+                      }
+                    }}
+                    onBlur={commitTitleEdit}
+                  />
+                  <button
+                    className={styles.titleSave}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={commitTitleEdit}
+                  >
+                    保存
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.titleRow}>
+                  <h2 className={styles.titleText}>{title}</h2>
+                  <button
+                    className={styles.titleEdit}
+                    aria-label="タスク名を編集"
+                    title="タスク名を編集"
+                    onClick={startEditTitle}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               {!isChild && (
                 <div className={styles.chips}>
                   {STATUS_CHIPS.map((c) => (

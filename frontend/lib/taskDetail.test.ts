@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   canSaveWaiting,
+  commitTitle,
   newDraft,
   propertyBody,
   toDraft,
@@ -79,5 +80,26 @@ test("条件待ちは条件を trim して送る", () => {
   assert.deepEqual(waitingBody(" 返信待ち "), {
     status: "waiting",
     wait_condition: "返信待ち",
+  });
+});
+
+test("タスク名の確定はtrimして保存する", () => {
+  assert.deepEqual(commitTitle("  新しい名前 ", "古い名前"), {
+    title: "新しい名前",
+    save: true,
+  });
+});
+
+test("タスク名が空なら保存せず元の値に戻す", () => {
+  assert.deepEqual(commitTitle("   ", "古い名前"), {
+    title: "古い名前",
+    save: false,
+  });
+});
+
+test("タスク名が変わっていなければ保存しない", () => {
+  assert.deepEqual(commitTitle("古い名前 ", "古い名前"), {
+    title: "古い名前",
+    save: false,
   });
 });
