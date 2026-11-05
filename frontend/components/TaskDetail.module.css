@@ -117,18 +117,85 @@
   line-height: 1.7;
 }
 
-.titleInput {
-  width: 100%;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.titleText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   color: var(--ink);
-  font-family: inherit;
   font-size: 22px;
   line-height: 1.45;
   font-weight: 700;
-  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+.titleEdit {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titleEdit:hover {
+  color: var(--ink);
+  border-color: var(--ink3);
+}
+
+.titleEdit:focus-visible,
+.titleSave:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.titleEditRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.titleInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--ink3);
+  border-radius: 10px;
+  resize: none;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1.45;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.titleInput:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.titleSave {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .labelRow {

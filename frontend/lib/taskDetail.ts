@@ -106,3 +106,16 @@ export function waitingBody(
     ? { status: "waiting", wait_condition: cond.trim() }
     : null;
 }
+
+/**
+ * タスク名の編集を確定したときの扱い。
+ * 前後の空白は取り除く。空なら保存せず編集前の値に戻す。変更がなければ保存しない。
+ */
+export function commitTitle(
+  draft: string,
+  saved: string,
+): { title: string; save: boolean } {
+  const value = draft.trim();
+  if (value === "") return { title: saved, save: false };
+  return { title: value, save: value !== saved };
+}
