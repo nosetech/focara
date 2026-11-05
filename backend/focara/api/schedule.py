@@ -92,7 +92,7 @@ def list_day(session: SessionDep, date: date, include_done: bool = False) -> lis
         .order_by(slot_rank, Task.run_order.is_(None), Task.run_order, Task.id)
     )
     if not include_done:
-        stmt = stmt.where(Task.status != "done")
+        stmt = stmt.where(Task.status.notin_(("done", "cancelled")))
     return list(session.scalars(stmt))
 
 

@@ -58,6 +58,8 @@ class HabitFields(BaseModel):
     priority: int | None = None
     estimate_minutes: int | None = Field(default=None, ge=0)
     memo: str | None = None
+    # 予定日を過ぎても未完了の子を、毎日の定期処理で自動キャンセルする(False は繰り越す)
+    auto_cancel_overdue: bool = False
     time_slot: TimeSlot | None = None
     # 予定時刻(ローカル時刻の HH:MM)。開始があると time_slot は開始から決まる
     fixed_start_time: ClockTime | None = None

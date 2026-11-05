@@ -710,3 +710,29 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+.cancelBtn {
+  padding: 0 14px;
+  color: var(--ink2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.habitKicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancelledTag {
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink2);
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}

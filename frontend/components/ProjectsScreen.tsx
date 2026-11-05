@@ -86,7 +86,10 @@ export function ProjectsScreen() {
     filters.pri !== "" ||
     filters.sort !== DEFAULT_FILTERS.sort;
   const candidates = tasks.filter(
-    (t) => t.project_id !== selected?.id && t.status !== "done",
+    (t) =>
+      t.project_id !== selected?.id &&
+      t.status !== "done" &&
+      t.status !== "cancelled",
   );
 
   const run = async (

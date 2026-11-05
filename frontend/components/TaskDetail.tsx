@@ -88,6 +88,7 @@ export function TaskDetail({
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("inbox");
   const [done, setDone] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const [projectId, setProjectId] = useState<number | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [newProject, setNewProject] = useState<string | null>(null);
@@ -159,6 +160,7 @@ export function TaskDetail({
       liveStatus.current = task.status;
       liveCond.current = task.wait_condition ?? "";
       setDone(task.status === "done");
+      setCancelled(task.status === "cancelled");
       setProjectId(task.project_id);
       setProjects(projs);
       setSlot(task.time_slot);
@@ -541,6 +543,15 @@ export function TaskDetail({
         : apiFetch(`/tasks/${taskId}/complete`, { method: "POST" }),
     );
 
+  /** 習慣の子をキャンセルする / キャンセルを取り消して未完了(next)に戻す。 */
+  const cancelChild = () =>
+    act(() =>
+      apiFetch(`/tasks/${taskId}/transition`, {
+        method: "POST",
+        body: { status: cancelled ? "next" : "cancelled" },
+      }),
+    );
+
   /** 習慣の作成シートを開く。未送信の保存が終わり、成功してから現在の内容で呼ぶ。 */
   const makeHabit = async () => {
     if (!onMakeHabit) return;
@@ -751,7 +762,25 @@ export function TaskDetail({
                     <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7" />
                   </svg>
                   <div className={styles.habitText}>
-                    <span className={styles.habitKicker}>習慣から生成</span>
+                    <span className={styles.habitKicker}>
+                      習慣から生成
+                      {cancelled && (
+                        <span className={styles.cancelledTag}>
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            aria-hidden="true"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                          この回はキャンセル済み
+                        </span>
+                      )}
+                    </span>
                     <span className={styles.habitLine}>
                       {habit
                         ? `${habit.title} · ${habitRuleText(habit)}`
@@ -1175,6 +1204,8 @@ export function TaskDetail({
                 <>
                   <button
                     className={styles.del}
+                    title={isChild ? "この回を削除" : "削除"}
+                    aria-label={isChild ? "この回を削除" : "削除"}
                     onClick={() => setConfirmDelete(true)}
                   >
                     <svg
@@ -1187,9 +1218,29 @@ export function TaskDetail({
                     >
                       <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
                     </svg>
-                    {isChild ? "この回を削除" : "削除"}
+                    {isChild ? null : "削除"}
                   </button>
-                  {!done && (
+                  {isChild && !done && !cancelled && (
+                    <button
+                      className={`${styles.secondary} ${styles.cancelBtn}`}
+                      disabled={busy}
+                      onClick={() => void cancelChild()}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                      キャンセル
+                    </button>
+                  )}
+                  {!done && !cancelled && (
                     <button
                       className={styles.secondary}
                       disabled={busy}
@@ -1201,9 +1252,11 @@ export function TaskDetail({
                   <button
                     className={styles.primaryBtn}
                     disabled={busy}
-                    onClick={() => void complete()}
+                    onClick={() =>
+                      void (cancelled ? cancelChild() : complete())
+                    }
                   >
-                    {done ? "未完了に戻す" : "完了"}
+                    {done || cancelled ? "未完了に戻す" : "完了"}
                   </button>
                 </>
               )}

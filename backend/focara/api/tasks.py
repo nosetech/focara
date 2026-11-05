@@ -9,11 +9,17 @@ from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
 from focara.db.models import Task, TaskLog
-from focara.task_status import InvalidTransition, MissingWaitCondition, transition, validate_waiting
+from focara.task_status import (
+    InvalidTransition,
+    MissingWaitCondition,
+    NotCancellable,
+    transition,
+    validate_waiting,
+)
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
-Status = Literal["inbox", "next", "someday", "waiting", "done"]
+Status = Literal["inbox", "next", "someday", "waiting", "done", "cancelled"]
 TimeSlot = Literal["morning", "afternoon", "evening"]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -182,7 +188,9 @@ def _transition(session: Session, task: Task, new_status: str) -> None:
         transition(task, new_status)
     except InvalidTransition as e:
         session.rollback()
-        raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
+        raise HTTPException(
+            422 if isinstance(e, (MissingWaitCondition, NotCancellable)) else 409, str(e)
+        ) from e
 
 
 def add_log(session: Session, task: Task, action: str, note: str | None = None) -> None:
@@ -212,7 +220,9 @@ def transition_task(task_id: int, body: TaskTransition, session: SessionDep) -> 
     except InvalidTransition as e:
         session.rollback()
         # 必須項目の不足は 422、遷移自体の禁止は 409
-        raise HTTPException(422 if isinstance(e, MissingWaitCondition) else 409, str(e)) from e
+        raise HTTPException(
+            422 if isinstance(e, (MissingWaitCondition, NotCancellable)) else 409, str(e)
+        ) from e
     log_if_done(session, task)
     _commit(session)
     return task

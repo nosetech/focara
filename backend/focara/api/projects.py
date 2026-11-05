@@ -43,7 +43,10 @@ def _select_with_progress():
     return (
         select(
             Project,
-            func.count(Task.id),
+            # キャンセルした子は進捗の母数に含めない
+            func.coalesce(
+                func.sum(case((Task.id.is_(None), 0), (Task.status == "cancelled", 0), else_=1)), 0
+            ),
             func.coalesce(func.sum(case((Task.status == "done", 1), else_=0)), 0),
         )
         .outerjoin(Task, Task.project_id == Project.id)

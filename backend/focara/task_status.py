@@ -16,11 +16,17 @@ class MissingWaitCondition(InvalidTransition):
     """waiting にするのに待ち条件・待ち日時が無い。"""
 
 
-# done は完了済み。やり直す場合は next にだけ戻せる。それ以外は相互に遷移できる。
+class NotCancellable(InvalidTransition):
+    """習慣の子ではないタスクをキャンセルしようとした。"""
+
+
+# done は完了済み、cancelled はキャンセル済み(習慣の子のみ)。やり直す場合は next にだけ戻せる。
+# それ以外は相互に遷移できる。cancelled への遷移が許されるのは習慣の子だけ(transition で検査)。
 _ACTIVE = {"inbox", "next", "someday", "waiting"}
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    **{s: (_ACTIVE - {s}) | {"done"} for s in _ACTIVE},
+    **{s: (_ACTIVE - {s}) | {"done", "cancelled"} for s in _ACTIVE},
     "done": {"next"},
+    "cancelled": {"next"},
 }
 
 
@@ -36,10 +42,12 @@ def transition(task: Task, new_status: str) -> None:
     old = task.status
     if new_status not in ALLOWED_TRANSITIONS.get(old, set()):
         raise InvalidTransition(f"{old} から {new_status} へは遷移できません")
+    if new_status == "cancelled" and task.habit_id is None:
+        raise NotCancellable("キャンセルできるのは習慣の子タスクのみです")
     task.status = new_status
     if new_status == "waiting":
         validate_waiting(task)
-    elif old == "waiting":
+    elif old == "waiting" or new_status == "cancelled":
         task.wait_condition = None
         task.wait_until = None
 
