@@ -434,7 +434,7 @@ export function HabitSheet({
   const rule = draft.rule;
   const paused = !isNew && current != null && !current.active;
   const dots = current ? recentDots(current.recent, today) : [];
-  const { done, total: counted } = dotCounts(dots);
+  const { done, total: counted, cancelled: cancelledCount } = dotCounts(dots);
   const days = rule.type === "weekly" ? rule.days : [];
   const mdayNote = rule.type === "monthly" && (rule.mday ?? 0) > 28;
   const bodyError = draftBody(draft);
@@ -546,7 +546,9 @@ export function HabitSheet({
                 ))}
               </div>
               <span>
-                直近7回 {done}/{counted} · 累計 {total}回
+                直近7回 {done}/{counted}
+                {cancelledCount > 0 && `(キャンセル${cancelledCount}を含む)`} ·
+                累計 {total}回
               </span>
             </div>
           )}
@@ -907,29 +909,37 @@ export function HabitSheet({
                 </div>
               )}
             </div>
-          </div>
-          <div className={styles.list} style={{ marginTop: 14 }}>
-            <div className={styles.item}>
-              <span className={styles.itemLabel}>期限切れの子</span>
+            <div className={own.endBlock}>
+              <div className={own.endRow}>
+                <span className={styles.itemLabel}>期限切れの子</span>
+                <div
+                  className={`${styles.seg} ${styles.grow}`}
+                  role="group"
+                  aria-label="期限切れの子の扱い"
+                >
+                  <button
+                    style={{ whiteSpace: "nowrap" }}
+                    data-on={!draft.autoCancel ? "" : undefined}
+                    onClick={() => change({ autoCancel: false })}
+                  >
+                    繰り越す
+                  </button>
+                  <button
+                    style={{ whiteSpace: "nowrap" }}
+                    data-on={draft.autoCancel ? "" : undefined}
+                    onClick={() => change({ autoCancel: true })}
+                  >
+                    自動でキャンセル
+                  </button>
+                </div>
+              </div>
               <div
-                className={`${styles.seg} ${styles.grow}`}
-                role="group"
-                aria-label="期限切れの子の扱い"
+                className={own.endDetail}
+                style={{ color: "var(--ink3)", fontSize: 12 }}
               >
-                <button
-                  style={{ whiteSpace: "nowrap" }}
-                  data-on={!draft.autoCancel ? "" : undefined}
-                  onClick={() => change({ autoCancel: false })}
-                >
-                  繰り越す
-                </button>
-                <button
-                  style={{ whiteSpace: "nowrap" }}
-                  data-on={draft.autoCancel ? "" : undefined}
-                  onClick={() => change({ autoCancel: true })}
-                >
-                  自動でキャンセル
-                </button>
+                {draft.autoCancel
+                  ? "その日のうちに終えなかった子は、翌日に自動でキャンセルになります"
+                  : "その日のうちに終えなかった子は、翌日以降も残ります"}
               </div>
             </div>
           </div>
