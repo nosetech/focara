@@ -24,7 +24,7 @@ import {
   type OrganizeScreenKey,
 } from "@/lib/organize";
 import { OrganizeContext, type OrganizeProject } from "./OrganizeContext";
-import { ThemeToggle } from "./ThemeToggle";
+import { ThemeIconButton } from "./ThemeIconButton";
 import { Toast, type ToastMessage } from "./Toast";
 import { Brand } from "./Brand";
 import styles from "./OrganizeShell.module.css";
@@ -162,185 +162,186 @@ export function OrganizeShell({
 
   return (
     <div className={styles.shell}>
-      {navOpen && (
-        <div className={styles.backdrop} onClick={() => setNavOpen(false)} />
-      )}
-
-      <nav
-        className={styles.nav}
-        data-open={navOpen ? "" : undefined}
-        aria-label="メインナビゲーション"
-      >
-        <Brand
-          className={styles.brand}
-          versionClassName={styles.brandVersion}
-        />
-        <Link href="/" className={styles.navLink}>
+      <header className={styles.header}>
+        <button
+          className={styles.menuButton}
+          aria-label="メニュー"
+          onClick={() => setNavOpen(true)}
+        >
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.7"
           >
-            <path d="M7 5l11 7-11 7z" />
+            <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
-          実行画面
-        </Link>
-        <button className={styles.addButton} onClick={onQuickAdd}>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          <span>inboxに追加</span>
-          <kbd className={styles.kbd}>N</kbd>
         </button>
-        {ORGANIZE_GROUPS.map((g) => (
-          <div key={g.label} className={styles.group}>
-            <div className={styles.groupLabel}>{g.label}</div>
-            {g.screens.map((s) => (
-              <Link
-                key={s.key}
-                href={`/organize/${s.key}`}
-                className={styles.navItem}
-                aria-current={screen === s.key ? "page" : undefined}
-              >
-                <span>{s.label}</span>
-                <span className={styles.count}>{countOf(s.key)}</span>
-              </Link>
-            ))}
-          </div>
-        ))}
-        <div className={styles.spacer} />
-        <ThemeToggle />
-      </nav>
+        <Brand
+          className={styles.brand}
+          versionClassName={styles.brandVersion}
+        />
+        <div className={styles.headSpacer} />
+        <ThemeIconButton />
+      </header>
 
-      <main className={styles.main}>
-        <div className={styles.head}>
-          <div className={styles.titleRow}>
-            <button
-              className={styles.menuButton}
-              aria-label="メニュー"
-              onClick={() => setNavOpen(true)}
+      <div className={styles.body}>
+        {navOpen && (
+          <div className={styles.backdrop} onClick={() => setNavOpen(false)} />
+        )}
+
+        <nav
+          className={styles.nav}
+          data-open={navOpen ? "" : undefined}
+          aria-label="メインナビゲーション"
+        >
+          <Link href="/" className={styles.navLink}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-              >
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            </button>
-            <div className={styles.titles}>
-              <h1 className={styles.title}>{current?.label ?? "整理"}</h1>
-              <span className={styles.sub}>{sub}</span>
+              <path d="M7 5l11 7-11 7z" />
+            </svg>
+            実行画面
+          </Link>
+          <button className={styles.addButton} onClick={onQuickAdd}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span>inboxに追加</span>
+            <kbd className={styles.kbd}>N</kbd>
+          </button>
+          {ORGANIZE_GROUPS.map((g) => (
+            <div key={g.label} className={styles.group}>
+              <div className={styles.groupLabel}>{g.label}</div>
+              {g.screens.map((s) => (
+                <Link
+                  key={s.key}
+                  href={`/organize/${s.key}`}
+                  className={styles.navItem}
+                  aria-current={screen === s.key ? "page" : undefined}
+                >
+                  <span>{s.label}</span>
+                  <span className={styles.count}>{countOf(s.key)}</span>
+                </Link>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        <main className={styles.main}>
+          <div className={styles.head}>
+            <div className={styles.titleRow}>
+              <div className={styles.titles}>
+                <h1 className={styles.title}>{current?.label ?? "整理"}</h1>
+                <span className={styles.sub}>{sub}</span>
+              </div>
+            </div>
+            <div className={styles.toolbar}>
+              {hasDateNav(screen) && (
+                <div className={styles.dateNav}>
+                  <button
+                    className={styles.iconButton}
+                    aria-label="前へ"
+                    onClick={() => setDate(addDays(date, -step))}
+                  >
+                    {chevron("M15 6l-6 6 6 6")}
+                  </button>
+                  <span className={styles.dateLabel}>
+                    {dateNavLabel(screen, date)}
+                  </span>
+                  <button
+                    className={styles.iconButton}
+                    aria-label="次へ"
+                    onClick={() => setDate(addDays(date, step))}
+                  >
+                    {chevron("M9 6l6 6-6 6")}
+                  </button>
+                  <button
+                    className={styles.today}
+                    onClick={() => setDate(new Date())}
+                  >
+                    今日
+                  </button>
+                </div>
+              )}
+              {list && (
+                <>
+                  {screen === "projects" &&
+                    select("status", "ステータス", [
+                      { v: "", l: "ステータス: すべて" },
+                      ...STATUS_OPTIONS,
+                    ])}
+                  {screen !== "projects" &&
+                    select("project", "プロジェクト", [
+                      { v: "", l: "プロジェクト: すべて" },
+                      ...projects.map((p) => ({ v: String(p.id), l: p.name })),
+                      { v: "none", l: "なし" },
+                    ])}
+                  {select("pri", "優先度", [
+                    { v: "", l: "優先度: すべて" },
+                    ...PRIORITY_OPTIONS.map((p) => ({ v: p, l: p })),
+                  ])}
+                  {select("sort", "並び順", SORT_OPTIONS)}
+                  {hasFilter && (
+                    <button
+                      className={styles.clear}
+                      onClick={() => setFilters(DEFAULT_FILTERS)}
+                    >
+                      絞り込みを解除
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
-          <div className={styles.toolbar}>
-            {hasDateNav(screen) && (
-              <div className={styles.dateNav}>
-                <button
-                  className={styles.iconButton}
-                  aria-label="前へ"
-                  onClick={() => setDate(addDays(date, -step))}
-                >
-                  {chevron("M15 6l-6 6 6 6")}
-                </button>
-                <span className={styles.dateLabel}>
-                  {dateNavLabel(screen, date)}
+
+          <div className={styles.content}>
+            <OrganizeContext.Provider
+              value={{
+                filters: activeFilters,
+                clearFilters: () => setFilters(DEFAULT_FILTERS),
+                projects,
+                refreshProjects,
+                panelEl,
+                date,
+                setDate,
+                refreshCounts,
+                showToast,
+                openQuickAdd: onQuickAdd,
+              }}
+            >
+              {children}
+            </OrganizeContext.Provider>
+          </div>
+
+          {screen === "inbox" && (
+            <div className={styles.keys}>
+              {KEYS.map((k) => (
+                <span key={k.k} className={styles.key}>
+                  <kbd>{k.k}</kbd>
+                  {k.l}
                 </span>
-                <button
-                  className={styles.iconButton}
-                  aria-label="次へ"
-                  onClick={() => setDate(addDays(date, step))}
-                >
-                  {chevron("M9 6l6 6-6 6")}
-                </button>
-                <button
-                  className={styles.today}
-                  onClick={() => setDate(new Date())}
-                >
-                  今日
-                </button>
-              </div>
-            )}
-            {list && (
-              <>
-                {screen === "projects" &&
-                  select("status", "ステータス", [
-                    { v: "", l: "ステータス: すべて" },
-                    ...STATUS_OPTIONS,
-                  ])}
-                {screen !== "projects" &&
-                  select("project", "プロジェクト", [
-                    { v: "", l: "プロジェクト: すべて" },
-                    ...projects.map((p) => ({ v: String(p.id), l: p.name })),
-                    { v: "none", l: "なし" },
-                  ])}
-                {select("pri", "優先度", [
-                  { v: "", l: "優先度: すべて" },
-                  ...PRIORITY_OPTIONS.map((p) => ({ v: p, l: p })),
-                ])}
-                {select("sort", "並び順", SORT_OPTIONS)}
-                {hasFilter && (
-                  <button
-                    className={styles.clear}
-                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                  >
-                    絞り込みを解除
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          )}
+        </main>
 
-        <div className={styles.content}>
-          <OrganizeContext.Provider
-            value={{
-              filters: activeFilters,
-              clearFilters: () => setFilters(DEFAULT_FILTERS),
-              projects,
-              refreshProjects,
-              panelEl,
-              date,
-              setDate,
-              refreshCounts,
-              showToast,
-              openQuickAdd: onQuickAdd,
-            }}
-          >
-            {children}
-          </OrganizeContext.Provider>
-        </div>
-
-        {screen === "inbox" && (
-          <div className={styles.keys}>
-            {KEYS.map((k) => (
-              <span key={k.k} className={styles.key}>
-                <kbd>{k.k}</kbd>
-                {k.l}
-              </span>
-            ))}
-          </div>
-        )}
-      </main>
-
-      <aside
-        className={styles.panel}
-
-        ref={setPanelEl}
-      />
+        <aside className={styles.panel} ref={setPanelEl} />
+      </div>
 
       <Toast toast={toast} />
 
