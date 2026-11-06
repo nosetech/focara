@@ -42,8 +42,7 @@
   flex: 1;
 }
 
-.backLink,
-.headTheme {
+.backLink {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -563,16 +562,6 @@
     border: 1px solid var(--line);
     border-radius: 4px;
     padding: 1px 5px;
-  }
-
-  .headTheme {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-  }
-
-  .headTheme:hover {
-    background: var(--sunk);
   }
 
   .date {
