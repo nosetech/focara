@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
 from focara.api.deps import SessionDep
+from focara.api.schedule import _slot_tasks
 from focara.api.tasks import (
     Task,
     TaskOut,
@@ -92,15 +93,13 @@ def postpone_task(task_id: int, body: PostponeBody, session: SessionDep) -> Task
         day = current
     slot = body.time_slot or ("evening" if body.target == "end_of_day" else task.time_slot)
     slot = slot or "morning"
-    last = session.scalar(
-        select(Task.run_order)
-        .where(Task.scheduled_date == day.isoformat(), Task.time_slot == slot, Task.id != task.id)
-        .order_by(Task.run_order.desc())
-        .limit(1)
-    )
+    # run_order が NULL のタスクは枠の末尾に固定されるため、表示順で振り直してから末尾に付ける
+    others = [t for t in _slot_tasks(session, day, slot) if t.id != task.id]
+    for i, other in enumerate(others):
+        other.run_order = i
     task.scheduled_date = day.isoformat()
     task.time_slot = slot
-    task.run_order = 0 if last is None else last + 1
+    task.run_order = len(others)
     # 日時固定の予定は移動後は意味を持たないため外す
     task.fixed_at = task.fixed_end_at = None
     add_log(session, task, "postponed", body.note)

@@ -65,7 +65,7 @@ def test_postpone_tomorrow_appends(client):
         json={"scheduled_date": today.isoformat(), "time_slot": "morning"},
     )
     res = client.post(f"/api/tasks/{a}/postpone", json={"note": "忙しい"}).json()
-    assert (res["scheduled_date"], res["time_slot"], res["run_order"]) == (tomorrow, "morning", 4)
+    assert (res["scheduled_date"], res["time_slot"], res["run_order"]) == (tomorrow, "morning", 1)
     log = client.get("/api/logs?action=postponed").json()[0]
     assert (log["task_id"], log["note"]) == (a, "忙しい")
 
@@ -103,8 +103,35 @@ def test_postpone_end_of_day_uses_given_slot_and_appends(client):
         assert (res["scheduled_date"], res["time_slot"], res["run_order"]) == (
             "2026-10-20",
             slot,
-            5,
+            1,
         )
+
+
+def test_postpone_goes_last_even_with_null_run_order(client):
+    """run_order 未設定のタスクが混在しても、後回しで次のタスクは並び順どおりに回る。"""
+    day = "2026-10-20"
+    m1, m2 = (_task(client, n, priority=2) for n in ("m1", "m2"))
+    low = _task(client, "low", priority=3)
+    for tid, order in ((m1, 0), (m2, 1)):
+        client.put(
+            f"/api/tasks/{tid}/schedule",
+            json={"scheduled_date": day, "time_slot": "afternoon", "run_order": order},
+        )
+    # タスク詳細からの設定と同じく run_order を付けずに割り当てる
+    client.patch(f"/api/tasks/{low}", json={"scheduled_date": day, "time_slot": "afternoon"})
+
+    def titles():
+        return [t["title"] for t in client.get(f"/api/schedule?date={day}").json()]
+
+    assert titles() == ["m1", "m2", "low"]
+    client.post(
+        f"/api/tasks/{m1}/postpone", json={"target": "end_of_day", "time_slot": "afternoon"}
+    )
+    assert titles() == ["m2", "low", "m1"]
+    client.post(
+        f"/api/tasks/{m2}/postpone", json={"target": "end_of_day", "time_slot": "afternoon"}
+    )
+    assert titles() == ["low", "m1", "m2"]
 
 
 def test_postpone_done_rejected(client):
