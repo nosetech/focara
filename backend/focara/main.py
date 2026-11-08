@@ -17,7 +17,7 @@ from focara.api.schedule import router as schedule_router
 from focara.api.tasks import router as tasks_router
 from focara.config import BACKEND_HOST, load_config
 from focara.db import create_db_engine, upgrade_db
-from focara.habit_generator import auto_cancel_overdue, generate_all
+from focara.habit_generator import auto_cancel_overdue, carry_over_overdue, generate_all
 from focara.task_status import release_due_waiting
 
 RELEASE_INTERVAL_SECONDS = 60
@@ -45,6 +45,7 @@ def _generate_habits() -> None:
         today = date.today()
         generate_all(session, today, ahead)
         auto_cancel_overdue(session, today)
+        carry_over_overdue(session, today)
         session.commit()
 
 

@@ -3,7 +3,7 @@
 import logging
 from datetime import UTC, date, datetime, time, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from focara.db.models import Habit, HabitProperty, Task, TaskProperty
@@ -238,4 +238,39 @@ def auto_cancel_overdue(session: Session, today: date) -> int:
         child.wait_condition = None
         child.wait_until = None
     session.flush()
+    return len(children)
+
+
+def carry_over_overdue(session: Session, today: date) -> int:
+    """auto_cancel_overdue が OFF の習慣について、予定日が今日より前の未完了の子を今日に繰り越す。
+
+    枠は維持し、run_order は移動先(今日・同じ枠)の末尾にする。日時固定は解除する。
+    occurrence_date は変えない。再実行しても対象は予定日が過去の子だけなので冪等。
+    commit は呼び出し側。
+    """
+    day = _iso(today)
+    children = session.scalars(
+        select(Task)
+        .join(Habit, Task.habit_id == Habit.id)
+        .where(
+            Habit.auto_cancel_overdue.is_(False),
+            Task.status.notin_(CLOSED),
+            Task.scheduled_date < day,
+        )
+        .order_by(Task.scheduled_date, Task.run_order.is_(None), Task.run_order, Task.id)
+    ).all()
+    for child in children:
+        last = session.scalar(
+            select(func.max(Task.run_order)).where(
+                Task.scheduled_date == day,
+                Task.time_slot.is_(child.time_slot)
+                if child.time_slot is None
+                else Task.time_slot == child.time_slot,
+            )
+        )
+        child.scheduled_date = day
+        child.fixed_at = None
+        child.fixed_end_at = None
+        child.run_order = 0 if last is None else last + 1
+        session.flush()
     return len(children)
