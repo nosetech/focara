@@ -9,7 +9,12 @@ from focara.api.deps import get_config, get_engine
 from focara.config import Config, HabitConfig
 from focara.db import create_db_engine, upgrade_db
 from focara.db.models import Habit, Task, TaskLog
-from focara.habit_generator import auto_cancel_overdue, generate_all, generate_children
+from focara.habit_generator import (
+    auto_cancel_overdue,
+    carry_over_overdue,
+    generate_all,
+    generate_children,
+)
 from focara.main import app
 
 AHEAD = 14
@@ -577,3 +582,46 @@ def test_progress_excludes_cancelled_habit_child(client):
     before = client.get(f"/api/projects/{pid}").json()["task_count"]
     client.post(f"/api/tasks/{kids[0]['id']}/transition", json={"status": "cancelled"})
     assert client.get(f"/api/projects/{pid}").json()["task_count"] == before - 1
+
+
+def _t(habit_id, offset, **kw):
+    return Task(
+        title="t",
+        status=kw.pop("status", "next"),
+        habit_id=habit_id,
+        occurrence_date=_iso(offset),
+        scheduled_date=_iso(offset),
+        **kw,
+    )
+
+
+def test_carry_over_overdue(engine, client):
+    off = _habit(client, title="off")
+    on = _habit(client, title="on", auto_cancel_overdue=True)
+    fixed = datetime(2020, 1, 1, tzinfo=UTC)
+    with Session(engine) as s:
+        # 今日・同じ枠に既存の子(run_order 0..1)
+        today_child = s.query(Task).filter_by(habit_id=off["id"], occurrence_date=_iso()).one()
+        today_child.time_slot, today_child.run_order = "morning", 1
+        old3 = _t(
+            off["id"], -3, time_slot="morning", run_order=0, fixed_at=fixed, fixed_end_at=fixed
+        )
+        old1 = _t(off["id"], -1, time_slot="morning", run_order=0)
+        done = _t(off["id"], -2, status="done")
+        canc = _t(off["id"], -4, status="cancelled")
+        on_old = _t(on["id"], -2)
+        s.add_all([old3, old1, done, canc, on_old])
+        s.commit()
+        assert carry_over_overdue(s, date.today()) == 2
+        s.commit()
+        assert carry_over_overdue(s, date.today()) == 0  # 冪等
+        s.refresh(old3), s.refresh(old1)
+        assert old3.scheduled_date == old1.scheduled_date == _iso()
+        assert (old3.run_order, old1.run_order) == (2, 3)  # 古い順に枠の末尾へ
+        assert old3.fixed_at is None and old3.fixed_end_at is None
+        assert old3.occurrence_date == _iso(-3)
+        assert done.scheduled_date == _iso(-2) and canc.scheduled_date == _iso(-4)
+        assert on_old.scheduled_date == _iso(-2)
+        # 繰り越した日の occurrence_date の子は再生成されない
+        generate_children(s, s.get(Habit, off["id"]), date.today(), AHEAD)
+        assert s.query(Task).filter_by(habit_id=off["id"], occurrence_date=_iso(-3)).count() == 1
