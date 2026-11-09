@@ -23,6 +23,11 @@ export function splitFixed(
   return { date, start: clock(fixedAt), end: clock(fixedEndAt) };
 }
 
+/** 日付の変更を反映する。日付を空にするときは、日付なしでは成立しない時刻も一緒に外す。 */
+export function withDate(d: FixedDraft, date: string): FixedDraft {
+  return date ? { ...d, date } : { date: "", start: "", end: "" };
+}
+
 export function slotForTime(time: string): TimeSlot {
   return currentSlot(new Date(`2000-01-01T${time}`));
 }

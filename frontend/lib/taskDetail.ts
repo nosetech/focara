@@ -68,7 +68,12 @@ export function propertyBody(d: PropertyDraft): PropertyBody | null {
       return { error: "数値を入力してください" };
     return { key, value: num, value_type: "number", unit };
   }
-  if (d.value_type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(d.value))
+  // 日付は空(クリア)も許す
+  if (
+    d.value_type === "date" &&
+    d.value !== "" &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(d.value)
+  )
     return { error: "日付を選んでください" };
   return { key, value: d.value, value_type: d.value_type, unit };
 }

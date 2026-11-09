@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { habitRuleText, slotName, type Habit } from "@/lib/habits";
-import { fixedBody, splitFixed, type FixedDraft } from "@/lib/fixed";
+import { fixedBody, splitFixed, withDate, type FixedDraft } from "@/lib/fixed";
 import { PRIORITIES } from "@/lib/inbox";
 import { SLOTS, postponeBody, type TimeSlot } from "@/lib/run";
 import {
@@ -21,6 +21,7 @@ import {
   type SaveState,
   type TaskProperty,
 } from "@/lib/taskDetail";
+import { DateInput } from "./DateInput";
 import styles from "./TaskDetail.module.css";
 
 const MEMO_DEBOUNCE_MS = 800;
@@ -937,13 +938,13 @@ export function TaskDetail({
                   <span className={styles.itemLabel}>
                     {isChild ? "日付(この回)" : "日付"}
                   </span>
-                  <input
-                    type="date"
-                    className={`${styles.input} ${styles.mono} ${styles.grow}`}
+                  <DateInput
+                    inputClassName={`${styles.input} ${styles.mono} ${styles.grow}`}
                     value={fixed.date}
                     aria-label="日付"
-                    onChange={(e) =>
-                      saveFixed({ ...fixed, date: e.target.value })
+                    onChange={(date) =>
+                      // 日付を外すときは時刻も一緒に外す(日付なしの時刻指定はできない)
+                      saveFixed(withDate(fixed, date))
                     }
                   />
                 </div>
@@ -1129,14 +1130,13 @@ export function TaskDetail({
                         onBlur={() => saveRow(r)}
                       />
                       {r.value_type === "date" ? (
-                        <input
-                          type="date"
-                          className={`${styles.input} ${styles.mono} ${styles.grow}`}
+                        <DateInput
+                          inputClassName={`${styles.input} ${styles.mono} ${styles.grow}`}
                           value={r.value}
                           aria-label="値"
-                          onChange={(e) => {
-                            patchRow(r.localId, { value: e.target.value });
-                            saveRow({ ...r, value: e.target.value });
+                          onChange={(value) => {
+                            patchRow(r.localId, { value });
+                            saveRow({ ...r, value });
                           }}
                         />
                       ) : (

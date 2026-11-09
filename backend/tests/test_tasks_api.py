@@ -187,3 +187,16 @@ def test_patch_status_waiting_without_condition_is_422(client):
     res = client.patch(f"/api/tasks/{tid}", json={"status": "waiting"})
     assert res.status_code == 422
     assert client.get(f"/api/tasks/{tid}").json()["status"] == "inbox"
+
+
+def test_scheduled_date_can_be_cleared_by_patch(client):
+    tid = client.post(
+        "/api/tasks",
+        json={"title": "a", "status": "next", "scheduled_date": "2026-10-20"},
+    ).json()["id"]
+    res = client.patch(
+        f"/api/tasks/{tid}",
+        json={"scheduled_date": None, "fixed_at": None, "fixed_end_at": None},
+    )
+    assert res.status_code == 200
+    assert res.json()["scheduled_date"] is None
