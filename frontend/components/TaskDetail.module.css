@@ -369,7 +369,7 @@
   .sheet {
     left: auto;
     top: 0;
-    width: 420px;
+    width: var(--detail-w, 420px);
     max-height: none;
     border-radius: 0;
     border-left: 1px solid var(--line);

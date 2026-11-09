@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { habitRuleText, slotName, type Habit } from "@/lib/habits";
 import { fixedBody, splitFixed, withDate, type FixedDraft } from "@/lib/fixed";
@@ -22,6 +28,8 @@ import {
   type TaskProperty,
 } from "@/lib/taskDetail";
 import { DateInput } from "./DateInput";
+import { DetailResizeHandle } from "./DetailResizeHandle";
+import { useDetailWidth } from "./useDetailWidth";
 import styles from "./TaskDetail.module.css";
 
 const MEMO_DEBOUNCE_MS = 800;
@@ -73,6 +81,9 @@ const CLOSE_ICON = (
 );
 
 /** タスクをタップしたときに開く詳細(モバイルはボトムシート、デスクトップは右パネル)。 */
+/** PC幅のシートの既定幅(px) */
+const SHEET_DEFAULT_WIDTH = 420;
+
 export function TaskDetail({
   taskId,
   onClose,
@@ -86,6 +97,7 @@ export function TaskDetail({
   /** sheet: 画面下から出るシート(モバイル)/ panel: 整理画面の右ペインに埋め込む */
   variant?: "sheet" | "panel";
 }) {
+  const sheetWidth = useDetailWidth(SHEET_DEFAULT_WIDTH);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [title, setTitle] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
@@ -651,7 +663,21 @@ export function TaskDetail({
         role="dialog"
         aria-modal={variant === "sheet"}
         aria-label="タスクの詳細"
+        style={
+          variant === "sheet"
+            ? ({ "--detail-w": `${sheetWidth.width}px` } as CSSProperties)
+            : undefined
+        }
       >
+        {variant === "sheet" && (
+          <DetailResizeHandle
+            edge="inside"
+            width={sheetWidth.width}
+            onChange={sheetWidth.setWidth}
+            onCommit={sheetWidth.commit}
+            onReset={sheetWidth.reset}
+          />
+        )}
         {variant === "sheet" && <div className={styles.grabber} />}
         <div className={styles.top}>
           <div className={styles.save} data-state={save} role="status">

@@ -25,6 +25,9 @@ export function ThemeToggle() {
       type="button"
       className={styles.themeButton}
       onClick={() => setTheme(next)}
+      title={
+        next === "dark" ? "ダークモードに切り替え" : "ライトモードに切り替え"
+      }
       aria-label={
         next === "dark" ? "ダークモードに切り替え" : "ライトモードに切り替え"
       }
@@ -40,7 +43,7 @@ export function ThemeToggle() {
       >
         <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
       </svg>
-      <span suppressHydrationWarning>
+      <span className={styles.label} suppressHydrationWarning>
         {theme === "dark" ? "ライトモード" : "ダークモード"}
       </span>
     </button>

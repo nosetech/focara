@@ -8,6 +8,8 @@ import { QuickAdd } from "./QuickAdd";
 import { ThemeToggle } from "./ThemeToggle";
 import { Brand } from "./Brand";
 import { ShellContext } from "./ShellContext";
+import { SidebarToggle } from "./SidebarToggle";
+import { useSidebarCollapse } from "./useSidebarCollapse";
 import styles from "./AppShell.module.css";
 
 const NAV_ITEMS = [
@@ -29,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   const [quickAdd, setQuickAdd] = useState(false);
+  const side = useSidebarCollapse();
 
   // デスクトップ: N キーでクイック追加を開く(入力中は無視)
   useEffect(() => {
@@ -62,17 +65,48 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ShellContext.Provider value={{ openQuickAdd: () => setQuickAdd(true) }}>
       <div className={styles.shell} data-run={isRun ? "" : undefined}>
-        <nav className={styles.sidebar} aria-label="メインナビゲーション">
-          <Brand
-            className={styles.brand}
-            versionClassName={styles.brandVersion}
-          />
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
+        <div
+          className={styles.sidebarSlot}
+          data-collapsed={side.collapsed ? "" : undefined}
+        >
+          <nav
+            className={styles.sidebar}
+            data-icon-only={side.iconOnly ? "" : undefined}
+            data-peek={side.peek ? "" : undefined}
+            aria-label="メインナビゲーション"
+            onMouseEnter={side.collapsed ? side.onEnter : undefined}
+            onMouseLeave={side.collapsed ? side.onLeave : undefined}
+          >
+            <Brand
+              className={styles.brand}
+              versionClassName={styles.brandVersion}
+            />
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={styles.sideLink}
+                title={item.label}
+                aria-current={isActive(item.href) ? "page" : undefined}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
+                  {item.icon}
+                </svg>
+                <span className={styles.label}>{item.label}</span>
+              </Link>
+            ))}
+            <button
               className={styles.sideLink}
-              aria-current={isActive(item.href) ? "page" : undefined}
+              onClick={() => setQuickAdd(true)}
+              title="inboxに追加(N)"
+              aria-label="inboxに追加"
             >
               <svg
                 width="16"
@@ -82,32 +116,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                 stroke="currentColor"
                 strokeWidth="1.7"
               >
-                {item.icon}
+                <path d="M12 5v14M5 12h14" />
               </svg>
-              {item.label}
-            </Link>
-          ))}
-          <button
-            className={styles.sideLink}
-            onClick={() => setQuickAdd(true)}
-            aria-label="inboxに追加"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            inboxに追加
-            <kbd className={styles.kbd}>N</kbd>
-          </button>
-          <div className={styles.spacer} />
-          <ThemeToggle />
-        </nav>
+              <span className={styles.label}>inboxに追加</span>
+              <kbd className={`${styles.kbd} ${styles.label}`}>N</kbd>
+            </button>
+            <div className={styles.spacer} />
+            <ThemeToggle />
+            <SidebarToggle
+              collapsed={side.collapsed}
+              onToggle={side.toggle}
+              className={`${styles.themeButton} ${styles.collapseButton}`}
+              labelClassName={styles.label}
+            />
+          </nav>
+        </div>
 
         <main className={styles.main}>{children}</main>
 

@@ -1,0 +1,40 @@
+/* PC幅のみ。細い線で、ホバー・ドラッグ中・キーボードフォーカス中にアクセント色にする */
+.handle {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;
+    width: 7px;
+    padding: 0 2.5px;
+    box-sizing: border-box;
+    background-clip: content-box;
+    background-color: transparent;
+    cursor: col-resize;
+    z-index: 6;
+    touch-action: none;
+    transition: background-color 0.12s;
+    outline: none;
+  }
+
+  .handle[data-edge="inside"] {
+    left: 0;
+  }
+
+  .handle:hover,
+  .handle:focus-visible,
+  .handle[data-dragging] {
+    background-color: var(--accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handle {
+    transition: none;
+  }
+}

@@ -7,12 +7,14 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { apiFetch } from "@/lib/api";
 import { DEFAULT_FILTERS, effectiveFilters } from "@/lib/inbox";
 import {
   ORGANIZE_GROUPS,
+  ORGANIZE_ICONS,
   ORGANIZE_SCREENS,
   addDays,
   countTasks,
@@ -27,6 +29,10 @@ import { OrganizeContext, type OrganizeProject } from "./OrganizeContext";
 import { ThemeIconButton } from "./ThemeIconButton";
 import { Toast, type ToastMessage } from "./Toast";
 import { Brand } from "./Brand";
+import { DetailResizeHandle } from "./DetailResizeHandle";
+import { SidebarToggle } from "./SidebarToggle";
+import { useDetailWidth } from "./useDetailWidth";
+import { useSidebarCollapse } from "./useSidebarCollapse";
 import styles from "./OrganizeShell.module.css";
 
 const KEYS = [
@@ -57,6 +63,7 @@ const SORT_OPTIONS = [
 ];
 
 const TOAST_MS = 4000;
+const PANEL_DEFAULT_WIDTH = 400;
 
 const chevron = (d: string) => (
   <svg
@@ -86,6 +93,8 @@ export function OrganizeShell({
   const screen: OrganizeScreenKey = current?.key ?? "inbox";
 
   const [navOpen, setNavOpen] = useState(false);
+  const side = useSidebarCollapse();
+  const panelWidth = useDetailWidth(PANEL_DEFAULT_WIDTH);
   const [date, setDate] = useState(() => new Date());
   const [counts, setCounts] = useState<OrganizeCounts | null>(null);
   const [projects, setProjects] = useState<OrganizeProject[]>([]);
@@ -192,55 +201,100 @@ export function OrganizeShell({
           <div className={styles.backdrop} onClick={() => setNavOpen(false)} />
         )}
 
-        <nav
-          className={styles.nav}
-          data-open={navOpen ? "" : undefined}
-          aria-label="メインナビゲーション"
+        <div
+          className={styles.navSlot}
+          data-collapsed={side.collapsed ? "" : undefined}
         >
-          <Link href="/" className={styles.navLink}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
+          <nav
+            className={styles.nav}
+            data-open={navOpen ? "" : undefined}
+            data-icon-only={side.iconOnly ? "" : undefined}
+            data-peek={side.peek ? "" : undefined}
+            aria-label="メインナビゲーション"
+            onMouseEnter={side.collapsed ? side.onEnter : undefined}
+            onMouseLeave={side.collapsed ? side.onLeave : undefined}
+          >
+            <Link href="/" className={styles.navLink} title="実行画面">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                <path d="M7 5l11 7-11 7z" />
+              </svg>
+              <span className={styles.label}>実行画面</span>
+            </Link>
+            <button
+              className={styles.addButton}
+              onClick={onQuickAdd}
+              title="inboxに追加(N)"
+              aria-label="inboxに追加"
             >
-              <path d="M7 5l11 7-11 7z" />
-            </svg>
-            実行画面
-          </Link>
-          <button className={styles.addButton} onClick={onQuickAdd}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span>inboxに追加</span>
-            <kbd className={styles.kbd}>N</kbd>
-          </button>
-          {ORGANIZE_GROUPS.map((g) => (
-            <div key={g.label} className={styles.group}>
-              <div className={styles.groupLabel}>{g.label}</div>
-              {g.screens.map((s) => (
-                <Link
-                  key={s.key}
-                  href={`/organize/${s.key}`}
-                  className={styles.navItem}
-                  aria-current={screen === s.key ? "page" : undefined}
-                >
-                  <span>{s.label}</span>
-                  <span className={styles.count}>{countOf(s.key)}</span>
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span className={styles.label}>inboxに追加</span>
+              <kbd className={`${styles.kbd} ${styles.label}`}>N</kbd>
+            </button>
+            {ORGANIZE_GROUPS.map((g) => (
+              <div key={g.label} className={styles.group}>
+                <div className={styles.groupLabel}>{g.label}</div>
+                <div className={styles.groupRule} aria-hidden="true" />
+                {g.screens.map((s) => {
+                  const count = countOf(s.key);
+                  return (
+                    <Link
+                      key={s.key}
+                      href={`/organize/${s.key}`}
+                      className={styles.navItem}
+                      title={s.label}
+                      aria-label={count ? `${s.label}(${count}件)` : undefined}
+                      aria-current={screen === s.key ? "page" : undefined}
+                    >
+                      <svg
+                        className={styles.navIcon}
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d={ORGANIZE_ICONS[s.key]} />
+                      </svg>
+                      <span className={`${styles.label} ${styles.labelGrow}`}>
+                        {s.label}
+                      </span>
+                      <span className={`${styles.count} ${styles.label}`}>
+                        {count}
+                      </span>
+                      {count !== "" && <span className={styles.dot} />}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+            <div className={styles.navSpacer} />
+            <SidebarToggle
+              collapsed={side.collapsed}
+              onToggle={side.toggle}
+              className={styles.collapseButton}
+              labelClassName={styles.label}
+            />
+          </nav>
+        </div>
 
         <main className={styles.main}>
           <div className={styles.head}>
@@ -340,7 +394,18 @@ export function OrganizeShell({
           )}
         </main>
 
-        <aside className={styles.panel} ref={setPanelEl} />
+        <div
+          className={styles.panelWrap}
+          style={{ "--detail-w": `${panelWidth.width}px` } as CSSProperties}
+        >
+          <DetailResizeHandle
+            width={panelWidth.width}
+            onChange={panelWidth.setWidth}
+            onCommit={panelWidth.commit}
+            onReset={panelWidth.reset}
+          />
+          <aside className={styles.panel} ref={setPanelEl} />
+        </div>
       </div>
 
       <Toast toast={toast} />

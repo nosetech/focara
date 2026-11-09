@@ -28,6 +28,21 @@ export const ORGANIZE_GROUPS = [
 export type OrganizeScreenKey =
   (typeof ORGANIZE_GROUPS)[number]["screens"][number]["key"];
 
+/** 折りたたみ中のナビに出すアイコン(デザインの NAVI。24px viewBox のパス) */
+export const ORGANIZE_ICONS: Record<OrganizeScreenKey, string> = {
+  inbox:
+    "M4 13h4.5l1.5 3h4l1.5-3H20M5.5 6h13L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5z",
+  assign: "M4 5h16M4 12h16M4 19h16M8 5v14",
+  day: "M4.5 6.5h15v13h-15zM4.5 10.5h15M9 4v4M15 4v4",
+  week: "M4.5 6.5h15v13h-15zM4.5 10.5h15M9 4v4M15 4v4M9.5 10.5v9M14.5 10.5v9",
+  projects:
+    "M3.5 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
+  waiting: "M12 7.5V12l3 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0z",
+  someday: "M5 8h14M5 8v10.5h14V8M5 8l1.5-3h11L19 8M10 12h4",
+  habits:
+    "M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7",
+};
+
 export const DEFAULT_ORGANIZE_SCREEN: OrganizeScreenKey = "inbox";
 
 export const ORGANIZE_SCREENS: readonly {
