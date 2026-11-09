@@ -111,3 +111,14 @@ def test_properties_deleted_with_task(client, tid):
     client.post(f"/api/tasks/{tid}/properties", json={"key": "k", "value": "1"})
     assert client.delete(f"/api/tasks/{tid}").status_code == 204
     assert client.get(f"/api/tasks/{tid}/properties").status_code == 404
+
+
+def test_date_property_can_be_cleared(client, tid):
+    res = client.post(
+        f"/api/tasks/{tid}/properties",
+        json={"key": "d", "value": "2026-10-19", "value_type": "date"},
+    )
+    url = f"/api/tasks/{tid}/properties/{res.json()['id']}"
+    cleared = client.patch(url, json={"value": "", "value_type": "date"})
+    assert cleared.status_code == 200
+    assert cleared.json()["value"] == ""

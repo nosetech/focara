@@ -49,9 +49,24 @@ test("数値が不正ならエラー", () => {
   assert.deepEqual(propertyBody(d), { error: "数値を入力してください" });
 });
 
-test("日付が未入力ならエラー", () => {
-  const d = { ...newDraft(1), key: "a", value_type: "date" as const };
+test("日付が不正ならエラー", () => {
+  const d = {
+    ...newDraft(1),
+    key: "a",
+    value: "2026/01/01",
+    value_type: "date" as const,
+  };
   assert.deepEqual(propertyBody(d), { error: "日付を選んでください" });
+});
+
+test("日付が空なら値を空にして保存する(クリア)", () => {
+  const d = { ...newDraft(1), key: "a", value_type: "date" as const };
+  assert.deepEqual(propertyBody(d), {
+    key: "a",
+    value: "",
+    value_type: "date",
+    unit: null,
+  });
 });
 
 test("APIの行を編集用に変換する", () => {

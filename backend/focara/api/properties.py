@@ -75,6 +75,8 @@ def _normalize(value: str | int | float, value_type: str) -> str:
     if not isinstance(value, str):
         raise HTTPException(422, f"{value_type} プロパティの値は文字列で指定してください")
     if value_type == "date":
+        if value == "":
+            return ""  # 値を空に戻す(クリア)
         try:
             return date.fromisoformat(value).isoformat()
         except ValueError:

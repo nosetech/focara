@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fixedBody, formatRange, overlappingIds, splitFixed } from "./fixed.ts";
+import {
+  fixedBody,
+  formatRange,
+  overlappingIds,
+  splitFixed,
+  withDate,
+} from "./fixed.ts";
 
 const at = (date: string, time: string) =>
   new Date(`${date}T${time}`).toISOString();
@@ -85,4 +91,10 @@ test("範囲の表示", () => {
     "10:00–11:00",
   );
   assert.equal(formatRange(at("2026-10-28", "10:00"), null), "10:00〜");
+});
+
+test("日付を空にすると時刻も外れる", () => {
+  const d = { date: "2026-10-28", start: "10:00", end: "11:00" };
+  assert.deepEqual(withDate(d, ""), { date: "", start: "", end: "" });
+  assert.deepEqual(withDate(d, "2026-10-29"), { ...d, date: "2026-10-29" });
 });
