@@ -124,6 +124,12 @@
   white-space: nowrap;
 }
 
+/* 画面移動のキー表示はデスクトップ幅のみ(キーボードのないモバイルには出さない) */
+.navLink .kbd,
+.navItem .kbd {
+  display: none;
+}
+
 .labelGrow {
   flex: 1;
 }
@@ -389,6 +395,11 @@
 }
 
 @media (min-width: 900px) {
+  .navLink .kbd,
+  .navItem .kbd {
+    display: inline-block;
+  }
+
   .header {
     padding: 0 20px;
     min-height: 56px;

@@ -33,6 +33,7 @@ import { DetailResizeHandle } from "./DetailResizeHandle";
 import { SidebarToggle } from "./SidebarToggle";
 import { useDetailWidth } from "./useDetailWidth";
 import { useSidebarCollapse } from "./useSidebarCollapse";
+import { shortcutKeyFor } from "@/lib/shortcuts";
 import styles from "./OrganizeShell.module.css";
 
 const KEYS = [
@@ -214,7 +215,12 @@ export function OrganizeShell({
             onMouseEnter={side.collapsed ? side.onEnter : undefined}
             onMouseLeave={side.collapsed ? side.onLeave : undefined}
           >
-            <Link href="/" className={styles.navLink} title="実行画面">
+            <Link
+              href="/"
+              className={styles.navLink}
+              title="実行画面"
+              aria-keyshortcuts={shortcutKeyFor("/")}
+            >
               <svg
                 width="16"
                 height="16"
@@ -225,7 +231,15 @@ export function OrganizeShell({
               >
                 <path d="M7 5l11 7-11 7z" />
               </svg>
-              <span className={styles.label}>実行画面</span>
+              <span className={`${styles.label} ${styles.labelGrow}`}>
+                実行画面
+              </span>
+              <kbd
+                className={`${styles.kbd} ${styles.label}`}
+                aria-hidden="true"
+              >
+                {shortcutKeyFor("/")}
+              </kbd>
             </Link>
             <button
               className={styles.addButton}
@@ -252,6 +266,7 @@ export function OrganizeShell({
                 <div className={styles.groupRule} aria-hidden="true" />
                 {g.screens.map((s) => {
                   const count = countOf(s.key);
+                  const keyHint = shortcutKeyFor(`/organize/${s.key}`);
                   return (
                     <Link
                       key={s.key}
@@ -260,6 +275,7 @@ export function OrganizeShell({
                       title={s.label}
                       aria-label={count ? `${s.label}(${count}件)` : undefined}
                       aria-current={screen === s.key ? "page" : undefined}
+                      aria-keyshortcuts={keyHint}
                     >
                       <svg
                         className={styles.navIcon}
@@ -277,6 +293,14 @@ export function OrganizeShell({
                       <span className={`${styles.label} ${styles.labelGrow}`}>
                         {s.label}
                       </span>
+                      {keyHint && (
+                        <kbd
+                          className={`${styles.kbd} ${styles.label}`}
+                          aria-hidden="true"
+                        >
+                          {keyHint}
+                        </kbd>
+                      )}
                       <span className={`${styles.count} ${styles.label}`}>
                         {count}
                       </span>
