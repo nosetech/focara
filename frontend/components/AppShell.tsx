@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { OrganizeShell } from "./OrganizeShell";
 import { QuickAdd } from "./QuickAdd";
@@ -10,6 +10,7 @@ import { Brand } from "./Brand";
 import { ShellContext } from "./ShellContext";
 import { SidebarToggle } from "./SidebarToggle";
 import { useSidebarCollapse } from "./useSidebarCollapse";
+import { resolveNavShortcut, shortcutKeyFor } from "@/lib/shortcuts";
 import styles from "./AppShell.module.css";
 
 const NAV_ITEMS = [
@@ -27,25 +28,46 @@ const NAV_ITEMS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   const [quickAdd, setQuickAdd] = useState(false);
   const side = useSidebarCollapse();
 
-  // デスクトップ: N キーでクイック追加を開く(入力中は無視)
+  // デスクトップ: N でクイック追加、R / I / A で画面移動(入力中・ダイアログ中は無視)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "n" || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.isComposing) return;
       const el = e.target as HTMLElement | null;
-      if (el?.closest("input, textarea, select, [contenteditable]")) return;
+      const inInput = !!el?.closest(
+        "input, textarea, select, [contenteditable]",
+      );
+      if (e.key === "n") {
+        if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || inInput)
+          return;
+        e.preventDefault();
+        setQuickAdd(true);
+        return;
+      }
+      const href = resolveNavShortcut(
+        {
+          key: e.key,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          isComposing: e.isComposing,
+          targetInInput: inInput,
+        },
+        pathname,
+        !!document.querySelector('[role="dialog"][aria-modal="true"]'),
+      );
+      if (!href) return;
       e.preventDefault();
-      setQuickAdd(true);
+      router.push(href);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [pathname, router]);
 
   // 整理画面群はデザイン固有のナビ・レイアウトを持つ
   if (pathname.startsWith("/organize")) {
@@ -88,6 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={styles.sideLink}
                 title={item.label}
                 aria-current={isActive(item.href) ? "page" : undefined}
+                aria-keyshortcuts={shortcutKeyFor(item.href)}
               >
                 <svg
                   width="16"
@@ -100,6 +123,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {item.icon}
                 </svg>
                 <span className={styles.label}>{item.label}</span>
+                {shortcutKeyFor(item.href) && (
+                  <kbd
+                    className={`${styles.kbd} ${styles.label}`}
+                    aria-hidden="true"
+                  >
+                    {shortcutKeyFor(item.href)}
+                  </kbd>
+                )}
               </Link>
             ))}
             <button
