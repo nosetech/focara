@@ -734,6 +734,7 @@ function Flow({
     ...s,
     tasks: tasks.filter((t) => t.time_slot === s.key),
   })).filter((s) => s.tasks.length);
+  const overlaps = overlappingIds(buildRunView(tasks).queue);
   return (
     <aside className={styles.flow} aria-label="今日の流れ">
       <div className={styles.afterLabel}>今日の流れ</div>
@@ -769,6 +770,19 @@ function Flow({
                     {t.title}
                     {t.habit_id != null && <HabitBadge icon />}
                   </span>
+                  {t.fixed_at && (
+                    <span
+                      className={styles.flowTime}
+                      data-danger={overlaps.has(t.id) ? "" : undefined}
+                      title={
+                        overlaps.has(t.id)
+                          ? "他の予定と重なっています"
+                          : undefined
+                      }
+                    >
+                      {formatRange(t.fixed_at, t.fixed_end_at)}
+                    </span>
+                  )}
                   <span className={styles.est}>{estimate(t)}</span>
                 </div>
               );
