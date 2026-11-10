@@ -780,6 +780,19 @@
     text-overflow: ellipsis;
   }
 
+  .flowTime {
+    flex: none;
+    white-space: nowrap;
+    font-family: var(--font-mono), monospace;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .flowTime[data-danger] {
+    color: var(--danger);
+  }
+
   .flowRow[data-done] .flowTitle {
     color: var(--ink3);
     text-decoration: line-through;
