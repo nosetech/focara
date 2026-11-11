@@ -701,6 +701,22 @@ export function HabitSheet({
             )}
           </div>
 
+          <div className={styles.labelRow}>
+            <span className={styles.label}>メモ</span>
+            <span className={styles.hint}>Markdown</span>
+          </div>
+          <textarea
+            className={styles.memo}
+            value={draft.memo}
+            rows={5}
+            aria-label="メモ"
+            placeholder="子タスクに引き継ぐメモ(手順、リンクなど)"
+            onChange={(e) => change({ memo: e.target.value })}
+          />
+          <div className={own.propNote} style={{ marginTop: 6 }}>
+            子タスクの作成時に引き継がれます。編集すると、今日以降の未完了の子にも反映されます
+          </div>
+
           <div className={styles.label} style={{ marginTop: 22 }}>
             繰り返し
           </div>

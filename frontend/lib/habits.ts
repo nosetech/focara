@@ -67,6 +67,8 @@ export interface HabitDraft {
   projectId: number | null;
   priority: number | null;
   estimate: number | null;
+  /** 子タスクの作成時に引き継ぐメモ(空文字はメモなし) */
+  memo: string;
   slot: TimeSlot | null;
   fixedStart: string;
   fixedEnd: string;
@@ -138,6 +140,7 @@ export function draftFromHabit(h: Habit): HabitDraft {
     projectId: h.project_id,
     priority: h.priority,
     estimate: h.estimate_minutes,
+    memo: h.memo ?? "",
     slot: h.time_slot,
     fixedStart: h.fixed_start_time ?? "",
     fixedEnd: h.fixed_end_time ?? "",
@@ -163,6 +166,7 @@ export function emptyDraft(
     projectId: null,
     priority: 2,
     estimate: 15,
+    memo: "",
     slot: "morning",
     fixedStart: "",
     fixedEnd: "",
@@ -268,6 +272,7 @@ export function draftBody(
       project_id: d.projectId,
       priority: d.priority,
       estimate_minutes: d.estimate,
+      memo: d.memo === "" ? null : d.memo,
       time_slot: d.slot,
       recurrence_type:
         r.type === "daily" || r.type === "weekly"

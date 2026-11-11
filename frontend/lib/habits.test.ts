@@ -307,3 +307,19 @@ test("自動キャンセルの設定を編集値と本文に引き継ぐ", () =>
   assert.ok("body" in r && r.body.auto_cancel_overdue === true);
   assert.equal(emptyDraft(new Date(2026, 9, 15)).autoCancel, false);
 });
+
+test("メモは編集値と保存ペイロードを行き来し、空文字は null にする", () => {
+  assert.equal(draftFromHabit(habit()).memo, "");
+  assert.equal(
+    draftFromHabit(habit({ memo: "手順\n1. 歩く" })).memo,
+    "手順\n1. 歩く",
+  );
+  assert.equal(emptyDraft(new Date("2026-10-01T00:00")).memo, "");
+  const d = { ...draftFromHabit(habit()), memo: "ストレッチも" };
+  const r = draftBody(d);
+  assert.ok("body" in r);
+  assert.equal(r.body.memo, "ストレッチも");
+  const cleared = draftBody({ ...d, memo: "" });
+  assert.ok("body" in cleared);
+  assert.equal(cleared.body.memo, null);
+});
