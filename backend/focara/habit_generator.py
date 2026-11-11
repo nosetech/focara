@@ -146,19 +146,22 @@ def sync_fields_to_children(
     old_time_slot: str | None,
     old_start: str | None = None,
     old_end: str | None = None,
+    old_memo: str | None = None,
 ) -> None:
     """タイトル・見積・優先度・プロジェクトを今日以降の未完了の子へ反映する。
 
-    既定枠・予定時刻は、旧い既定値のままの子にだけ反映する(個別変更した子は触らない)。
+    既定枠・予定時刻・メモは、旧い既定値のままの子にだけ反映する(個別変更した子は触らない)。
     """
     shared = {
         k: v
         for k, v in changed.items()
-        if k in ("title", "estimate_minutes", "priority", "project_id", "memo")
+        if k in ("title", "estimate_minutes", "priority", "project_id")
     }
     for child in session.scalars(_future_open_children(habit.id, today, include_today=True)):
         for key, value in shared.items():
             setattr(child, key, value)
+        if "memo" in changed and (child.memo or None) == (old_memo or None):
+            child.memo = changed["memo"]
         if "time_slot" in changed and child.time_slot == old_time_slot:
             child.time_slot = changed["time_slot"]
         if "fixed_start_time" in changed or "fixed_end_time" in changed:
