@@ -657,6 +657,25 @@ function Ready({
             後回し
             <kbd>S</kbd>
           </button>
+          {canCancel(cur) && (
+            <button
+              className={styles.cancelBtn}
+              disabled={busy}
+              onClick={() => void onCancel(cur)}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+              キャンセル
+            </button>
+          )}
           <button
             className={styles.openDetail}
             onClick={() => onOpenDetail(cur.id)}
