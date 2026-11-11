@@ -282,6 +282,32 @@ def test_memo_syncs_to_children(client):
     assert {k["memo"] for k in _children(client, h["id"])} == {"新"}
 
 
+def test_memo_sync_skips_individually_edited_child(client):
+    h = _habit(client, memo="旧")
+    kids = _children(client, h["id"])
+    client.patch(f"/api/tasks/{kids[0]['id']}", json={"memo": "個別"})
+    client.patch(f"/api/habits/{h['id']}", json={"memo": "新"})
+    memos = [k["memo"] for k in _children(client, h["id"])]
+    assert memos[0] == "個別"
+    assert set(memos[1:]) == {"新"}
+
+
+def test_memo_added_to_habit_without_memo(client):
+    h = _habit(client)
+    client.patch(f"/api/habits/{h['id']}", json={"memo": "新"})
+    assert {k["memo"] for k in _children(client, h["id"])} == {"新"}
+
+
+def test_memo_sync_skips_child_whose_memo_was_cleared(client):
+    h = _habit(client, memo="旧")
+    kids = _children(client, h["id"])
+    client.patch(f"/api/tasks/{kids[0]['id']}", json={"memo": None})
+    client.patch(f"/api/habits/{h['id']}", json={"memo": "新"})
+    memos = [k["memo"] for k in _children(client, h["id"])]
+    assert memos[0] is None
+    assert set(memos[1:]) == {"新"}
+
+
 def _local_utc(day: str, hhmm: str) -> datetime:
     return datetime.combine(date.fromisoformat(day), time.fromisoformat(hhmm)).astimezone(UTC)
 

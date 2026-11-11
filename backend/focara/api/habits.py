@@ -237,6 +237,7 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
     values.pop("properties", None)
     keys = _clean_specs(body.properties) if body.properties is not None else None
     old_time_slot = habit.time_slot
+    old_memo = habit.memo
     old_start, old_end = habit.fixed_start_time, habit.fixed_end_time
     old_specs = [(p.key, p.value_type, p.unit) for p in habit.properties]
     _check_fixed_time(
@@ -258,7 +259,9 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
     today = date.today()
     sync = {k: v for k, v in changed.items() if k in SYNC_FIELDS}
     if sync:
-        sync_fields_to_children(session, habit, today, sync, old_time_slot, old_start, old_end)
+        sync_fields_to_children(
+            session, habit, today, sync, old_time_slot, old_start, old_end, old_memo
+        )
     if keys is not None:
         sync_properties_to_children(session, habit, today, old_specs)
     if any(k in changed for k in RULE_FIELDS):
