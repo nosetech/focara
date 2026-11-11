@@ -233,7 +233,8 @@
 }
 
 .complete,
-.postpone {
+.postpone,
+.cancelBtn {
   font-family: inherit;
   cursor: pointer;
   display: flex;
@@ -260,12 +261,14 @@
 }
 
 .complete:disabled,
-.postpone:disabled {
+.postpone:disabled,
+.cancelBtn:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
 .postpone,
+.cancelBtn,
 .actions kbd {
   display: none;
 }
@@ -631,8 +634,26 @@
     font-weight: 500;
   }
 
+  .cancelBtn {
+    display: flex;
+    height: 56px;
+    padding: 0 20px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink2);
+    font-size: 15px;
+    font-weight: 500;
+    gap: 8px;
+  }
+
   .postpone:hover:not(:disabled) {
     background: var(--sunk);
+  }
+
+  .cancelBtn:hover:not(:disabled) {
+    background: var(--sunk);
+    color: var(--ink);
   }
 
   .actions kbd {
