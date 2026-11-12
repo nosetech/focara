@@ -299,7 +299,6 @@ export function ProjectsScreen() {
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
       />
-      <span className={styles.fieldLabel}>タグ</span>
       <TagInput
         tags={form.tags}
         suggestions={allTags}
@@ -479,17 +478,40 @@ export function ProjectsScreen() {
                   )
                 }
               >
-                {t}{" "}
-                <span className={styles.mono}>
+                {on && (
+                  <svg
+                    aria-hidden="true"
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                )}
+                {t}
+                <span className={styles.tagCount}>
                   {listed.filter((p) => p.tags.includes(t)).length}
                 </span>
               </button>
             );
           })}
           {activeTags.length > 0 && (
-            <button className={styles.link} onClick={() => setTagFilter([])}>
-              絞り込みを解除
-            </button>
+            <>
+              <span className={styles.tagFilterNote}>
+                いずれかを含む · {listedByTag.length}件
+              </span>
+              <button
+                className={styles.tagFilterClear}
+                onClick={() => setTagFilter([])}
+              >
+                絞り込みを解除
+              </button>
+            </>
           )}
         </div>
       )}
@@ -534,7 +556,13 @@ export function ProjectsScreen() {
                     {pr.done}/{pr.total}
                   </span>
                 </span>
-                <TagChips tags={p.tags} max={3} size="sm" />
+                <TagChips
+                  tags={p.tags}
+                  max={3}
+                  size="row"
+                  active={activeTags}
+                  onSurface={selected?.id === p.id}
+                />
                 <span className={styles.bar}>
                   <i style={{ width: `${pr.pct}%` }} />
                 </span>
@@ -542,7 +570,7 @@ export function ProjectsScreen() {
             );
           })}
           {activeTags.length > 0 && listedByTag.length === 0 && (
-            <div className={styles.hint}>該当する{PREFIX}がありません</div>
+            <div className={styles.noMatch}>該当する{PREFIX}はありません</div>
           )}
           {form?.mode === "create" ? (
             formEl
@@ -569,6 +597,15 @@ export function ProjectsScreen() {
               title={`${PREFIX}はまだありません`}
               text="関連するタスクをまとめると、進み具合が見えるようになります。"
             />
+          ) : activeTags.length > 0 && listedByTag.length === 0 ? (
+            <OrganizeEmpty
+              title={`該当する${PREFIX}はありません`}
+              text={`${activeTags.map((t) => `「${t}」`).join("")}のいずれかを含む${PREFIX}がありません。タグを選び直すか、絞り込みを解除してください。`}
+              action={{
+                label: "絞り込みを解除",
+                onClick: () => setTagFilter([]),
+              }}
+            />
           ) : !selected ? (
             <div className={styles.hint}>{PREFIX}を選んでください</div>
           ) : (
@@ -591,7 +628,7 @@ export function ProjectsScreen() {
                     >
                       {selected.name}
                     </span>
-                    <TagChips tags={selected.tags} />
+                    <TagChips tags={selected.tags} size="header" />
                   </span>
                   {completed && <span className={styles.badge}>完了済み</span>}
                   <span className={styles.headerProgress}>

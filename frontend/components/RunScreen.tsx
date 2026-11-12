@@ -619,10 +619,10 @@ function Ready({
             {curProject && curProject.tags.length > 0 && (
               <>
                 <span className={styles.tagsNarrow}>
-                  <TagChips tags={curProject.tags} max={2} size="sm" />
+                  <TagChips tags={curProject.tags} max={2} size="run-sm" />
                 </span>
                 <span className={styles.tagsWide}>
-                  <TagChips tags={curProject.tags} max={3} />
+                  <TagChips tags={curProject.tags} max={3} size="run-md" />
                 </span>
               </>
             )}

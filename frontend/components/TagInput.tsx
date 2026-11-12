@@ -5,6 +5,8 @@ import { normalizeTags } from "@/lib/projects";
 import styles from "./TagInput.module.css";
 
 /** タグの入力。Enter またはカンマで確定し、×(空欄で Backspace)で削除する。既存のタグは候補から追加できる。 */
+const MAX_SUGGESTIONS = 8;
+
 export function TagInput({
   tags,
   suggestions,
@@ -25,12 +27,16 @@ export function TagInput({
     setDraft("");
   };
 
-  const candidates = suggestions.filter(
-    (s) => !tags.includes(s) && s.includes(draft.trim()),
-  );
+  const candidates = suggestions
+    .filter((s) => !tags.includes(s) && s.includes(draft.trim()))
+    .slice(0, MAX_SUGGESTIONS);
 
   return (
     <div>
+      <div className={styles.head}>
+        <label htmlFor="project-tags">タグ</label>
+        <span>Enter またはカンマで追加</span>
+      </div>
       <div className={styles.box}>
         {tags.map((t) => (
           <span key={t} className={styles.chip}>
@@ -41,13 +47,24 @@ export function TagInput({
               aria-label={`タグ「${t}」を削除`}
               onClick={() => onChange(tags.filter((x) => x !== t))}
             >
-              ×
+              <svg
+                aria-hidden="true"
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
             </button>
           </span>
         ))}
         <input
+          id="project-tags"
           className={styles.input}
-          aria-label="タグ"
           placeholder={tags.length === 0 ? "例: 仕事、Q4" : ""}
           value={draft}
           onChange={(e) => {
@@ -69,7 +86,9 @@ export function TagInput({
         />
       </div>
       {dup && (
-        <div className={styles.note}>「{dup}」はすでに追加されています</div>
+        <div className={styles.note} role="status">
+          「{dup}」はすでに追加されています
+        </div>
       )}
       {candidates.length > 0 && (
         <div className={styles.suggest}>
@@ -81,7 +100,19 @@ export function TagInput({
               className={styles.suggestChip}
               onClick={() => add(s)}
             >
-              ＋ {s}
+              <svg
+                aria-hidden="true"
+                width="9"
+                height="9"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              {s}
             </button>
           ))}
         </div>
