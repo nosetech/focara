@@ -1,6 +1,6 @@
-# アプリアイコン デザインプロンプト(Claude Design 用)
+# アプリアイコン デザインプロンプト(Claude チャット用)
 
-Focara(フォカラ)のアプリアイコン・favicon を Claude Design で作成した際の指示と、採用結果の記録です。デザインは [CLAUDE.md](../CLAUDE.md) の Claude Design プロジェクト内「Focara アイコン案.dc.html」にあります。
+Focara(フォカラ)のアプリアイコン・favicon を Claude のチャットで作成した際の指示と、採用結果の記録です。デザインは Artifacts(https://claude.ai/artifacts)の「Focara アイコン案.dc.html」にあります。
 
 ## プロンプト
 
