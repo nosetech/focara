@@ -16,7 +16,7 @@ export function OrganizeEmpty({
       <div className={styles.title}>{title}</div>
       <div className={styles.text}>{text}</div>
       {action && (
-        <button className={styles.retry} onClick={action.onClick}>
+        <button className={styles.action} onClick={action.onClick}>
           {action.label}
         </button>
       )}

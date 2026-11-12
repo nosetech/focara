@@ -9,6 +9,7 @@ import {
   priorityLabel,
 } from "@/lib/inbox";
 import {
+  addTags,
   byProjectOrder,
   collectTags,
   filterByTags,
@@ -37,8 +38,11 @@ type Load = "loading" | "error" | "ready";
 type Form = {
   mode: "create" | "edit";
   name: string;
+  /** 画面では編集しない(デザインに欄がない)。編集時に既存の値を保つために持つ */
   description: string;
   tags: string[];
+  /** タグ欄に入力中で、まだ確定していない文字 */
+  tagDraft: string;
 };
 
 const PREFIX = "プロジェクト";
@@ -95,9 +99,13 @@ export function ProjectsScreen() {
     () => visibleProjects(projects, showCompleted),
     [projects, showCompleted],
   );
-  const allTags = useMemo(() => collectTags(listed), [listed]);
-  // 一覧から消えたタグ(タグの削除・完了済みの非表示など)は絞り込みから外す
-  const activeTags = tagFilter.filter((t) => allTags.includes(t));
+  // 絞り込み中のタグは、一覧から該当するプロジェクトが消えても(完了済みを隠したときなど)
+  // チップに残す(件数0)。選び直すか解除するまで絞り込みを保ち、「該当なし」を出す(デザインどおり)
+  const allTags = useMemo(() => {
+    const base = collectTags(listed);
+    return [...base, ...tagFilter.filter((t) => !base.includes(t))];
+  }, [listed, tagFilter]);
+  const activeTags = tagFilter;
   const listedByTag = useMemo(
     () => filterByTags(listed, activeTags),
     [listed, activeTags],
@@ -152,7 +160,8 @@ export function ProjectsScreen() {
     const body = {
       name: form.name.trim(),
       description: form.description.trim() || null,
-      tags: form.tags,
+      // 入力中のタグも、保存時に取り込む
+      tags: addTags(form.tags, [form.tagDraft]).tags,
     };
     if (form.mode === "create") {
       let created: ProjectSummary | null = null;
@@ -275,52 +284,80 @@ export function ProjectsScreen() {
     return <OrganizeError label={PREFIX} onRetry={() => void fetchAll(true)} />;
 
   const progress = projectProgress(owned);
+
+  const noMatchEmpty = (
+    <OrganizeEmpty
+      title={`該当する${PREFIX}はありません`}
+      text={`${activeTags.map((t) => `「${t}」`).join("")}のいずれかを含む${PREFIX}がありません。タグを選び直すか、絞り込みを解除してください。`}
+      action={{
+        label: "絞り込みを解除",
+        onClick: () => setTagFilter([]),
+      }}
+    />
+  );
   const groups = groupByStatus(shown);
 
-  const formEl = form && (
-    <form className={styles.form} onSubmit={(e) => void submitForm(e)}>
-      <label className={styles.fieldLabel} htmlFor="project-name">
-        {PREFIX}名
-      </label>
-      <input
-        id="project-name"
-        className={styles.input}
-        autoFocus
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-      />
-      <label className={styles.fieldLabel} htmlFor="project-description">
-        説明(任意)
-      </label>
-      <textarea
-        id="project-description"
-        className={styles.textarea}
-        rows={2}
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-      />
-      <TagInput
-        tags={form.tags}
-        suggestions={allTags}
-        onChange={(tags) => setForm({ ...form, tags })}
-      />
-      <div className={styles.formActions}>
-        <button
-          className={styles.primary}
-          type="submit"
-          disabled={!form.name.trim()}
-        >
-          {form.mode === "create" ? "作成" : "保存"}
-        </button>
-        <button
-          className={styles.link}
-          type="button"
-          onClick={() => setForm(null)}
-        >
-          キャンセル
-        </button>
-      </div>
-    </form>
+  // 作成・編集フォーム。デスクトップは中央寄りのモーダル、モバイルは下からのシート(デザインどおり)
+  const formDialog = form && (
+    <>
+      <div className={styles.formBackdrop} onClick={() => setForm(null)} />
+      <form
+        className={styles.formDialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-form-title"
+        onSubmit={(e) => void submitForm(e)}
+      >
+        <div id="project-form-title" className={styles.formTitle}>
+          {form.mode === "edit" ? `${PREFIX}を編集` : `新しい${PREFIX}`}
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel} htmlFor="project-name">
+            {PREFIX}名
+          </label>
+          <input
+            id="project-name"
+            className={styles.formInput}
+            autoFocus
+            autoComplete="off"
+            placeholder="例: 新サービス企画"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                setForm(null);
+              }
+            }}
+          />
+        </div>
+        <TagInput
+          tags={form.tags}
+          draft={form.tagDraft}
+          suggestions={collectTags(projects)}
+          // タグと入力中の文字を続けて更新するので、直前の状態から作る(古い form で上書きしない)
+          onChange={(tags) => setForm((f) => f && { ...f, tags })}
+          onDraftChange={(tagDraft) => setForm((f) => f && { ...f, tagDraft })}
+          onEscape={() => setForm(null)}
+        />
+        <div className={styles.formButtons}>
+          <button
+            className={styles.formCancel}
+            type="button"
+            onClick={() => setForm(null)}
+          >
+            キャンセル
+          </button>
+          <button
+            className={styles.formSave}
+            type="submit"
+            disabled={!form.name.trim()}
+          >
+            {form.mode === "create" ? "作成" : "保存"}
+          </button>
+        </div>
+      </form>
+    </>
   );
 
   const taskRow = (t: ProjectTask, g: { tasks: ProjectTask[] }, i: number) => (
@@ -380,6 +417,7 @@ export function ProjectsScreen() {
           refreshCounts();
         }}
       />
+      {formDialog}
       {confirmComplete && selected && (
         <div
           className={styles.backdrop}
@@ -570,25 +608,27 @@ export function ProjectsScreen() {
             );
           })}
           {activeTags.length > 0 && listedByTag.length === 0 && (
-            <div className={styles.noMatch}>該当する{PREFIX}はありません</div>
+            <>
+              {/* デスクトップ: 一覧に1行、右の詳細側に説明とボタン */}
+              <div className={styles.noMatch}>該当する{PREFIX}はありません</div>
+              {/* モバイル: 詳細が出ないので、一覧に説明とボタンまで出す */}
+              <div className={styles.noMatchFull}>{noMatchEmpty}</div>
+            </>
           )}
-          {form?.mode === "create" ? (
-            formEl
-          ) : (
-            <button
-              className={styles.outline}
-              onClick={() => {
-                setForm({
-                  mode: "create",
-                  name: "",
-                  description: "",
-                  tags: [],
-                });
-              }}
-            >
-              ＋ 新しい{PREFIX}
-            </button>
-          )}
+          <button
+            className={styles.outline}
+            onClick={() => {
+              setForm({
+                mode: "create",
+                name: "",
+                description: "",
+                tags: [],
+                tagDraft: "",
+              });
+            }}
+          >
+            ＋ 新しい{PREFIX}
+          </button>
         </div>
 
         <div className={styles.detail}>
@@ -598,14 +638,7 @@ export function ProjectsScreen() {
               text="関連するタスクをまとめると、進み具合が見えるようになります。"
             />
           ) : activeTags.length > 0 && listedByTag.length === 0 ? (
-            <OrganizeEmpty
-              title={`該当する${PREFIX}はありません`}
-              text={`${activeTags.map((t) => `「${t}」`).join("")}のいずれかを含む${PREFIX}がありません。タグを選び直すか、絞り込みを解除してください。`}
-              action={{
-                label: "絞り込みを解除",
-                onClick: () => setTagFilter([]),
-              }}
-            />
+            noMatchEmpty
           ) : !selected ? (
             <div className={styles.hint}>{PREFIX}を選んでください</div>
           ) : (
@@ -646,65 +679,62 @@ export function ProjectsScreen() {
                 <div className={styles.bar} data-large="">
                   <i style={{ width: `${progress.pct}%` }} />
                 </div>
-                {form?.mode === "edit" ? (
-                  formEl
-                ) : (
-                  <div className={styles.headerActions}>
+                <div className={styles.headerActions}>
+                  <button
+                    className={styles.action}
+                    onClick={() =>
+                      setForm({
+                        mode: "edit",
+                        name: selected.name,
+                        description: selected.description ?? "",
+                        tags: selected.tags,
+                        tagDraft: "",
+                      })
+                    }
+                  >
+                    編集
+                  </button>
+                  <button
+                    className={styles.action}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    削除
+                  </button>
+                  {completed ? (
                     <button
                       className={styles.action}
-                      onClick={() =>
-                        setForm({
-                          mode: "edit",
-                          name: selected.name,
-                          description: selected.description ?? "",
-                          tags: selected.tags,
-                        })
-                      }
+                      onClick={() => void reopen(selected)}
                     >
-                      編集
+                      未完了に戻す
                     </button>
+                  ) : (
                     <button
                       className={styles.action}
-                      onClick={() => setConfirmDelete(true)}
+                      onClick={() => void requestComplete(selected)}
                     >
-                      削除
+                      完了にする
                     </button>
-                    {completed ? (
-                      <button
-                        className={styles.action}
-                        onClick={() => void reopen(selected)}
-                      >
-                        未完了に戻す
-                      </button>
-                    ) : (
-                      <button
-                        className={styles.action}
-                        onClick={() => void requestComplete(selected)}
-                      >
-                        完了にする
-                      </button>
-                    )}
-                    <select
-                      className={styles.select}
-                      value=""
-                      aria-label="タスクを追加"
-                      disabled={candidates.length === 0}
-                      onChange={(e) => {
-                        const task = candidates.find(
-                          (t) => t.id === Number(e.target.value),
-                        );
-                        if (task) void setMembership(task, selected.id);
-                      }}
-                    >
-                      <option value="">タスクを追加</option>
-                      {candidates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                  )}
+                  <select
+                    className={styles.select}
+                    value=""
+                    aria-label="タスクを追加"
+                    disabled={candidates.length === 0}
+                    onChange={(e) => {
+                      const task = candidates.find(
+                        (t) => t.id === Number(e.target.value),
+                      );
+                      if (task) void setMembership(task, selected.id);
+                    }}
+                  >
+                    <option value="">タスクを追加</option>
+                    {candidates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {groups.length === 0 ? (

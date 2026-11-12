@@ -1,51 +1,66 @@
 "use client";
 
 import { useState } from "react";
-import { normalizeTags } from "@/lib/projects";
+import { addTags, TAG_SEPARATOR } from "@/lib/projects";
 import styles from "./TagInput.module.css";
 
-/** タグの入力。Enter またはカンマで確定し、×(空欄で Backspace)で削除する。既存のタグは候補から追加できる。 */
 const MAX_SUGGESTIONS = 8;
 
+/**
+ * タグの入力。Enter またはカンマ(, 、 ，)で確定し、×(空欄で Backspace)で削除する。
+ * 既存のタグは候補から追加できる。入力中の文字(draft)は親が持ち、保存時に取り込む。
+ */
 export function TagInput({
   tags,
+  draft,
   suggestions,
   onChange,
+  onDraftChange,
+  onEscape,
 }: {
   tags: string[];
+  draft: string;
   suggestions: readonly string[];
   onChange: (tags: string[]) => void;
+  onDraftChange: (draft: string) => void;
+  onEscape?: () => void;
 }) {
-  const [draft, setDraft] = useState("");
   const [dup, setDup] = useState<string | null>(null);
 
-  const add = (raw: string) => {
-    const incoming = normalizeTags(raw.split(/[,、]/));
-    const fresh = incoming.filter((t) => !tags.includes(t));
-    setDup(incoming.find((t) => tags.includes(t)) ?? null);
-    if (fresh.length > 0) onChange([...tags, ...fresh]);
-    setDraft("");
+  const add = (raw: string[], nextDraft: string) => {
+    const r = addTags(tags, raw);
+    setDup(r.dup);
+    if (r.tags.length !== tags.length) onChange(r.tags);
+    onDraftChange(nextDraft);
   };
 
+  // 候補の絞り込みは大文字小文字を区別しない(重複判定は区別する)
+  const q = draft.trim().toLowerCase();
   const candidates = suggestions
-    .filter((s) => !tags.includes(s) && s.includes(draft.trim()))
+    .filter(
+      (s) => !tags.includes(s) && (q === "" || s.toLowerCase().includes(q)),
+    )
     .slice(0, MAX_SUGGESTIONS);
 
   return (
-    <div>
+    <div className={styles.root}>
       <div className={styles.head}>
         <label htmlFor="project-tags">タグ</label>
-        <span>Enter またはカンマで追加</span>
+        <span id="project-tags-hint">Enter またはカンマで追加</span>
       </div>
       <div className={styles.box}>
         {tags.map((t) => (
           <span key={t} className={styles.chip}>
-            {t}
+            <span className={styles.chipLabel}>{t}</span>
             <button
               type="button"
               className={styles.remove}
               aria-label={`タグ「${t}」を削除`}
-              onClick={() => onChange(tags.filter((x) => x !== t))}
+              title={`タグ「${t}」を削除`}
+              onClick={() => {
+                setDup(null);
+                onChange(tags.filter((x) => x !== t));
+              }}
             >
               <svg
                 aria-hidden="true"
@@ -65,24 +80,35 @@ export function TagInput({
         <input
           id="project-tags"
           className={styles.input}
-          placeholder={tags.length === 0 ? "例: 仕事、Q4" : ""}
+          aria-describedby="project-tags-hint"
+          autoComplete="off"
+          placeholder={tags.length > 0 ? "タグを追加" : "例: 仕事、Q4"}
           value={draft}
           onChange={(e) => {
-            setDup(null);
             const v = e.target.value;
-            if (/[,、]/.test(v)) add(v);
-            else setDraft(v);
-          }}
-          onKeyDown={(e) => {
-            // 日本語入力の変換確定の Enter では追加しない
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              if (draft.trim()) add(draft);
-            } else if (e.key === "Backspace" && draft === "" && tags.length) {
-              onChange(tags.slice(0, -1));
+            if (TAG_SEPARATOR.test(v)) {
+              const parts = v.split(TAG_SEPARATOR);
+              const rest = parts.pop() ?? "";
+              add(parts, rest);
+            } else {
+              setDup(null);
+              onDraftChange(v);
             }
           }}
-          onBlur={() => draft.trim() && add(draft)}
+          onKeyDown={(e) => {
+            // 日本語入力の変換確定のキーでは何もしない
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (draft.trim()) add([draft], "");
+            } else if (e.key === "Backspace" && draft === "" && tags.length) {
+              setDup(null);
+              onChange(tags.slice(0, -1));
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              onEscape?.();
+            }
+          }}
         />
       </div>
       {dup && (
@@ -98,7 +124,8 @@ export function TagInput({
               key={s}
               type="button"
               className={styles.suggestChip}
-              onClick={() => add(s)}
+              aria-label={`タグ「${s}」を追加`}
+              onClick={() => add([s], "")}
             >
               <svg
                 aria-hidden="true"
@@ -108,7 +135,6 @@ export function TagInput({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.6"
-                strokeLinecap="round"
               >
                 <path d="M12 5v14M5 12h14" />
               </svg>

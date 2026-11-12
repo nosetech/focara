@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  addTags,
   assignableProjects,
   byProjectOrder,
   collectTags,
@@ -11,6 +12,7 @@ import {
   openTaskCount,
   projectProgress,
   type ProjectTask,
+  TAG_SEPARATOR,
   visibleProjects,
 } from "./projects.ts";
 
@@ -139,4 +141,28 @@ test("filterByTags: 未指定は全件、複数指定はいずれかを含む(OR
 
 test("normalizeTags: 空白除去・空除外・大文字小文字を区別して重複除去", () => {
   assert.deepEqual(normalizeTags([" a ", "", "a", "A", "  "]), ["a", "A"]);
+});
+
+test("normalizeTags: 先頭の # / ＃ を除く", () => {
+  assert.deepEqual(normalizeTags(["#仕事", "＃Q4", " #a ", "#"]), [
+    "仕事",
+    "Q4",
+    "a",
+  ]);
+});
+
+test("addTags: 追加し、重複(大文字小文字を区別)は dup で返す", () => {
+  assert.deepEqual(addTags(["a"], ["b", " #c "]), {
+    tags: ["a", "b", "c"],
+    dup: null,
+  });
+  assert.deepEqual(addTags(["a"], ["a", "A"]), {
+    tags: ["a", "A"],
+    dup: "a",
+  });
+  assert.deepEqual(addTags(["a"], ["", "  "]), { tags: ["a"], dup: null });
+});
+
+test("TAG_SEPARATOR: 半角カンマ・読点・全角カンマで区切る", () => {
+  assert.deepEqual("a,b、c，d".split(TAG_SEPARATOR), ["a", "b", "c", "d"]);
 });

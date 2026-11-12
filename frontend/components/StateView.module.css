@@ -34,17 +34,143 @@
   justify-content: center;
 }
 
+/* 値は Focara 実行画面.dc.html の「読み込み中」に合わせる */
 .skeleton {
-  padding: 4px 24px 0;
-  display: flex;
-  flex-direction: column;
   animation: pulse 1.6s ease-in-out infinite alternate;
 }
 
 .skeleton i {
   display: block;
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--sunk);
+}
+
+.skelMobile {
+  padding: 4px 24px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.skelDesktop {
+  display: none;
+  padding: 76px 80px 0;
+  flex-direction: column;
+}
+
+.skeleton .sBar {
+  height: 3px;
+  border-radius: 2px;
+}
+
+.sLabelM {
+  height: 10px;
+  width: 64px;
+  margin-top: 52px;
+}
+
+.sProjectM {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 22px;
+}
+
+.sProjectM i {
+  height: 12px;
+}
+
+.skeleton .sTitleM1 {
+  height: 28px;
+  width: 300px;
+  margin-top: 16px;
+  border-radius: 6px;
+}
+
+.skeleton .sTitleM2 {
+  height: 28px;
+  width: 190px;
+  margin-top: 12px;
+  border-radius: 6px;
+}
+
+.sChipsM {
+  display: flex;
+  gap: 6px;
+  margin-top: 22px;
+}
+
+.sChipsM i {
+  height: 26px;
+  border-radius: 999px;
+}
+
+.sLabelM2 {
+  height: 10px;
+  width: 52px;
+  margin-top: 64px;
+}
+
+.sLinesM {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.sLinesM i {
+  height: 14px;
+}
+
+.sLabelD {
+  height: 12px;
+  width: 72px;
+}
+
+.sProjectD {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.sProjectD i {
+  height: 14px;
+}
+
+.skeleton .sTitleD1 {
+  height: 40px;
+  width: 560px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.skeleton .sTitleD2 {
+  height: 40px;
+  width: 320px;
+  margin-top: 14px;
+  border-radius: 8px;
+}
+
+.sChipsD {
+  display: flex;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.sChipsD i {
+  height: 30px;
+  border-radius: 999px;
+}
+
+.sButtonsD {
+  display: flex;
+  gap: 12px;
+  margin-top: 56px;
+}
+
+.sButtonsD i {
+  height: 56px;
+  border-radius: 14px;
 }
 
 @keyframes pulse {
@@ -77,7 +203,11 @@
     font-size: 15px;
   }
 
-  .skeleton {
-    padding: 76px 80px 0;
+  .skelMobile {
+    display: none;
+  }
+
+  .skelDesktop {
+    display: flex;
   }
 }

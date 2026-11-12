@@ -234,9 +234,7 @@
   cursor: default;
 }
 
-.select,
-.input,
-.textarea {
+.select {
   border-radius: 9px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -251,31 +249,6 @@
   padding: 0 8px;
   font-size: 13px;
   max-width: 200px;
-}
-
-.input {
-  height: 36px;
-  padding: 0 10px;
-}
-
-.textarea {
-  padding: 8px 10px;
-  resize: vertical;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.fieldLabel {
-  font-size: 12px;
-  color: var(--ink3);
 }
 
 .formActions {
@@ -457,12 +430,14 @@
 }
 
 .tagFilterLabel {
+  flex: none;
   margin-right: 4px;
   font-size: 12px;
   color: var(--ink2);
 }
 
 .tagFilterChip {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -500,12 +475,16 @@
 }
 
 .tagFilterNote {
+  flex: none;
   margin-left: 6px;
+  white-space: nowrap;
   font-size: 12px;
   color: var(--ink2);
 }
 
 .tagFilterClear {
+  flex: none;
+  white-space: nowrap;
   height: 28px;
   padding: 0 8px;
   border: none;
@@ -525,10 +504,126 @@
   color: var(--ink2);
 }
 
+.noMatchFull {
+  display: none;
+}
+
+/* 作成・編集フォーム(Focara 整理画面.dc.html のプロジェクトフォームに合わせる)。モバイルは下からのシート */
+.formBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 62;
+  background: var(--backdrop);
+}
+
+.formDialog {
+  position: fixed;
+  z-index: 63;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 20px 34px;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.formTitle {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formLabel {
+  font-size: 12px;
+  color: var(--ink2);
+}
+
+.formInput {
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.formButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.formCancel {
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.formSave {
+  height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.formSave:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (min-width: 900px) {
+  .formDialog {
+    left: calc(50% - 240px);
+    right: auto;
+    top: 120px;
+    bottom: auto;
+    width: 480px;
+    padding: 24px;
+    border-radius: 16px;
+  }
+}
+
 @media (max-width: 899px) {
   .tagFilter {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  /* モバイルでは詳細が出ないので、一覧側に説明とボタンまで出す */
+  .noMatch {
+    display: none;
+  }
+
+  .noMatchFull {
+    display: block;
   }
 }
