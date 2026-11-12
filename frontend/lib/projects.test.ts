@@ -3,8 +3,11 @@ import { test } from "node:test";
 import {
   assignableProjects,
   byProjectOrder,
+  collectTags,
+  filterByTags,
   groupByStatus,
   movedOrder,
+  normalizeTags,
   openTaskCount,
   projectProgress,
   type ProjectTask,
@@ -108,4 +111,32 @@ test("未完了タスク数: done と cancelled は数えない", () => {
     ]),
     2,
   );
+});
+
+test("collectTags: 重複を除き初出順で返す", () => {
+  assert.deepEqual(
+    collectTags([{ tags: ["a", "b"] }, { tags: [] }, { tags: ["b", "c"] }]),
+    ["a", "b", "c"],
+  );
+});
+
+test("filterByTags: 未指定は全件、複数指定はいずれかを含む(OR)", () => {
+  const ps = [
+    { id: 1, tags: ["a"] },
+    { id: 2, tags: ["b", "c"] },
+    { id: 3, tags: [] },
+  ];
+  assert.deepEqual(
+    filterByTags(ps, []).map((p) => p.id),
+    [1, 2, 3],
+  );
+  assert.deepEqual(
+    filterByTags(ps, ["a", "c"]).map((p) => p.id),
+    [1, 2],
+  );
+  assert.deepEqual(filterByTags(ps, ["x"]), []);
+});
+
+test("normalizeTags: 空白除去・空除外・大文字小文字を区別して重複除去", () => {
+  assert.deepEqual(normalizeTags([" a ", "", "a", "A", "  "]), ["a", "A"]);
 });

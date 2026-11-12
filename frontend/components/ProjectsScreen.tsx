@@ -10,6 +10,8 @@ import {
 } from "@/lib/inbox";
 import {
   byProjectOrder,
+  collectTags,
+  filterByTags,
   groupByStatus,
   isProjectDone,
   movedOrder,
@@ -26,11 +28,18 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { TagChips } from "./TagChips";
+import { TagInput } from "./TagInput";
 import { TaskDetailHost } from "./TaskDetailHost";
 import styles from "./ProjectsScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
-type Form = { mode: "create" | "edit"; name: string; description: string };
+type Form = {
+  mode: "create" | "edit";
+  name: string;
+  description: string;
+  tags: string[];
+};
 
 const PREFIX = "プロジェクト";
 
@@ -49,6 +58,7 @@ export function ProjectsScreen() {
   const [load, setLoad] = useState<Load>("loading");
   const [selId, setSelId] = useState<number | null>(null);
   const [form, setForm] = useState<Form | null>(null);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -84,6 +94,13 @@ export function ProjectsScreen() {
   const listed = useMemo(
     () => visibleProjects(projects, showCompleted),
     [projects, showCompleted],
+  );
+  const allTags = useMemo(() => collectTags(listed), [listed]);
+  // 一覧から消えたタグ(タグの削除・完了済みの非表示など)は絞り込みから外す
+  const activeTags = tagFilter.filter((t) => allTags.includes(t));
+  const listedByTag = useMemo(
+    () => filterByTags(listed, activeTags),
+    [listed, activeTags],
   );
   const selected = listed.find((p) => p.id === selId) ?? null;
   const owned = useMemo(
@@ -135,6 +152,7 @@ export function ProjectsScreen() {
     const body = {
       name: form.name.trim(),
       description: form.description.trim() || null,
+      tags: form.tags,
     };
     if (form.mode === "create") {
       let created: ProjectSummary | null = null;
@@ -280,6 +298,12 @@ export function ProjectsScreen() {
         rows={2}
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
+      />
+      <span className={styles.fieldLabel}>タグ</span>
+      <TagInput
+        tags={form.tags}
+        suggestions={allTags}
+        onChange={(tags) => setForm({ ...form, tags })}
       />
       <div className={styles.formActions}>
         <button
@@ -434,9 +458,45 @@ export function ProjectsScreen() {
         </div>
       )}
 
+      {allTags.length > 0 && (
+        <div
+          className={styles.tagFilter}
+          role="group"
+          aria-label="タグで絞り込む"
+        >
+          <span className={styles.tagFilterLabel}>タグ</span>
+          {allTags.map((t) => {
+            const on = activeTags.includes(t);
+            return (
+              <button
+                key={t}
+                className={styles.tagFilterChip}
+                aria-pressed={on}
+                data-on={on ? "" : undefined}
+                onClick={() =>
+                  setTagFilter(
+                    on ? activeTags.filter((x) => x !== t) : [...activeTags, t],
+                  )
+                }
+              >
+                {t}{" "}
+                <span className={styles.mono}>
+                  {listed.filter((p) => p.tags.includes(t)).length}
+                </span>
+              </button>
+            );
+          })}
+          {activeTags.length > 0 && (
+            <button className={styles.link} onClick={() => setTagFilter([])}>
+              絞り込みを解除
+            </button>
+          )}
+        </div>
+      )}
+
       <div className={styles.grid} data-selected={selected ? "" : undefined}>
         <div className={styles.projects}>
-          {listed.map((p) => {
+          {listedByTag.map((p) => {
             const pr = projectProgress(
               tasks.filter((t) => t.project_id === p.id),
             );
@@ -474,19 +534,28 @@ export function ProjectsScreen() {
                     {pr.done}/{pr.total}
                   </span>
                 </span>
+                <TagChips tags={p.tags} max={3} size="sm" />
                 <span className={styles.bar}>
                   <i style={{ width: `${pr.pct}%` }} />
                 </span>
               </button>
             );
           })}
+          {activeTags.length > 0 && listedByTag.length === 0 && (
+            <div className={styles.hint}>該当する{PREFIX}がありません</div>
+          )}
           {form?.mode === "create" ? (
             formEl
           ) : (
             <button
               className={styles.outline}
               onClick={() => {
-                setForm({ mode: "create", name: "", description: "" });
+                setForm({
+                  mode: "create",
+                  name: "",
+                  description: "",
+                  tags: [],
+                });
               }}
             >
               ＋ 新しい{PREFIX}
@@ -515,11 +584,14 @@ export function ProjectsScreen() {
                   ‹ {PREFIX}一覧
                 </button>
                 <div className={styles.headerTop}>
-                  <span
-                    className={styles.headerName}
-                    data-done={completed ? "" : undefined}
-                  >
-                    {selected.name}
+                  <span className={styles.headerNameRow}>
+                    <span
+                      className={styles.headerName}
+                      data-done={completed ? "" : undefined}
+                    >
+                      {selected.name}
+                    </span>
+                    <TagChips tags={selected.tags} />
                   </span>
                   {completed && <span className={styles.badge}>完了済み</span>}
                   <span className={styles.headerProgress}>
@@ -548,6 +620,7 @@ export function ProjectsScreen() {
                           mode: "edit",
                           name: selected.name,
                           description: selected.description ?? "",
+                          tags: selected.tags,
                         })
                       }
                     >

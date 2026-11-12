@@ -281,6 +281,16 @@
   color: var(--ink2);
 }
 
+.tagsNarrow {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.tagsWide {
+  display: none;
+  min-width: 0;
+}
+
 .box {
   width: 8px;
   height: 8px;
@@ -677,6 +687,14 @@
 
   .project {
     font-size: 14px;
+  }
+
+  .tagsNarrow {
+    display: none;
+  }
+
+  .tagsWide {
+    display: inline-flex;
   }
 
   .title {

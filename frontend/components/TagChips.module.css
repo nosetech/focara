@@ -1,0 +1,31 @@
+.tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  font-size: 11px;
+}
+
+.tags[data-size="sm"] {
+  font-size: 10.5px;
+}
+
+.tag {
+  min-width: 0;
+  max-width: 9em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--sunk);
+  color: var(--ink2);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more {
+  flex: none;
+  font-family: var(--font-mono), monospace;
+  color: var(--ink3);
+}

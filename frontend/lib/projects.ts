@@ -11,6 +11,7 @@ export interface ProjectSummary {
   id: number;
   name: string;
   description: string | null;
+  tags: string[];
   /** 完了日時。null なら未完了 */
   completed_at: string | null;
 }
@@ -96,4 +97,23 @@ export function movedOrder(
   const ids = ordered.map((t) => t.id);
   [ids[at], ids[to]] = [ids[to], ids[at]];
   return ids;
+}
+
+/** 一覧に出すプロジェクトのタグ一覧(重複なし、初出順)。 */
+export function collectTags(projects: readonly { tags: string[] }[]): string[] {
+  return [...new Set(projects.flatMap((p) => p.tags))];
+}
+
+/** タグで絞り込む。複数指定はいずれかを含む(OR)。未指定なら全件。 */
+export function filterByTags<T extends { tags: string[] }>(
+  projects: readonly T[],
+  selected: readonly string[],
+): T[] {
+  if (selected.length === 0) return [...projects];
+  return projects.filter((p) => p.tags.some((t) => selected.includes(t)));
+}
+
+/** 入力されたタグ名を整える。前後空白を除き、空を捨て、重複(大文字小文字を区別)を除く。 */
+export function normalizeTags(tags: readonly string[]): string[] {
+  return [...new Set(tags.map((t) => t.trim()).filter((t) => t !== ""))];
 }

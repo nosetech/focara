@@ -438,3 +438,45 @@
   display: inline-flex;
   align-items: center;
 }
+
+.headerNameRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.tagFilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tagFilterLabel {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.tagFilterChip {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: none;
+  background: var(--sunk);
+  color: var(--ink2);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tagFilterChip[data-on] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.tagFilterChip[data-on] .mono {
+  color: inherit;
+  opacity: 0.7;
+}

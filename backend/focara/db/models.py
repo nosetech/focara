@@ -10,6 +10,7 @@ from sqlalchemy import (
     String,
     Text,
     TypeDecorator,
+    UniqueConstraint,
 )
 from sqlalchemy import false as sa_false
 from sqlalchemy import true as sa_true
@@ -64,6 +65,24 @@ class Project(Base):
     )
 
     tasks: Mapped[list["Task"]] = relationship(back_populates="project")
+    tags: Mapped[list["ProjectTag"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", order_by="ProjectTag.id"
+    )
+
+
+class ProjectTag(Base):
+    """プロジェクトに付けるタグ。同一プロジェクト内で名前は一意。"""
+
+    __tablename__ = "project_tags"
+    __table_args__ = (UniqueConstraint("project_id", "name", name="uq_project_tags_project_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+
+    project: Mapped["Project"] = relationship(back_populates="tags")
 
 
 class Habit(Base):
