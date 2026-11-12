@@ -63,7 +63,8 @@ def _property_or_404(session: Session, task_id: int, property_id: int) -> TaskPr
     return prop
 
 
-_DURATION_RE = re.compile(r"^(\d+):([0-5]\d):([0-5]\d)$")
+_DURATION_RE = re.compile(r"^(\d{1,6}):([0-5]\d):([0-5]\d)$", re.ASCII)
+_DURATION_MAX_DIGITS = 10
 _DURATION_ERROR = "時間プロパティの値は HH:MM:SS で指定してください"
 
 
@@ -77,12 +78,12 @@ def _normalize_duration(value: str | int | float) -> str:
         if m:
             h, mi, s = (int(g) for g in m.groups())
             return str(h * 3600 + mi * 60 + s)
-        if not value.isascii() or not value.isdigit():
+        if not value.isascii() or not value.isdigit() or len(value) > _DURATION_MAX_DIGITS:
             raise HTTPException(422, _DURATION_ERROR)
         return str(int(value))
     if isinstance(value, float) and not value.is_integer():
         raise HTTPException(422, _DURATION_ERROR)
-    if value < 0:
+    if value < 0 or value >= 10**_DURATION_MAX_DIGITS:
         raise HTTPException(422, _DURATION_ERROR)
     return str(int(value))
 

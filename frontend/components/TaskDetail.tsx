@@ -347,13 +347,20 @@ export function TaskDetail({
                 { method: "PATCH", body },
               );
         rowIds.current.set(draft.localId, saved.id);
-        patchRow(draft.localId, {
-          id: saved.id,
-          // 時間は保存値(秒)から HH:MM:SS に揃える(MM:SS 入力の補完など)
-          ...(saved.value_type === "duration"
-            ? { value: formatDuration(saved.value) }
-            : {}),
-        });
+        // 時間は保存値(秒)から HH:MM:SS に揃える。保存中に入力が続いていれば上書きしない
+        setRows((rs) =>
+          rs.map((r) =>
+            r.localId !== draft.localId
+              ? r
+              : {
+                  ...r,
+                  id: saved.id,
+                  ...(saved.value_type === "duration" && r.value === draft.value
+                    ? { value: formatDuration(saved.value) }
+                    : {}),
+                },
+          ),
+        );
       } catch (e) {
         if (e instanceof ApiError && e.status === 409)
           setRowErrors((x) => ({

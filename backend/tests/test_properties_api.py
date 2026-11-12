@@ -150,7 +150,10 @@ def test_duration_normalized_to_seconds(client, tid, value, expected):
     assert res.json()["unit"] is None
 
 
-@pytest.mark.parametrize("value", ["00:60:00", "00:00:60", "1:2", "abc", "-1", -5, 1.5, "1.5"])
+@pytest.mark.parametrize(
+    "value",
+    ["00:60:00", "00:00:60", "1:2", "abc", "-1", -5, 1.5, "1.5", "٠١:00:00", "9" * 5000],
+)
 def test_duration_rejects_invalid(client, tid, value):
     assert _add_duration(client, tid, value).status_code == 422
 
