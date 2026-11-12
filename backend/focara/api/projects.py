@@ -2,12 +2,12 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 from sqlalchemy import case, func, select
 
 from focara.api.deps import SessionDep
 from focara.api.tasks import add_log
-from focara.db.models import Project, Task
+from focara.db.models import Project, ProjectTag, Task
 from focara.task_status import InvalidTransition, transition
 
 # 完了にするとき、一括で完了にする対象(done / cancelled は対象外)
@@ -18,9 +18,15 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+def normalize_tags(tags: list[str]) -> list[str]:
+    """前後空白を除去して空文字を除外し、大文字小文字を区別して重複を除く(入力順を保持)。"""
+    return list(dict.fromkeys(t for t in (t.strip() for t in tags) if t))
+
+
 class ProjectCreate(BaseModel):
     name: Name
     description: str | None = None
+    tags: list[str] = []
 
 
 class ProjectUpdate(BaseModel):
@@ -28,6 +34,8 @@ class ProjectUpdate(BaseModel):
 
     name: Name | None = None
     description: str | None = None
+    # 指定時は全置換する
+    tags: list[str] | None = None
     # True で完了、False で未完了に戻す。未完了タスクが残るときは complete_tasks が必要
     completed: bool | None = None
     complete_tasks: bool = False
@@ -39,12 +47,18 @@ class ProjectOut(BaseModel):
     id: int
     name: str
     description: str | None
+    tags: list[str] = []
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
     task_count: int = 0
     done_count: int = 0
     progress: float = 0.0
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _tag_names(cls, value):
+        return [t.name if isinstance(t, ProjectTag) else t for t in value]
 
 
 def _select_with_progress():
@@ -97,7 +111,8 @@ def get_project(project_id: int, session: SessionDep) -> ProjectOut:
 
 @router.post("", response_model=ProjectOut, status_code=201)
 def create_project(body: ProjectCreate, session: SessionDep) -> ProjectOut:
-    project = Project(**body.model_dump())
+    values = body.model_dump(exclude={"tags"})
+    project = Project(**values, tags=[ProjectTag(name=t) for t in normalize_tags(body.tags)])
     session.add(project)
     session.commit()
     return _out_for(session, project.id)
@@ -134,11 +149,15 @@ def _set_completed(session, project: Project, completed: bool, complete_tasks: b
 @router.patch("/{project_id}", response_model=ProjectOut)
 def update_project(project_id: int, body: ProjectUpdate, session: SessionDep) -> ProjectOut:
     project = _get_or_404(session, project_id)
-    values = body.model_dump(exclude_unset=True, exclude={"completed", "complete_tasks"})
+    values = body.model_dump(exclude_unset=True, exclude={"completed", "complete_tasks", "tags"})
     if "name" in values and values["name"] is None:
         raise HTTPException(422, "name は null にできません")
     if body.completed is not None:
         _set_completed(session, project, body.completed, body.complete_tasks)
+    if "tags" in body.model_fields_set:
+        if body.tags is None:
+            raise HTTPException(422, "tags は null にできません")
+        project.tags = [ProjectTag(name=t) for t in normalize_tags(body.tags)]
     for key, value in values.items():
         setattr(project, key, value)
     session.commit()

@@ -5,14 +5,21 @@ const SKELETON_WIDTHS = [100, 92, 96, 84, 90, 70];
 export function OrganizeEmpty({
   title,
   text,
+  action,
 }: {
   title: string;
   text: string;
+  action?: { label: string; onClick: () => void };
 }) {
   return (
     <div className={styles.message}>
       <div className={styles.title}>{title}</div>
       <div className={styles.text}>{text}</div>
+      {action && (
+        <button className={styles.action} onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

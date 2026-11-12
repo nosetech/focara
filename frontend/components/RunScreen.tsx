@@ -38,6 +38,7 @@ import { TaskDetail } from "./TaskDetail";
 import { Toast, type ToastMessage } from "./Toast";
 import { ErrorState, LoadingState } from "./StateView";
 import { HabitBadge } from "./HabitBadge";
+import { TagChips } from "./TagChips";
 import { useShell } from "./ShellContext";
 import Link from "next/link";
 import { ThemeIconButton } from "./ThemeIconButton";
@@ -46,7 +47,9 @@ import styles from "./RunScreen.module.css";
 type Load =
   | { state: "loading" }
   | { state: "error" }
-  | { state: "ready"; tasks: RunTask[]; projects: Map<number, string> };
+  | { state: "ready"; tasks: RunTask[]; projects: Map<number, ProjectInfo> };
+
+type ProjectInfo = { name: string; tags: string[] };
 
 const MAX_UPCOMING = 6;
 const TOAST_MS = 4000;
@@ -77,13 +80,15 @@ export function RunScreen() {
         apiFetch<RunTask[]>("/schedule", {
           query: { date: toDateParam(today), include_done: true },
         }),
-        apiFetch<{ id: number; name: string }[]>("/projects"),
+        apiFetch<{ id: number; name: string; tags: string[] }[]>("/projects"),
       ]);
       setLoad({
         state: "ready",
         // キャンセルした習慣の子は実行画面に出さない
         tasks: tasks.filter((t) => t.status !== "cancelled"),
-        projects: new Map(projects.map((p) => [p.id, p.name])),
+        projects: new Map(
+          projects.map((p) => [p.id, { name: p.name, tags: p.tags }]),
+        ),
       });
     } catch {
       setLoad({ state: "error" });
@@ -453,7 +458,7 @@ function Ready({
   onAddToday,
 }: {
   tasks: RunTask[];
-  projects: Map<number, string>;
+  projects: Map<number, ProjectInfo>;
   slot: TimeSlot | null;
   busy: boolean;
   onComplete: (t: RunTask) => Promise<void>;
@@ -469,6 +474,8 @@ function Ready({
 }) {
   const view = buildRunView(tasks);
   const cur = view.queue[0];
+  const curProject =
+    cur?.project_id != null ? projects.get(cur.project_id) : undefined;
 
   if (now && isDayOver(now, view.queue.length, resumed, dayEndHour)) {
     return (
@@ -608,9 +615,17 @@ function Ready({
         >
           <div className={styles.project}>
             <span className={styles.box} />
-            {cur.project_id != null
-              ? (projects.get(cur.project_id) ?? "未分類")
-              : "未分類"}
+            {curProject?.name ?? "未分類"}
+            {curProject && curProject.tags.length > 0 && (
+              <>
+                <span className={styles.tagsNarrow}>
+                  <TagChips tags={curProject.tags} max={2} size="run-sm" />
+                </span>
+                <span className={styles.tagsWide}>
+                  <TagChips tags={curProject.tags} max={3} size="run-md" />
+                </span>
+              </>
+            )}
             {cur.habit_id != null && <HabitBadge />}
           </div>
           <h1 className={styles.title}>{cur.title}</h1>

@@ -206,3 +206,37 @@ def test_cannot_assign_habit_to_completed_project(client):
     assert client.post("/api/habits", json={**body, "project_id": pid}).status_code == 422
     hid = client.post("/api/habits", json=body).json()["id"]
     assert client.patch(f"/api/habits/{hid}", json={"project_id": pid}).status_code == 422
+
+
+def test_tags_create_update_normalize(client):
+    res = client.post("/api/projects", json={"name": "p"})
+    assert res.json()["tags"] == []
+    res = client.post(
+        "/api/projects", json={"name": "q", "tags": [" 仕事 ", "", "仕事", "Home", "home", "  "]}
+    )
+    assert res.json()["tags"] == ["仕事", "Home", "home"]
+    pid = res.json()["id"]
+    # tags 未指定の更新では変わらない
+    assert client.patch(f"/api/projects/{pid}", json={"name": "r"}).json()["tags"] == [
+        "仕事",
+        "Home",
+        "home",
+    ]
+    res = client.patch(f"/api/projects/{pid}", json={"tags": ["b", "a", "b"]})
+    assert res.json()["tags"] == ["b", "a"]
+    assert client.get(f"/api/projects/{pid}").json()["tags"] == ["b", "a"]
+    assert [p["tags"] for p in client.get("/api/projects").json()][-1] == ["b", "a"]
+    assert client.patch(f"/api/projects/{pid}", json={"tags": []}).json()["tags"] == []
+    assert client.patch(f"/api/projects/{pid}", json={"tags": None}).status_code == 422
+
+
+def test_tags_deleted_with_project(client):
+    from sqlalchemy import text
+
+    pid = client.post("/api/projects", json={"name": "p", "tags": ["a", "b"]}).json()["id"]
+    engine = app.dependency_overrides[get_engine]()
+    with engine.connect() as c:
+        assert c.execute(text("SELECT COUNT(*) FROM project_tags")).scalar() == 2
+    assert client.delete(f"/api/projects/{pid}").status_code == 204
+    with engine.connect() as c:
+        assert c.execute(text("SELECT COUNT(*) FROM project_tags")).scalar() == 0
