@@ -43,7 +43,7 @@ frontend(`frontend/` で実行。npm):
 - 取得手順: ブラウザ操作は不要。`Artifact` ツールで取得する。
   1. `action: "list"`、`scope: "files"` でこのURLのファイル一覧を取る。
   2. 実装対象の画面を `action: "read"`、`path: "project/<ファイル名>"`(例: `project/Focara 実行画面.dc.html`)で読む。ファイルはローカルにも保存される。
-  - 前提: Claude Code が claude.ai アカウントで `/login` 済みであること。`claude -p`(ヘッドレス)では既定で使えない。
+  - 前提: Claude Code が claude.ai アカウントで `/login` 済みであること。
   - `artifact-type/` と `SKILL.md` は Artifact の仕組み側のファイルでデザインではない。読まない。
 - デザインを修正する場合は、Claude のチャットから指示して行う(ファイルを直接編集しない)。
 - 主なファイル(`project/` 配下。`.dc.html` がデザイン本体、`support.js` は共通スクリプト):
