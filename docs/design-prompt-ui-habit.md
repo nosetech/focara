@@ -1,6 +1,6 @@
-# Claude Design 指示プロンプト: 習慣の親子分離
+# Claude チャット指示プロンプト: 習慣の親子分離
 
-既存デザインに対する差分指示です(Claude Design のチャットに入力する)。仕様は [requirements.md](./requirements.md) 2.1.1 と [design-prompt-ui.md](./design-prompt-ui.md) を参照。
+既存デザインに対する差分指示です(Claude のチャットに入力する)。仕様は [requirements.md](./requirements.md) 2.1.1 と [design-prompt-ui.md](./design-prompt-ui.md) を参照。
 
 ```
 既存デザインを踏襲して、習慣まわりの画面を追加・修正してください。配色トークン(--bg --surface --ink --accent 等)、書体(Zen Kaku Gothic New / IBM Plex Mono)、ライト・ダーク切替(data-theme)はそのまま使い、全画面でライト/ダークの両方を作ってください。日本語UIで、静かで集中しやすいトーンを保ってください。

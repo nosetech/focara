@@ -37,15 +37,21 @@ frontend(`frontend/` で実行。npm):
 
 ## 画面デザインの実装ルール
 
-画面デザインは Claude Design のプロジェクトを正とする。画面を実装する際は、必ず `DesignSync` でデザインのソースを取得し、それに合わせて実装する(スクリーンショットや推測で実装しない)。
+画面デザインは Claude の Artifacts(https://claude.ai/artifacts)にあるファイルを正とする(以前の Claude Design からは移管済み)。画面を実装する際は、必ず Artifacts 上のデザインのソースを参照し、それに合わせて実装する(スクリーンショットや推測で実装しない)。
 
-- デザインURL: https://claude.ai/design/p/3bacbcce-0eaa-4dfc-a270-306fd1ff4e98
-- `projectId`: `3bacbcce-0eaa-4dfc-a270-306fd1ff4e98`
-- 取得手順: `DesignSync` の `list_files` でファイル一覧を取り、実装対象の画面のファイルを `get_file` で読む。
-- 主なファイル(`.dc.html` がデザイン本体、`support.js` は共通スクリプト):
+- デザインURL: https://claude.ai/artifact/KBdkTZzjLzEb5tX6sNt94p(「Focara実行画面デザイン」。一覧は https://claude.ai/artifacts)
+- 取得手順: ブラウザ操作は不要。`Artifact` ツールで取得する。
+  1. `action: "list"`、`scope: "files"` でこのURLのファイル一覧を取る。
+  2. 実装対象の画面を `action: "read"`、`path: "project/<ファイル名>"`(例: `project/Focara 実行画面.dc.html`)で読む。ファイルはローカルにも保存される。
+  - 前提: Claude Code が claude.ai アカウントで `/login` 済みであること。`claude -p`(ヘッドレス)では既定で使えない。
+  - `artifact-type/` と `SKILL.md` は Artifact の仕組み側のファイルでデザインではない。読まない。
+- デザインを修正する場合は、Claude のチャットから指示して行う(ファイルを直接編集しない)。
+- 主なファイル(`project/` 配下。`.dc.html` がデザイン本体、`support.js` は共通スクリプト):
   - `Focara 実行画面.dc.html`: 実行画面(モバイル)。通常 / 1日の予定を終えた / 空 / 読み込み中 / エラー
   - `Focara タスク詳細・クイック追加.dc.html`、`TaskDetail.dc.html`、`QuickAdd.dc.html`: タスク詳細とinboxクイック追加
   - `Focara 整理画面.dc.html`: 整理画面(デスクトップ中心)
+  - `HabitSheet.dc.html`: 習慣の作成・編集シート
+  - `Focara アイコン案.dc.html`: アプリアイコン案
 - 仕様(`docs/requirements.md`、`docs/design-prompt-ui.md`)とデザインに齟齬がある場合は、勝手にどちらかに寄せず、issueで確認する。
 - デザイン内の配色トークン(`--bg` `--surface` `--ink` `--accent` 等)、書体(Zen Kaku Gothic New / IBM Plex Mono)、ライト・ダークの切替(`data-theme`)を踏襲する。
 - 横スワイプで後回し・タップで詳細・FABでクイック追加といった操作と、各状態(空 / 読み込み中 / エラー)の表示を実装から落とさない。
