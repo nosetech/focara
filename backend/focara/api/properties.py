@@ -1,4 +1,5 @@
 import math
+import re
 from datetime import date
 from typing import Annotated, Literal
 
@@ -13,7 +14,7 @@ from focara.db.models import Task, TaskProperty
 
 router = APIRouter(prefix="/api/tasks/{task_id}", tags=["properties"])
 
-PropertyType = Literal["string", "number", "date"]
+PropertyType = Literal["string", "number", "date", "duration"]
 Key = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
@@ -62,8 +63,34 @@ def _property_or_404(session: Session, task_id: int, property_id: int) -> TaskPr
     return prop
 
 
+_DURATION_RE = re.compile(r"^(\d+):([0-5]\d):([0-5]\d)$")
+_DURATION_ERROR = "時間プロパティの値は HH:MM:SS で指定してください"
+
+
+def _normalize_duration(value: str | int | float) -> str:
+    """時間は秒数の整数文字列で保存する。HH:MM:SS・秒数(非負の整数)を受け付ける。空はクリア。"""
+    if isinstance(value, str):
+        value = value.strip()
+        if value == "":
+            return ""  # 値を空に戻す(クリア)
+        m = _DURATION_RE.match(value)
+        if m:
+            h, mi, s = (int(g) for g in m.groups())
+            return str(h * 3600 + mi * 60 + s)
+        if not value.isascii() or not value.isdigit():
+            raise HTTPException(422, _DURATION_ERROR)
+        return str(int(value))
+    if isinstance(value, float) and not value.is_integer():
+        raise HTTPException(422, _DURATION_ERROR)
+    if value < 0:
+        raise HTTPException(422, _DURATION_ERROR)
+    return str(int(value))
+
+
 def _normalize(value: str | int | float, value_type: str) -> str:
     """種別に応じて値を検証し、保存用の文字列に正規化する。"""
+    if value_type == "duration":
+        return _normalize_duration(value)
     if value_type == "number":
         try:
             num = float(value)

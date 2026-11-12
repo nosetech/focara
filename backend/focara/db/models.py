@@ -22,7 +22,7 @@ TIME_SLOTS = ("morning", "afternoon", "evening")
 TASK_LOG_ACTIONS = ("completed", "postponed")
 RECURRENCE_TYPES = ("weekly", "monthly", "yearly")
 RECURRENCE_END_TYPES = ("none", "date", "count")
-PROPERTY_TYPES = ("string", "number", "date")
+PROPERTY_TYPES = ("string", "number", "date", "duration")
 
 
 class UTCDateTime(TypeDecorator):

@@ -321,6 +321,11 @@
   justify-content: center;
 }
 
+.invalid {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .rowError {
   font-size: 12px;
   color: var(--danger);

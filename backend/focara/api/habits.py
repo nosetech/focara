@@ -77,7 +77,7 @@ class PropertySpec(BaseModel):
     """子へ引き継ぐプロパティの定義(項目名・種別・単位)。値は持たない。"""
 
     key: str
-    value_type: Literal["string", "number", "date"] = "string"
+    value_type: Literal["string", "number", "date", "duration"] = "string"
     unit: str | None = None
 
     @model_validator(mode="before")

@@ -28,6 +28,7 @@ import {
   type SaveState,
   type TaskProperty,
 } from "@/lib/taskDetail";
+import { formatDuration } from "@/lib/duration";
 import { DateInput } from "./DateInput";
 import { DetailResizeHandle } from "./DetailResizeHandle";
 import { useDetailWidth } from "./useDetailWidth";
@@ -346,7 +347,13 @@ export function TaskDetail({
                 { method: "PATCH", body },
               );
         rowIds.current.set(draft.localId, saved.id);
-        patchRow(draft.localId, { id: saved.id });
+        patchRow(draft.localId, {
+          id: saved.id,
+          // 時間は保存値(秒)から HH:MM:SS に揃える(MM:SS 入力の補完など)
+          ...(saved.value_type === "duration"
+            ? { value: formatDuration(saved.value) }
+            : {}),
+        });
       } catch (e) {
         if (e instanceof ApiError && e.status === 409)
           setRowErrors((x) => ({
@@ -1180,13 +1187,33 @@ export function TaskDetail({
                         />
                       ) : (
                         <input
-                          className={`${styles.input} ${styles.mono} ${styles.grow}`}
+                          className={`${styles.input} ${styles.mono} ${styles.grow} ${
+                            r.value_type === "duration" && rowErrors[r.localId]
+                              ? styles.invalid
+                              : ""
+                          }`}
                           value={r.value}
                           inputMode={
-                            r.value_type === "number" ? "decimal" : undefined
+                            r.value_type === "number"
+                              ? "decimal"
+                              : r.value_type === "duration"
+                                ? "numeric"
+                                : undefined
                           }
-                          placeholder="値"
-                          aria-label="値"
+                          placeholder={
+                            r.value_type === "duration" ? "00:00:00" : "値"
+                          }
+                          aria-label={
+                            r.value_type === "duration"
+                              ? "値(時間 HH:MM:SS)"
+                              : "値"
+                          }
+                          aria-invalid={
+                            r.value_type === "duration" &&
+                            !!rowErrors[r.localId]
+                              ? true
+                              : undefined
+                          }
                           onChange={(e) =>
                             patchRow(r.localId, { value: e.target.value })
                           }
