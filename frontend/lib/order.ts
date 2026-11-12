@@ -5,21 +5,26 @@ export interface Orderable {
   fixed_at?: string | null;
 }
 
+const time = (t: Orderable) => new Date(t.fixed_at as string).getTime();
+
 /**
- * 同日・同枠の並び順の規則(サーバーの `GET /schedule` と同じ)。
- * 予定時刻ありを先頭(開始時刻順)、なしは実行順(run_order 未設定は末尾)。
+ * run_order 順に並んだ配列のうち、予定時刻ありのタスクを、自分たちが占める位置の中で
+ * 開始時刻順(同時刻は id 順)に入れ替える。予定時刻なしのタスクの位置は動かさない。
+ * サーバーの `GET /schedule` と同じ規則。
  */
-export function compareOrder(a: Orderable, b: Orderable): number {
-  if (!!a.fixed_at !== !!b.fixed_at) return a.fixed_at ? -1 : 1;
-  if (a.fixed_at && b.fixed_at) {
-    const d = new Date(a.fixed_at).getTime() - new Date(b.fixed_at).getTime();
-    if (d) return d;
-    return a.id - b.id;
-  }
-  return (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id;
+export function arrangeFixed<T extends Orderable>(items: readonly T[]): T[] {
+  const fixed = items
+    .filter((t) => t.fixed_at)
+    .sort((a, b) => time(a) - time(b) || a.id - b.id);
+  let n = 0;
+  return items.map((t) => (t.fixed_at ? fixed[n++] : t));
 }
 
-/** 並び順の規則で並べ替えた配列を返す(元の配列は変えない)。 */
+/** run_order 順(未設定は末尾、同値は id 順)の比較。 */
+export const compareRunOrder = (a: Orderable, b: Orderable): number =>
+  (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id;
+
+/** 同日・同枠のタスクを並べ替えた配列を返す(元の配列は変えない)。 */
 export function sortByOrder<T extends Orderable>(tasks: readonly T[]): T[] {
-  return [...tasks].sort(compareOrder);
+  return arrangeFixed([...tasks].sort(compareRunOrder));
 }

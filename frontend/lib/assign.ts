@@ -28,7 +28,7 @@ export const COLUMNS: { key: Column; label: string }[] = [
 export const isCandidate = (t: AssignTask) =>
   t.status === "next" && !t.scheduled_date;
 
-/** 枠の中のタスクを並べる(サーバーの並びと同じ: 予定時刻あり(開始順)→ 実行順、run_order 未設定は末尾) */
+/** 枠の中のタスクを並べる(サーバーの並びと同じ: 実行順。予定時刻ありは、その位置の中で開始順) */
 export function slotTasks(
   scheduled: readonly AssignTask[],
   slot: TimeSlot,

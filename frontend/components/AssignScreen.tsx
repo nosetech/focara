@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { arrangeFixed } from "@/lib/order";
 import {
   COLUMNS,
   insertAt,
@@ -83,7 +84,17 @@ export function AssignScreen() {
           if (isCandidate(task)) return;
           await apiFetch(`/tasks/${task.id}/schedule`, { method: "DELETE" });
         } else {
-          const here = slotTasks(scheduled, target).map((t) => t.id);
+          const slot = slotTasks(scheduled, target);
+          const here = slot.map((t) => t.id);
+          // 予定時刻ありのタスクは、その位置の中で開始時刻順に直してから送る
+          const arranged = (ids: number[]) => {
+            const byId = new Map(
+              [...slot, task].map((t) => [t.id, t] as const),
+            );
+            return arrangeFixed(
+              ids.map((id) => byId.get(id) as AssignTask),
+            ).map((t) => t.id);
+          };
           const inSlot =
             task.scheduled_date === day && task.time_slot === target;
           if (!inSlot) {
@@ -98,7 +109,7 @@ export function AssignScreen() {
             body: {
               scheduled_date: day,
               time_slot: target,
-              task_ids: insertAt(here, task.id, index),
+              task_ids: arranged(insertAt(here, task.id, index)),
             },
           });
         }

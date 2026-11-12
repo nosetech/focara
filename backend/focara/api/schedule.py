@@ -1,4 +1,5 @@
 from datetime import date
+from itertools import groupby
 
 from fastapi import APIRouter, HTTPException
 from pydantic import AwareDatetime, BaseModel, model_validator
@@ -41,6 +42,13 @@ class ReorderBody(BaseModel):
         if len(set(self.task_ids)) != len(self.task_ids):
             raise ValueError("task_ids に重複があります")
         return self
+
+
+def arrange_fixed(tasks: list[Task]) -> list[Task]:
+    """run_order 順の並びのうち、予定時刻ありのタスクを、自分たちが占める位置の中で
+    開始時刻順(同時刻は id 順)に入れ替える。予定時刻なしのタスクの位置は動かさない。"""
+    fixed = iter(sorted((t for t in tasks if t.fixed_at), key=lambda t: (t.fixed_at, t.id)))
+    return [next(fixed) if t.fixed_at else t for t in tasks]
 
 
 def _slot_tasks(session: Session, day: date, slot: str) -> list[Task]:
@@ -92,16 +100,16 @@ def unassign_schedule(task_id: int, session: SessionDep) -> Task:
 
 @router.get("/schedule", response_model=list[TaskOut])
 def list_day(session: SessionDep, date: date, include_done: bool = False) -> list[Task]:
-    """指定日のタスクを、時間帯(朝→昼→夜)→予定時刻あり(開始順)→実行順で返す。時間帯未設定は末尾。"""
+    """指定日のタスクを、時間帯(朝→昼→夜)→実行順で返す。時間帯未設定は末尾。
+
+    枠の中の予定時刻ありのタスクは、自分たちが占める位置の中で開始時刻順に入れ替える。
+    """
     slot_rank = case({s: i for i, s in enumerate(TIME_SLOTS)}, value=Task.time_slot, else_=99)
     stmt = (
         select(Task)
         .where(Task.scheduled_date == date.isoformat())
         .order_by(
             slot_rank,
-            # 枠の中では、予定時刻あり(開始時刻順)→ なし(実行順)
-            Task.fixed_at.is_(None),
-            Task.fixed_at,
             Task.run_order.is_(None),
             Task.run_order,
             Task.id,
@@ -109,7 +117,11 @@ def list_day(session: SessionDep, date: date, include_done: bool = False) -> lis
     )
     if not include_done:
         stmt = stmt.where(Task.status.notin_(("done", "cancelled")))
-    return list(session.scalars(stmt))
+    tasks = list(session.scalars(stmt))
+    result: list[Task] = []
+    for _, group in groupby(tasks, key=lambda t: t.time_slot):
+        result.extend(arrange_fixed(list(group)))
+    return result
 
 
 @router.put("/schedule/order", response_model=list[TaskOut])
@@ -120,7 +132,9 @@ def reorder(body: ReorderBody, session: SessionDep) -> list[Task]:
         raise HTTPException(
             422, "task_ids は指定した日付・時間帯の全タスクを過不足なく含めてください"
         )
-    for i, tid in enumerate(body.task_ids):
-        by_id[tid].run_order = i
+    # 予定時刻ありのタスクは、その位置の中で開始時刻順に直してから run_order を振る
+    ordered = arrange_fixed([by_id[tid] for tid in body.task_ids])
+    for i, t in enumerate(ordered):
+        t.run_order = i
     _commit(session)
-    return [by_id[tid] for tid in body.task_ids]
+    return ordered

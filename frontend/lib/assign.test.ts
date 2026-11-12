@@ -74,7 +74,7 @@ test("unslotted: 日付ありで時間帯未設定のみ", () => {
   );
 });
 
-test("slotTasks / unslotted: 予定時刻ありを先頭(開始順)に並べ、動かせるのは予定時刻なしだけ", () => {
+test("slotTasks / unslotted: 予定時刻ありは、その位置の中で開始順に並べ、動かせるのは予定時刻なしだけ", () => {
   const sorted = slotTasks(
     [
       t(1, { time_slot: "morning", run_order: 0 }),
@@ -93,7 +93,7 @@ test("slotTasks / unslotted: 予定時刻ありを先頭(開始順)に並べ、�
   );
   assert.deepEqual(
     sorted.map((x) => x.id),
-    [3, 2, 1],
+    [1, 3, 2],
   );
-  assert.deepEqual(sorted.map(isAssignable), [false, false, true]);
+  assert.deepEqual(sorted.map(isAssignable), [true, false, false]);
 });

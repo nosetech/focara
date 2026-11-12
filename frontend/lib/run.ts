@@ -1,4 +1,4 @@
-import { compareOrder } from "./order.ts";
+import { sortByOrder } from "./order.ts";
 
 export type TimeSlot = "morning" | "afternoon" | "evening";
 
@@ -82,10 +82,17 @@ const SLOT_RANK: Record<TimeSlot, number> = {
   evening: 2,
 };
 
-/** 枠(午前中→午後→夜、未設定は末尾)→ 予定時刻あり(開始順)→ 実行順に並べる。 */
+/** 枠(午前中→午後→夜、未設定は末尾)→ 実行順(予定時刻ありは、その位置の中で開始順)に並べる。 */
 export function sortRunTasks(tasks: readonly RunTask[]): RunTask[] {
   const rank = (t: RunTask) => (t.time_slot ? SLOT_RANK[t.time_slot] : 99);
-  return [...tasks].sort((a, b) => rank(a) - rank(b) || compareOrder(a, b));
+  const slots = new Map<number, RunTask[]>();
+  for (const t of tasks) {
+    const r = rank(t);
+    slots.set(r, [...(slots.get(r) ?? []), t]);
+  }
+  return [...slots.keys()]
+    .sort((a, b) => a - b)
+    .flatMap((r) => sortByOrder(slots.get(r) ?? []));
 }
 
 /** APIと同じ並び(枠→予定時刻→実行順)にそろえたうえで、完了/未完了に分ける。 */
