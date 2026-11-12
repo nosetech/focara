@@ -27,7 +27,7 @@ export const weekDays = (d: Date): Date[] => {
 export const rangeDays = (mode: "day" | "week", d: Date): Date[] =>
   mode === "week" ? weekDays(d) : [d];
 
-/** 日付と枠でタスクを絞る。予定は開始時刻順で先頭、タスクは実行順。 */
+/** 日付と枠でタスクを絞る。実行順(予定時刻ありは、その位置の中で開始時刻順)。 */
 export function cellTasks(
   tasks: readonly CalendarTask[],
   day: string,

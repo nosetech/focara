@@ -204,7 +204,7 @@ def test_assign_mismatched_slot_rejected(client):
     assert client.get(f"/api/tasks/{a}").json()["scheduled_date"] is None
 
 
-def test_day_list_fixed_first_in_start_order(client):
+def test_day_list_fixed_sorted_within_their_positions(client):
     plain1 = _task(client, "plain1")
     late = _task(client, "late")
     early = _task(client, "early")
@@ -217,4 +217,37 @@ def test_day_list_fixed_first_in_start_order(client):
     ):
         assert _assign(client, tid, "afternoon", **extra).status_code == 200
     body = client.get(f"/api/schedule?date={DAY}").json()
-    assert [t["title"] for t in body] == ["early", "late", "plain1", "plain2"]
+    assert [t["title"] for t in body] == ["plain1", "early", "late", "plain2"]
+
+
+def test_reorder_places_plain_around_fixed(client):
+    a = _task(client, "a")
+    fx = _task(client, "fx")
+    b = _task(client, "b")
+    for tid, extra in ((a, {}), (fx, {"fixed_at": _local("13:00")}), (b, {})):
+        assert _assign(client, tid, "afternoon", **extra).status_code == 200
+    for order, want in (([b, fx, a], ["b", "fx", "a"]), ([fx, a, b], ["fx", "a", "b"])):
+        res = client.put(
+            "/api/schedule/order",
+            json={"scheduled_date": DAY, "time_slot": "afternoon", "task_ids": order},
+        )
+        assert [t["title"] for t in res.json()] == want
+        body = client.get(f"/api/schedule?date={DAY}").json()
+        assert [t["title"] for t in body] == want
+
+
+def test_reorder_sorts_fixed_by_start(client):
+    f1 = _task(client, "f1")
+    p = _task(client, "p")
+    f2 = _task(client, "f2")
+    for tid, extra in (
+        (f1, {"fixed_at": _local("16:00")}),
+        (p, {}),
+        (f2, {"fixed_at": _local("13:00")}),
+    ):
+        assert _assign(client, tid, "afternoon", **extra).status_code == 200
+    res = client.put(
+        "/api/schedule/order",
+        json={"scheduled_date": DAY, "time_slot": "afternoon", "task_ids": [f1, p, f2]},
+    )
+    assert [t["title"] for t in res.json()] == ["f2", "p", "f1"]

@@ -145,7 +145,7 @@ test("queue[0] は優先度に関係なく並び順どおりに決まる", () =>
   );
 });
 
-test("buildRunView / sortRunTasks: 枠の中は予定時刻あり(開始順)→ 実行順", () => {
+test("buildRunView / sortRunTasks: 枠の中は実行順(予定時刻ありは、その位置の中で開始順)", () => {
   const at = (id: number, iso: string | null, order: number | null) => ({
     ...t(id, "next", null),
     fixed_at: iso,
@@ -161,7 +161,7 @@ test("buildRunView / sortRunTasks: 枠の中は予定時刻あり(開始順)→ 
   ]);
   assert.deepEqual(
     v.queue.map((x) => x.id),
-    [3, 2, 1, 4, 6],
+    [1, 3, 2, 4, 6],
   );
   assert.deepEqual(
     sortRunTasks([evening, at(1, null, 0)]).map((x) => x.id),

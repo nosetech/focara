@@ -38,7 +38,7 @@ test("rangeDays: 日は1日、週は7日", () => {
   assert.equal(rangeDays("week", d).length, 7);
 });
 
-test("cellTasks: 予定が開始順で先頭、タスクは run_order 順", () => {
+test("cellTasks: run_order 順。予定は、その位置の中で開始順", () => {
   const list = [
     t(1, { run_order: 1 }),
     t(2, { run_order: 0 }),
@@ -49,7 +49,7 @@ test("cellTasks: 予定が開始順で先頭、タスクは run_order 順", () =
   ];
   assert.deepEqual(
     cellTasks(list, "2026-10-27", "morning").map((x) => x.id),
-    [4, 3, 2, 1],
+    [2, 1, 4, 3],
   );
 });
 
