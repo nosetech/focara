@@ -227,3 +227,24 @@ def test_migration_0006_keeps_existing_data(tmp_path):
         assert (log.task_id, log.task_title) == (1, "a")
         assert s.query(TaskProperty).one().key == "k"
     e.dispose()
+
+
+def test_migration_0010_syncs_slot_with_fixed_at(tmp_path):
+    engine = create_db_engine(tmp_path / "m.db")
+    upgrade_db(engine, "0009")
+    local = datetime(2026, 10, 20, 14, 0).astimezone().astimezone(UTC)
+    with engine.begin() as c:
+        c.execute(
+            text(
+                "INSERT INTO tasks (title, status, time_slot, fixed_at, created_at, updated_at)"
+                " VALUES (:t, 'next', :s, :f, '2026-10-01 00:00:00', '2026-10-01 00:00:00')"
+            ),
+            [
+                {"t": "a", "s": "morning", "f": local.replace(tzinfo=None).isoformat(sep=" ")},
+                {"t": "b", "s": "evening", "f": None},
+            ],
+        )
+    upgrade_db(engine, "0010")
+    with engine.connect() as c:
+        rows = dict(c.execute(text("SELECT title, time_slot FROM tasks")).fetchall())
+    assert rows == {"a": "afternoon", "b": "evening"}

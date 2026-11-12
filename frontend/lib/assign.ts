@@ -1,3 +1,4 @@
+import { sortByOrder } from "./order.ts";
 import type { TimeSlot } from "./run";
 
 export interface AssignTask {
@@ -9,6 +10,7 @@ export interface AssignTask {
   scheduled_date: string | null;
   time_slot: TimeSlot | null;
   run_order: number | null;
+  fixed_at: string | null;
   habit_id: number | null;
 }
 
@@ -26,17 +28,12 @@ export const COLUMNS: { key: Column; label: string }[] = [
 export const isCandidate = (t: AssignTask) =>
   t.status === "next" && !t.scheduled_date;
 
-/** 枠の中のタスクを実行順に並べる(サーバーの並びと同じ: run_order 未設定は末尾) */
+/** 枠の中のタスクを並べる(サーバーの並びと同じ: 予定時刻あり(開始順)→ 実行順、run_order 未設定は末尾) */
 export function slotTasks(
   scheduled: readonly AssignTask[],
   slot: TimeSlot,
 ): AssignTask[] {
-  return scheduled
-    .filter((t) => t.time_slot === slot)
-    .sort(
-      (a, b) =>
-        (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id,
-    );
+  return sortByOrder(scheduled.filter((t) => t.time_slot === slot));
 }
 
 /** 見積もりの合計(分) */
@@ -56,10 +53,10 @@ export function insertAt(
 
 /** 選択日の日付あり・時間帯未設定のタスク(実行順。run_order 未設定は末尾) */
 export function unslotted(scheduled: readonly AssignTask[]): AssignTask[] {
-  return scheduled
-    .filter((t) => !!t.scheduled_date && t.time_slot === null)
-    .sort(
-      (a, b) =>
-        (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id,
-    );
+  return sortByOrder(
+    scheduled.filter((t) => !!t.scheduled_date && t.time_slot === null),
+  );
 }
+
+/** 3枠割り当てで動かせるのは、予定時刻のないタスクだけ。 */
+export const isAssignable = (t: AssignTask) => !t.fixed_at;

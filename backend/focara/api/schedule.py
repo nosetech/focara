@@ -6,7 +6,14 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
-from focara.api.tasks import TaskOut, TimeSlot, _check_fixed_range, _commit, _get_or_404
+from focara.api.tasks import (
+    TaskOut,
+    TimeSlot,
+    _check_fixed_range,
+    _commit,
+    _get_or_404,
+    sync_slot_with_fixed,
+)
 from focara.db.models import TIME_SLOTS, Task
 
 router = APIRouter(prefix="/api", tags=["schedule"])
@@ -66,6 +73,7 @@ def assign_schedule(task_id: int, body: ScheduleAssign, session: SessionDep) -> 
     task.fixed_end_at = body.fixed_end_at
     try:
         _check_fixed_range(task)
+        sync_slot_with_fixed(task, body.time_slot, given=True)
     except HTTPException:
         session.rollback()
         raise
@@ -84,12 +92,20 @@ def unassign_schedule(task_id: int, session: SessionDep) -> Task:
 
 @router.get("/schedule", response_model=list[TaskOut])
 def list_day(session: SessionDep, date: date, include_done: bool = False) -> list[Task]:
-    """指定日のタスクを、時間帯(朝→昼→夜)→実行順で返す。時間帯未設定は末尾。"""
+    """指定日のタスクを、時間帯(朝→昼→夜)→予定時刻あり(開始順)→実行順で返す。時間帯未設定は末尾。"""
     slot_rank = case({s: i for i, s in enumerate(TIME_SLOTS)}, value=Task.time_slot, else_=99)
     stmt = (
         select(Task)
         .where(Task.scheduled_date == date.isoformat())
-        .order_by(slot_rank, Task.run_order.is_(None), Task.run_order, Task.id)
+        .order_by(
+            slot_rank,
+            # 枠の中では、予定時刻あり(開始時刻順)→ なし(実行順)
+            Task.fixed_at.is_(None),
+            Task.fixed_at,
+            Task.run_order.is_(None),
+            Task.run_order,
+            Task.id,
+        )
     )
     if not include_done:
         stmt = stmt.where(Task.status.notin_(("done", "cancelled")))

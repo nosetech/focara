@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import {
   COLUMNS,
   insertAt,
+  isAssignable,
   isCandidate,
   slotTasks,
   totalEstimate,
@@ -13,7 +14,7 @@ import {
   type Column,
 } from "@/lib/assign";
 import { formatEstimate } from "@/lib/inbox";
-import { toDateParam, type TimeSlot } from "@/lib/run";
+import { formatClock, toDateParam, type TimeSlot } from "@/lib/run";
 import { useOrganize } from "./OrganizeContext";
 import { TaskDetailHost } from "./TaskDetailHost";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
@@ -133,7 +134,12 @@ export function AssignScreen() {
     <div
       key={t.id}
       className={styles.card}
-      draggable
+      draggable={isAssignable(t)}
+      title={
+        isAssignable(t)
+          ? undefined
+          : "予定時刻のあるタスクは動かせません。日付はタスク詳細で変更します"
+      }
       data-drag={dragId === t.id ? "" : undefined}
       data-selected={selId === t.id ? "" : undefined}
       onClick={() => setSelId(t.id)}
@@ -171,6 +177,7 @@ export function AssignScreen() {
       <div className={styles.meta}>
         <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
         <span className={styles.mono}>
+          {t.fixed_at && `${formatClock(t.fixed_at)} · `}
           {formatEstimate(t.estimate_minutes)}
         </span>
       </div>

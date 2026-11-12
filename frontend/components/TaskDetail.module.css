@@ -292,6 +292,22 @@
   font-weight: 700;
 }
 
+/* 予定時刻があるとき、枠は開始時刻から決まる(変更できない) */
+.seg:has(button:disabled) {
+  opacity: 0.5;
+}
+
+.seg button:disabled {
+  cursor: not-allowed;
+}
+
+.slotNote {
+  padding: 6px 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink3);
+}
+
 .remove {
   width: 36px;
   height: 36px;

@@ -23,6 +23,11 @@ def slot_for_time(hhmm: str) -> str:
     return "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
 
 
+def slot_for_datetime(dt: datetime) -> str:
+    """予定の開始日時(aware)から時間帯を決める。時間帯はサーバーのローカル時刻で判定する。"""
+    return slot_for_time(dt.astimezone().strftime("%H:%M"))
+
+
 def fixed_datetime(day: date | str, hhmm: str | None) -> datetime | None:
     """実施日と HH:MM(サーバーのローカル時刻)から UTC の日時を作る。"""
     if hhmm is None:
@@ -179,6 +184,9 @@ def _sync_fixed(child: Task, habit: Habit, old_start: str | None, old_end: str |
         return
     child.fixed_at = fixed_datetime(day, habit.fixed_start_time)
     child.fixed_end_at = fixed_datetime(day, habit.fixed_end_time)
+    if child.fixed_at is not None:
+        # 予定時刻がある子の時間帯は、開始時刻に合わせる
+        child.time_slot = slot_for_datetime(child.fixed_at)
 
 
 def sync_properties_to_children(
