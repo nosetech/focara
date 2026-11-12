@@ -651,3 +651,26 @@ def test_carry_over_overdue(engine, client):
         # 繰り越した日の occurrence_date の子は再生成されない
         generate_children(s, s.get(Habit, off["id"]), date.today(), AHEAD)
         assert s.query(Task).filter_by(habit_id=off["id"], occurrence_date=_iso(-3)).count() == 1
+
+
+def test_duration_property_inherited_by_children(client):
+    h = _habit(client, properties=[{"key": "作業時間", "value_type": "duration"}])
+    assert h["properties"] == [{"key": "作業時間", "value_type": "duration", "unit": None}]
+    kid = _children(client, h["id"])[0]
+    rows = client.get(f"/api/tasks/{kid['id']}/properties").json()
+    assert [(p["key"], p["value_type"], p["value"]) for p in rows] == [
+        ("作業時間", "duration", None)
+    ]
+    res = client.patch(
+        f"/api/tasks/{kid['id']}/properties/{rows[0]['id']}", json={"value": "00:30:00"}
+    )
+    assert res.json()["value"] == "1800"
+    bad = client.post(
+        "/api/habits",
+        json={
+            "title": "x",
+            **DAILY,
+            "properties": [{"key": "a", "value_type": "duration", "unit": "分"}],
+        },
+    )
+    assert bad.status_code == 422

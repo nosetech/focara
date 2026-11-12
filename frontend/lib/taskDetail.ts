@@ -1,4 +1,6 @@
-export type PropertyType = "string" | "number" | "date";
+import { formatDuration, parseDuration } from "./duration.ts";
+
+export type PropertyType = "string" | "number" | "date" | "duration";
 
 export interface TaskProperty {
   id: number;
@@ -23,14 +25,19 @@ export const PROPERTY_TYPES: { key: PropertyType; label: string }[] = [
   { key: "string", label: "文字" },
   { key: "number", label: "数値" },
   { key: "date", label: "日付" },
+  { key: "duration", label: "時間" },
 ];
+
+export const DURATION_ERROR = "時間は HH:MM:SS で入力してください";
 
 export function toDraft(p: TaskProperty): PropertyDraft {
   return {
     localId: `p${p.id}`,
     id: p.id,
     key: p.key,
-    value: p.value ?? "",
+    // 時間はAPIが秒数で返すため、画面では HH:MM:SS にする
+    value:
+      p.value_type === "duration" ? formatDuration(p.value) : (p.value ?? ""),
     value_type: p.value_type,
     unit: p.unit ?? "",
   };
@@ -67,6 +74,14 @@ export function propertyBody(d: PropertyDraft): PropertyBody | null {
     if (raw === "" || !Number.isFinite(num))
       return { error: "数値を入力してください" };
     return { key, value: num, value_type: "number", unit };
+  }
+  if (d.value_type === "duration") {
+    // 時間は空(クリア)も許す。APIへは秒数で送る
+    if (d.value.trim() === "")
+      return { key, value: "", value_type: "duration", unit };
+    const sec = parseDuration(d.value);
+    if (sec === null) return { error: DURATION_ERROR };
+    return { key, value: String(sec), value_type: "duration", unit };
   }
   // 日付は空(クリア)も許す
   if (

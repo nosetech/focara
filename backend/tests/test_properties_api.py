@@ -122,3 +122,55 @@ def test_date_property_can_be_cleared(client, tid):
     cleared = client.patch(url, json={"value": "", "value_type": "date"})
     assert cleared.status_code == 200
     assert cleared.json()["value"] == ""
+
+
+def _add_duration(client, tid, value, key="作業時間"):
+    return client.post(
+        f"/api/tasks/{tid}/properties",
+        json={"key": key, "value": value, "value_type": "duration"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("01:02:03", "3723"),
+        ("00:00:00", "0"),
+        ("100:00:00", "360000"),
+        ("00:59:59", "3599"),
+        ("3723", "3723"),
+        (3723, "3723"),
+    ],
+)
+def test_duration_normalized_to_seconds(client, tid, value, expected):
+    res = _add_duration(client, tid, value)
+    assert res.status_code == 201
+    assert res.json()["value"] == expected
+    assert res.json()["value_type"] == "duration"
+    assert res.json()["unit"] is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["00:60:00", "00:00:60", "1:2", "abc", "-1", -5, 1.5, "1.5", "٠١:00:00", "9" * 5000],
+)
+def test_duration_rejects_invalid(client, tid, value):
+    assert _add_duration(client, tid, value).status_code == 422
+
+
+def test_duration_update_and_clear(client, tid):
+    pid = _add_duration(client, tid, "00:10:00").json()["id"]
+    url = f"/api/tasks/{tid}/properties/{pid}"
+    assert client.patch(url, json={"value": "00:20:30"}).json()["value"] == "1230"
+    assert client.patch(url, json={"value": ""}).json()["value"] == ""
+    assert client.patch(url, json={"value": "00:99:00"}).status_code == 422
+
+
+def test_duration_type_change_revalidates_and_rejects_unit(client, tid):
+    pid = client.post(f"/api/tasks/{tid}/properties", json={"key": "a", "value": "x"}).json()["id"]
+    url = f"/api/tasks/{tid}/properties/{pid}"
+    assert client.patch(url, json={"value_type": "duration"}).status_code == 422
+    assert client.patch(url, json={"value_type": "duration", "value": "x"}).status_code == 422
+    res = client.patch(url, json={"value_type": "duration", "value": "00:01:00"})
+    assert res.json()["value"] == "60"
+    assert client.patch(url, json={"unit": "分"}).status_code == 422
