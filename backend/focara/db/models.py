@@ -56,6 +56,8 @@ class Project(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # 完了日時。NULL なら未完了
+    completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime, default=_now, onupdate=_now, nullable=False

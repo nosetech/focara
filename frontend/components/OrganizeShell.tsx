@@ -25,6 +25,7 @@ import {
   type OrganizeCounts,
   type OrganizeScreenKey,
 } from "@/lib/organize";
+import { assignableProjects } from "@/lib/projects";
 import { OrganizeContext, type OrganizeProject } from "./OrganizeContext";
 import { ThemeIconButton } from "./ThemeIconButton";
 import { Toast, type ToastMessage } from "./Toast";
@@ -100,6 +101,7 @@ export function OrganizeShell({
   const [counts, setCounts] = useState<OrganizeCounts | null>(null);
   const [projects, setProjects] = useState<OrganizeProject[]>([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [panelEl, setPanelEl] = useState<HTMLElement | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -358,6 +360,26 @@ export function OrganizeShell({
               )}
               {list && (
                 <>
+                  {screen === "projects" && (
+                    <>
+                      <button
+                        className={styles.toggle}
+                        role="switch"
+                        aria-checked={showCompleted}
+                        title="完了したプロジェクトを一覧に含める"
+                        onClick={() => setShowCompleted(!showCompleted)}
+                      >
+                        <span
+                          className={styles.track}
+                          data-on={showCompleted ? "" : undefined}
+                        >
+                          <span className={styles.knob} />
+                        </span>
+                        完了したプロジェクトも表示
+                      </button>
+                      <span className={styles.divider} aria-hidden="true" />
+                    </>
+                  )}
                   {screen === "projects" &&
                     select("status", "ステータス", [
                       { v: "", l: "ステータス: すべて" },
@@ -366,7 +388,10 @@ export function OrganizeShell({
                   {screen !== "projects" &&
                     select("project", "プロジェクト", [
                       { v: "", l: "プロジェクト: すべて" },
-                      ...projects.map((p) => ({ v: String(p.id), l: p.name })),
+                      ...assignableProjects(
+                        projects,
+                        Number(filters.project) || null,
+                      ).map((p) => ({ v: String(p.id), l: p.name })),
                       { v: "none", l: "なし" },
                     ])}
                   {select("pri", "優先度", [
@@ -394,6 +419,7 @@ export function OrganizeShell({
                 clearFilters: () => setFilters(DEFAULT_FILTERS),
                 projects,
                 refreshProjects,
+                showCompleted,
                 panelEl,
                 date,
                 setDate,

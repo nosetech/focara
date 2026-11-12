@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from focara.api.deps import ConfigDep, SessionDep
+from focara.api.tasks import ensure_project_open
 from focara.db.models import Habit, HabitProperty, Task
 from focara.habit_generator import (
     generate_children,
@@ -205,6 +206,7 @@ def get_habit(habit_id: int, session: SessionDep) -> HabitOut:
 
 @router.post("", response_model=HabitOut, status_code=201)
 def create_habit(body: HabitCreate, session: SessionDep, cfg: ConfigDep) -> HabitOut:
+    ensure_project_open(session, body.project_id)
     values = body.model_dump(exclude={"properties", "start_date"})
     _check_fixed_time(body.fixed_start_time, body.fixed_end_time)
     if body.fixed_start_time:
@@ -235,6 +237,8 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
         if key in values and values[key] is None:
             raise HTTPException(422, f"{key} は null にできません")
     values.pop("properties", None)
+    if "project_id" in values and values["project_id"] != habit.project_id:
+        ensure_project_open(session, values["project_id"])
     keys = _clean_specs(body.properties) if body.properties is not None else None
     old_time_slot = habit.time_slot
     old_memo = habit.memo

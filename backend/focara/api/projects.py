@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response
@@ -6,7 +6,12 @@ from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy import case, func, select
 
 from focara.api.deps import SessionDep
+from focara.api.tasks import add_log
 from focara.db.models import Project, Task
+from focara.task_status import InvalidTransition, transition
+
+# 完了にするとき、一括で完了にする対象(done / cancelled は対象外)
+OPEN_STATUSES = ("inbox", "next", "waiting", "someday")
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -23,6 +28,9 @@ class ProjectUpdate(BaseModel):
 
     name: Name | None = None
     description: str | None = None
+    # True で完了、False で未完了に戻す。未完了タスクが残るときは complete_tasks が必要
+    completed: bool | None = None
+    complete_tasks: bool = False
 
 
 class ProjectOut(BaseModel):
@@ -31,6 +39,7 @@ class ProjectOut(BaseModel):
     id: int
     name: str
     description: str | None
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
     task_count: int = 0
@@ -94,12 +103,42 @@ def create_project(body: ProjectCreate, session: SessionDep) -> ProjectOut:
     return _out_for(session, project.id)
 
 
+def _set_completed(session, project: Project, completed: bool, complete_tasks: bool) -> None:
+    """完了・未完了を切り替える。未完了タスクの一括完了も同じトランザクションで行う。"""
+    if not completed:
+        project.completed_at = None
+        return
+    if project.completed_at is not None:
+        return
+    open_tasks = session.scalars(
+        select(Task).where(Task.project_id == project.id, Task.status.in_(OPEN_STATUSES))
+    ).all()
+    if open_tasks and not complete_tasks:
+        raise HTTPException(
+            409,
+            {
+                "message": "未完了のタスクが残っています",
+                "open_task_count": len(open_tasks),
+            },
+        )
+    try:
+        for task in open_tasks:
+            transition(task, "done")
+            add_log(session, task, "completed")
+    except InvalidTransition as e:
+        session.rollback()
+        raise HTTPException(409, str(e)) from e
+    project.completed_at = datetime.now(UTC)
+
+
 @router.patch("/{project_id}", response_model=ProjectOut)
 def update_project(project_id: int, body: ProjectUpdate, session: SessionDep) -> ProjectOut:
     project = _get_or_404(session, project_id)
-    values = body.model_dump(exclude_unset=True)
+    values = body.model_dump(exclude_unset=True, exclude={"completed", "complete_tasks"})
     if "name" in values and values["name"] is None:
         raise HTTPException(422, "name は null にできません")
+    if body.completed is not None:
+        _set_completed(session, project, body.completed, body.complete_tasks)
     for key, value in values.items():
         setattr(project, key, value)
     session.commit()

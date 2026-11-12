@@ -1,5 +1,6 @@
 "use client";
 
+import { assignableProjects } from "@/lib/projects";
 import { createPortal } from "react-dom";
 import { HabitSheet, type HabitSheetProps } from "./HabitSheet";
 import { useOrganize } from "./OrganizeContext";
@@ -25,7 +26,10 @@ export function HabitSheetHost({
     <HabitSheet
       {...props}
       variant={desktop ? "panel" : "sheet"}
-      projects={projects}
+      projects={assignableProjects(
+        projects,
+        props.habit?.project_id ?? props.seed?.projectId,
+      )}
     />
   ) : null;
 

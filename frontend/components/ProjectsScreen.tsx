@@ -11,10 +11,13 @@ import {
 import {
   byProjectOrder,
   groupByStatus,
+  isProjectDone,
   movedOrder,
+  openTaskCount,
   projectProgress,
   type ProjectSummary,
   type ProjectTask,
+  visibleProjects,
 } from "@/lib/projects";
 import { useOrganize } from "./OrganizeContext";
 import {
@@ -33,14 +36,21 @@ const PREFIX = "プロジェクト";
 
 /** 整理画面のプロジェクト。一覧(進捗・件数)と、選んだプロジェクトの所属タスクの管理・並べ替え。 */
 export function ProjectsScreen() {
-  const { filters, clearFilters, refreshProjects, refreshCounts, showToast } =
-    useOrganize();
+  const {
+    filters,
+    clearFilters,
+    refreshProjects,
+    refreshCounts,
+    showToast,
+    showCompleted,
+  } = useOrganize();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [load, setLoad] = useState<Load>("loading");
   const [selId, setSelId] = useState<number | null>(null);
   const [form, setForm] = useState<Form | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const busy = useRef(false);
 
@@ -71,7 +81,11 @@ export function ProjectsScreen() {
     return () => window.removeEventListener(TASK_ADDED_EVENT, onAdded);
   }, [fetchAll]);
 
-  const selected = projects.find((p) => p.id === selId) ?? null;
+  const listed = useMemo(
+    () => visibleProjects(projects, showCompleted),
+    [projects, showCompleted],
+  );
+  const selected = listed.find((p) => p.id === selId) ?? null;
   const owned = useMemo(
     () => tasks.filter((t) => t.project_id === selected?.id),
     [tasks, selected],
@@ -85,8 +99,10 @@ export function ProjectsScreen() {
     filters.status !== "" ||
     filters.pri !== "" ||
     filters.sort !== DEFAULT_FILTERS.sort;
+  const completed = selected ? isProjectDone(selected) : false;
   const candidates = tasks.filter(
     (t) =>
+      !completed &&
       t.project_id !== selected?.id &&
       t.status !== "done" &&
       t.status !== "cancelled",
@@ -156,6 +172,61 @@ export function ProjectsScreen() {
       setSelId(null);
       refreshCounts();
     }
+  };
+
+  const reopen = async (p: ProjectSummary, restoreIds: number[] = []) => {
+    const ok = await run(async () => {
+      await apiFetch(`/projects/${p.id}`, {
+        method: "PATCH",
+        body: { completed: false },
+      });
+      for (const id of restoreIds)
+        await apiFetch(`/tasks/${id}/transition`, {
+          method: "POST",
+          body: { status: "next" },
+        });
+    }, "未完了に戻せませんでした。もう一度お試しください");
+    if (ok) refreshCounts();
+    return ok;
+  };
+
+  /** 完了にする。未完了タスクがあれば withTasks が true のときだけ一括で完了にする。 */
+  const complete = async (p: ProjectSummary, withTasks: boolean) => {
+    const targets = withTasks
+      ? tasks
+          .filter(
+            (t) =>
+              t.project_id === p.id &&
+              t.status !== "done" &&
+              t.status !== "cancelled",
+          )
+          .map((t) => t.id)
+      : [];
+    const ok = await run(
+      () =>
+        apiFetch(`/projects/${p.id}`, {
+          method: "PATCH",
+          body: { completed: true, complete_tasks: withTasks },
+        }),
+      "完了にできませんでした。もう一度お試しください",
+    );
+    setConfirmComplete(false);
+    if (!ok) return;
+    refreshCounts();
+    // 完了済みを表示しない設定なら、一覧から消えるので選択を外す
+    if (!showCompleted) setSelId(null);
+    showToast({
+      msg: `${PREFIX}「${p.name}」を完了にしました`,
+      undo: () => void reopen(p, targets),
+    });
+  };
+
+  const requestComplete = async (p: ProjectSummary) => {
+    if (openTaskCount(tasks.filter((t) => t.project_id === p.id)) > 0) {
+      setConfirmComplete(true);
+      return;
+    }
+    await complete(p, false);
   };
 
   const setMembership = (task: ProjectTask, projectId: number | null) =>
@@ -286,6 +357,45 @@ export function ProjectsScreen() {
           refreshCounts();
         }}
       />
+      {confirmComplete && selected && (
+        <div
+          className={styles.backdrop}
+          onClick={() => setConfirmComplete(false)}
+        >
+          <div
+            className={styles.dialog}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="project-complete-title"
+            aria-describedby="project-complete-desc"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div id="project-complete-title" className={styles.dialogTitle}>
+              「{selected.name}」を完了にしますか?
+            </div>
+            <div id="project-complete-desc" className={styles.dialogText}>
+              未完了のタスクが{" "}
+              <span className={styles.mono}>{openTaskCount(owned)}</span>{" "}
+              件あります。すべて完了にして{PREFIX}を完了にしますか?
+            </div>
+            <div className={styles.formActions}>
+              <button
+                className={styles.link}
+                onClick={() => setConfirmComplete(false)}
+              >
+                いいえ
+              </button>
+              <button
+                className={styles.primary}
+                onClick={() => void complete(selected, true)}
+                autoFocus
+              >
+                はい
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmDelete && selected && (
         <div
           className={styles.backdrop}
@@ -326,7 +436,7 @@ export function ProjectsScreen() {
 
       <div className={styles.grid} data-selected={selected ? "" : undefined}>
         <div className={styles.projects}>
-          {projects.map((p) => {
+          {listed.map((p) => {
             const pr = projectProgress(
               tasks.filter((t) => t.project_id === p.id),
             );
@@ -335,13 +445,31 @@ export function ProjectsScreen() {
                 key={p.id}
                 className={styles.project}
                 data-on={selected?.id === p.id ? "" : undefined}
+                data-done={isProjectDone(p) ? "" : undefined}
                 onClick={() => {
                   setSelId(p.id);
                   setForm(null);
                 }}
               >
                 <span className={styles.projectTop}>
-                  <span className={styles.projectName}>{p.name}</span>
+                  <span className={styles.projectName}>
+                    {isProjectDone(p) && (
+                      <svg
+                        aria-label="完了"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      </svg>
+                    )}
+                    <span>{p.name}</span>
+                  </span>
                   <span className={styles.mono}>
                     {pr.done}/{pr.total}
                   </span>
@@ -367,7 +495,7 @@ export function ProjectsScreen() {
         </div>
 
         <div className={styles.detail}>
-          {projects.length === 0 ? (
+          {listed.length === 0 && projects.length === 0 ? (
             <OrganizeEmpty
               title={`${PREFIX}はまだありません`}
               text="関連するタスクをまとめると、進み具合が見えるようになります。"
@@ -387,7 +515,13 @@ export function ProjectsScreen() {
                   ‹ {PREFIX}一覧
                 </button>
                 <div className={styles.headerTop}>
-                  <span className={styles.headerName}>{selected.name}</span>
+                  <span
+                    className={styles.headerName}
+                    data-done={completed ? "" : undefined}
+                  >
+                    {selected.name}
+                  </span>
+                  {completed && <span className={styles.badge}>完了済み</span>}
                   <span className={styles.headerProgress}>
                     進捗{" "}
                     <span className={styles.mono}>
@@ -425,6 +559,21 @@ export function ProjectsScreen() {
                     >
                       削除
                     </button>
+                    {completed ? (
+                      <button
+                        className={styles.action}
+                        onClick={() => void reopen(selected)}
+                      >
+                        未完了に戻す
+                      </button>
+                    ) : (
+                      <button
+                        className={styles.action}
+                        onClick={() => void requestComplete(selected)}
+                      >
+                        完了にする
+                      </button>
+                    )}
                     <select
                       className={styles.select}
                       value=""
