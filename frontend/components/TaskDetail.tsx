@@ -1,5 +1,6 @@
 "use client";
 
+import { assignableProjects } from "@/lib/projects";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -54,6 +55,7 @@ interface TaskData {
 interface ProjectOption {
   id: number;
   name: string;
+  completed_at?: string | null;
 }
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ready" };
@@ -914,7 +916,7 @@ export function TaskDetail({
                       onChange={(e) => pickProject(e.target.value)}
                     >
                       <option value="">なし</option>
-                      {projects.map((p) => (
+                      {assignableProjects(projects, projectId).map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>

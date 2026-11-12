@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  assignableProjects,
   byProjectOrder,
   groupByStatus,
   movedOrder,
+  openTaskCount,
   projectProgress,
   type ProjectTask,
+  visibleProjects,
 } from "./projects.ts";
 
 const t = (id: number, o: Partial<ProjectTask> = {}): ProjectTask => ({
@@ -63,4 +66,46 @@ test("並べ替え: 同じグループ内でだけ動く", () => {
   assert.equal(movedOrder(l, 1, -1), null);
   assert.equal(movedOrder(l, 4, 1), null);
   assert.equal(movedOrder(l, 99, 1), null);
+});
+
+const proj = (id: number, completed_at: string | null = null) => ({
+  id,
+  name: `p${id}`,
+  completed_at,
+});
+
+test("一覧: 既定は未完了のみ、完了も表示で完了済みを含める", () => {
+  const ps = [proj(1), proj(2, "2026-11-12T00:00:00Z"), proj(3)];
+  assert.deepEqual(
+    visibleProjects(ps, false).map((p) => p.id),
+    [1, 3],
+  );
+  assert.deepEqual(
+    visibleProjects(ps, true).map((p) => p.id),
+    [1, 2, 3],
+  );
+});
+
+test("割り当て先: 完了済みは外し、現在の所属だけ残す", () => {
+  const ps = [proj(1), proj(2, "2026-11-12T00:00:00Z")];
+  assert.deepEqual(
+    assignableProjects(ps).map((p) => p.id),
+    [1],
+  );
+  assert.deepEqual(
+    assignableProjects(ps, 2).map((p) => p.id),
+    [1, 2],
+  );
+});
+
+test("未完了タスク数: done と cancelled は数えない", () => {
+  assert.equal(
+    openTaskCount([
+      { status: "next" },
+      { status: "waiting" },
+      { status: "done" },
+      { status: "cancelled" },
+    ]),
+    2,
+  );
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { assignableProjects } from "@/lib/projects";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import {
@@ -387,7 +388,7 @@ export function InboxScreen() {
             }}
           >
             <option value="">プロジェクトを設定</option>
-            {projects.map((p) => (
+            {assignableProjects(projects).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>

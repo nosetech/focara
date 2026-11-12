@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
-from focara.db.models import Task, TaskLog
+from focara.db.models import Project, Task, TaskLog
 from focara.habit_generator import slot_for_datetime
 from focara.task_status import (
     InvalidTransition,
@@ -112,6 +112,15 @@ def sync_slot_with_fixed(task: Task, requested_slot: str | None = None, *, given
     task.time_slot = slot
 
 
+def ensure_project_open(session: Session, project_id: int | None) -> None:
+    """完了済みのプロジェクトにはタスク・習慣を割り当てられない(422)。"""
+    if project_id is None:
+        return
+    project = session.get(Project, project_id)
+    if project is not None and project.completed_at is not None:
+        raise HTTPException(422, "完了済みのプロジェクトには割り当てられません")
+
+
 def _commit(session: Session) -> None:
     try:
         session.commit()
@@ -149,6 +158,7 @@ def get_task(task_id: int, session: SessionDep) -> Task:
 
 @router.post("", response_model=TaskOut, status_code=201)
 def create_task(body: TaskCreate, session: SessionDep) -> Task:
+    ensure_project_open(session, body.project_id)
     task = Task(**_to_columns(body.model_dump()))
     if task.status != "waiting" and (
         task.wait_condition is not None or task.wait_until is not None
@@ -180,6 +190,7 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
     ):
         raise HTTPException(422, "待ち条件は waiting のタスクにのみ指定できます")
     if "project_id" in values and values["project_id"] != task.project_id:
+        ensure_project_open(session, values["project_id"])
         task.project_order = None
     for key, value in _to_columns(values).items():
         setattr(task, key, value)

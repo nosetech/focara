@@ -398,3 +398,43 @@
     display: none;
   }
 }
+
+.projectName {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.projectName > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projectName svg {
+  flex: none;
+}
+
+.project[data-done] .projectName {
+  color: var(--ink3);
+}
+
+.project[data-done] .bar i {
+  background: var(--ink3);
+}
+
+.headerName[data-done] {
+  color: var(--ink3);
+}
+
+.badge {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--sunk);
+  color: var(--ink2);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}

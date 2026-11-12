@@ -11,6 +11,33 @@ export interface ProjectSummary {
   id: number;
   name: string;
   description: string | null;
+  /** 完了日時。null なら未完了 */
+  completed_at: string | null;
+}
+
+/** 完了しているか(未完了なら false) */
+export const isProjectDone = (p: { completed_at?: string | null }) =>
+  p.completed_at != null;
+
+/** 一覧に出すプロジェクト。完了済みは showCompleted のときだけ含める。 */
+export function visibleProjects<T extends { completed_at?: string | null }>(
+  projects: readonly T[],
+  showCompleted: boolean,
+): T[] {
+  return projects.filter((p) => showCompleted || !isProjectDone(p));
+}
+
+/** タスク・習慣の割り当て先に選べるプロジェクト。完了済みは外す(現在の所属 keepId は残す)。 */
+export function assignableProjects<
+  T extends { id: number; completed_at?: string | null },
+>(projects: readonly T[], keepId?: number | null): T[] {
+  return projects.filter((p) => !isProjectDone(p) || p.id === keepId);
+}
+
+/** 完了にするとき一括で完了にする、未完了タスクの件数(done / cancelled は対象外)。 */
+export function openTaskCount(tasks: readonly { status: string }[]): number {
+  return tasks.filter((t) => t.status !== "done" && t.status !== "cancelled")
+    .length;
 }
 
 /** 詳細での表示順。完了は最後にまとめる(デザインのグループ順)。 */

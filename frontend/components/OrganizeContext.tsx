@@ -7,6 +7,7 @@ import type { ToastMessage } from "./Toast";
 export interface OrganizeProject {
   id: number;
   name: string;
+  completed_at?: string | null;
 }
 
 /** 整理画面の共通シェルが持つ状態(絞り込み・プロジェクト・詳細パネル・トースト)を各画面へ渡す。 */
@@ -15,6 +16,8 @@ export interface OrganizeContextValue {
   clearFilters: () => void;
   projects: OrganizeProject[];
   refreshProjects: () => void;
+  /** プロジェクト画面で完了済みも表示するか(既定は未完了のみ) */
+  showCompleted: boolean;
   /** 詳細パネルの描画先。デスクトップのみ存在する */
   panelEl: HTMLElement | null;
   /** 日付ナビで選んでいる日 */
