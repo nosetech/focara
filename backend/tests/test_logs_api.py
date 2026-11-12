@@ -153,3 +153,19 @@ def test_logs_date_range(client):
     future = (today + timedelta(days=1)).isoformat()
     assert client.get(f"/api/logs?from_date={future}").json() == []
     assert client.get(f"/api/logs?from_date={future}&to_date={day}").status_code == 422
+
+
+def test_postpone_fixed_task_clears_fixed_time_and_moves_to_slot_end(client):
+    from datetime import datetime
+
+    at = datetime(2026, 10, 20, 9, 0).astimezone().isoformat()
+    a = client.post(
+        "/api/tasks",
+        json={"title": "a", "status": "next", "scheduled_date": "2026-10-20", "fixed_at": at},
+    ).json()
+    assert a["time_slot"] == "morning"
+    res = client.post(
+        f"/api/tasks/{a['id']}/postpone", json={"target": "end_of_day", "time_slot": "afternoon"}
+    ).json()
+    assert res["fixed_at"] is None and res["fixed_end_at"] is None
+    assert res["time_slot"] == "afternoon"

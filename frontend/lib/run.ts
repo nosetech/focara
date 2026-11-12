@@ -1,3 +1,5 @@
+import { compareOrder } from "./order.ts";
+
 export type TimeSlot = "morning" | "afternoon" | "evening";
 
 export interface RunTask {
@@ -74,8 +76,21 @@ export interface RunView {
   remainMinutes: number;
 }
 
-/** APIは時間帯→実行順で返すので、その順序を保ったまま完了/未完了に分ける。 */
-export function buildRunView(tasks: RunTask[]): RunView {
+const SLOT_RANK: Record<TimeSlot, number> = {
+  morning: 0,
+  afternoon: 1,
+  evening: 2,
+};
+
+/** 枠(午前中→午後→夜、未設定は末尾)→ 予定時刻あり(開始順)→ 実行順に並べる。 */
+export function sortRunTasks(tasks: readonly RunTask[]): RunTask[] {
+  const rank = (t: RunTask) => (t.time_slot ? SLOT_RANK[t.time_slot] : 99);
+  return [...tasks].sort((a, b) => rank(a) - rank(b) || compareOrder(a, b));
+}
+
+/** APIと同じ並び(枠→予定時刻→実行順)にそろえたうえで、完了/未完了に分ける。 */
+export function buildRunView(input: RunTask[]): RunView {
+  const tasks = sortRunTasks(input);
   const done = tasks.filter((t) => t.status === "done");
   // キャンセルした習慣の子は、完了と同様にキューから外し、進捗の母数にも含めない
   const live = tasks.filter((t) => t.status !== "cancelled");

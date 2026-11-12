@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   insertAt,
+  isAssignable,
   isCandidate,
   slotTasks,
   totalEstimate,
@@ -18,6 +19,7 @@ const t = (id: number, o: Partial<AssignTask> = {}): AssignTask => ({
   scheduled_date: null,
   time_slot: null,
   run_order: null,
+  fixed_at: null,
   habit_id: null,
   ...o,
 });
@@ -70,4 +72,28 @@ test("unslotted: 日付ありで時間帯未設定のみ", () => {
     unslotted(list).map((x) => x.id),
     [1, 3],
   );
+});
+
+test("slotTasks / unslotted: 予定時刻ありを先頭(開始順)に並べ、動かせるのは予定時刻なしだけ", () => {
+  const sorted = slotTasks(
+    [
+      t(1, { time_slot: "morning", run_order: 0 }),
+      t(2, {
+        time_slot: "morning",
+        run_order: 1,
+        fixed_at: "2026-10-20T01:00:00Z",
+      }),
+      t(3, {
+        time_slot: "morning",
+        run_order: 2,
+        fixed_at: "2026-10-19T23:00:00Z",
+      }),
+    ],
+    "morning",
+  );
+  assert.deepEqual(
+    sorted.map((x) => x.id),
+    [3, 2, 1],
+  );
+  assert.deepEqual(sorted.map(isAssignable), [false, false, true]);
 });

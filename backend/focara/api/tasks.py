@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
 from focara.db.models import Task, TaskLog
+from focara.habit_generator import slot_for_datetime
 from focara.task_status import (
     InvalidTransition,
     MissingWaitCondition,
@@ -96,6 +97,21 @@ def _check_fixed_range(task: Task) -> None:
         raise HTTPException(422, "fixed_end_at は fixed_at より後にしてください")
 
 
+def sync_slot_with_fixed(task: Task, requested_slot: str | None = None, *, given: bool) -> None:
+    """予定時刻(開始)があるタスクの time_slot を、開始時刻から決まる値にそろえる。
+
+    time_slot が明示指定され、開始時刻と食い違う場合は 422 にする(given は指定の有無)。
+    """
+    if task.fixed_at is None:
+        return
+    slot = slot_for_datetime(task.fixed_at)
+    if given and requested_slot != slot:
+        raise HTTPException(
+            422, "予定時刻があるタスクの time_slot は、開始時刻から決まります(変更できません)"
+        )
+    task.time_slot = slot
+
+
 def _commit(session: Session) -> None:
     try:
         session.commit()
@@ -144,6 +160,7 @@ def create_task(body: TaskCreate, session: SessionDep) -> Task:
         except InvalidTransition as e:
             raise HTTPException(422, str(e)) from e
     _check_fixed_range(task)
+    sync_slot_with_fixed(task, task.time_slot, given="time_slot" in body.model_fields_set)
     session.add(task)
     _commit(session)
     return task
@@ -168,6 +185,7 @@ def update_task(task_id: int, body: TaskUpdate, session: SessionDep) -> Task:
         setattr(task, key, value)
     try:
         _check_fixed_range(task)
+        sync_slot_with_fixed(task, values.get("time_slot"), given="time_slot" in values)
     except HTTPException:
         session.rollback()
         raise

@@ -131,7 +131,6 @@ export function TaskDetail({
   const [fixedError, setFixedError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
-  const hasSlot = useRef(false);
 
   const seq = useRef(0);
   const pending = useRef(0);
@@ -189,7 +188,6 @@ export function TaskDetail({
       setCond(task.wait_condition ?? "");
       setMemo(task.memo ?? "");
       setFixed(f);
-      hasSlot.current = task.time_slot != null;
       rowIds.current = new Map(props.map((p) => [`p${p.id}`, p.id]));
       const drafts = props.map(toDraft);
       setRows(drafts);
@@ -399,21 +397,20 @@ export function TaskDetail({
     }
     setFixedError(null);
     const body: Record<string, unknown> = { ...result.body };
-    // 時間帯が未設定なら、開始時刻から実行画面で並ぶ枠を決める
-    if (result.slot && !hasSlot.current) {
+    // 予定時刻があるときの枠は、開始時刻から決まる(既に枠があっても更新する)
+    if (result.slot) {
       body.time_slot = result.slot;
       setSlot(result.slot);
     }
     void run("fixed", async () => {
       await apiFetch(`/tasks/${taskId}`, { method: "PATCH", body });
-      if (result.slot) hasSlot.current = true;
     });
   };
 
   const pickSlot = (key: TimeSlot) => {
+    if (slotLocked) return;
     const next = slot === key ? null : key;
     setSlot(next);
-    hasSlot.current = next != null;
     void patchTask("slot", { time_slot: next });
   };
 
@@ -646,6 +643,9 @@ export function TaskDetail({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // 予定時刻(開始)があるタスクの枠は、開始時刻に連動して決まり、変更できない
+  const slotLocked = fixed.start !== "";
 
   // この回だけ日付・枠を既定から変えているか
   const occChanged =
@@ -988,6 +988,7 @@ export function TaskDetail({
                       <button
                         key={s.key}
                         data-on={slot === s.key ? "" : undefined}
+                        disabled={slotLocked}
                         onClick={() => pickSlot(s.key)}
                       >
                         {s.label}
@@ -995,6 +996,11 @@ export function TaskDetail({
                     ))}
                   </div>
                 </div>
+                {slotLocked && (
+                  <div className={styles.slotNote}>
+                    予定時刻に連動しています。変更するには予定時刻を外してください。
+                  </div>
+                )}
 
                 {isChild && (
                   <div className={styles.occRow}>
@@ -1007,13 +1013,18 @@ export function TaskDetail({
                       <button
                         className={styles.occReset}
                         onClick={() => {
+                          // 予定時刻があるときは、枠も習慣の予定時刻に連動して戻る
                           saveFixed({
-                            ...fixed,
                             date: occurrence ?? fixed.date,
+                            start: habit?.fixed_start_time ?? "",
+                            end: habit?.fixed_end_time ?? "",
                           });
-                          if (habit && habit.time_slot !== slot) {
+                          if (
+                            habit &&
+                            !habit.fixed_start_time &&
+                            habit.time_slot !== slot
+                          ) {
                             setSlot(habit.time_slot);
-                            hasSlot.current = habit.time_slot != null;
                             void patchTask("slot", {
                               time_slot: habit.time_slot,
                             });

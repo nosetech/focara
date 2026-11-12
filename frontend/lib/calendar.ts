@@ -1,4 +1,5 @@
 import { addDays, mondayOf } from "./organize.ts";
+import { sortByOrder } from "./order.ts";
 import { toDateParam, type TimeSlot } from "./run.ts";
 
 /** カレンダーに出すタスク。fixed_at があれば日時が決まる予定。 */
@@ -32,19 +33,9 @@ export function cellTasks(
   day: string,
   slot: TimeSlot | null,
 ): CalendarTask[] {
-  return tasks
-    .filter((t) => t.scheduled_date === day && t.time_slot === slot)
-    .sort((a, b) => {
-      if (!!a.fixed_at !== !!b.fixed_at) return a.fixed_at ? -1 : 1;
-      if (a.fixed_at && b.fixed_at)
-        return (
-          new Date(a.fixed_at).getTime() - new Date(b.fixed_at).getTime() ||
-          a.id - b.id
-        );
-      return (
-        (a.run_order ?? Infinity) - (b.run_order ?? Infinity) || a.id - b.id
-      );
-    });
+  return sortByOrder(
+    tasks.filter((t) => t.scheduled_date === day && t.time_slot === slot),
+  );
 }
 
 /** 日の件数(時間帯未設定のタスクも含む)。 */

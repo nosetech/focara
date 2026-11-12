@@ -15,6 +15,7 @@ import {
   formatMinutes,
   formatNow,
   progressPercent,
+  sortRunTasks,
   type RunTask,
 } from "./run.ts";
 
@@ -141,5 +142,29 @@ test("queue[0] は優先度に関係なく並び順どおりに決まる", () =>
   assert.deepEqual(
     v.queue.map((x) => x.id),
     [1, 2, 3],
+  );
+});
+
+test("buildRunView / sortRunTasks: 枠の中は予定時刻あり(開始順)→ 実行順", () => {
+  const at = (id: number, iso: string | null, order: number | null) => ({
+    ...t(id, "next", null),
+    fixed_at: iso,
+    run_order: order,
+  });
+  const evening = { ...at(6, null, 0), time_slot: "evening" as const };
+  const v = buildRunView([
+    evening,
+    at(1, null, 0),
+    at(2, "2026-10-20T07:00:00Z", 1),
+    at(3, "2026-10-20T01:00:00Z", 2),
+    at(4, null, null),
+  ]);
+  assert.deepEqual(
+    v.queue.map((x) => x.id),
+    [3, 2, 1, 4, 6],
+  );
+  assert.deepEqual(
+    sortRunTasks([evening, at(1, null, 0)]).map((x) => x.id),
+    [1, 6],
   );
 });
