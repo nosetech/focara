@@ -432,7 +432,9 @@ export function HabitSheet({
   };
 
   const rule = draft.rule;
-  const paused = !isNew && current != null && !current.active;
+  const ended = !isNew && current?.ended === true;
+  const paused = !isNew && current != null && !current.active && !ended;
+  const finishing = !isNew && !ended && current?.finishing === true;
   const dots = current ? recentDots(current.recent, today) : [];
   const { done, total: counted, cancelled: cancelledCount } = dotCounts(dots);
   const days = rule.type === "weekly" ? rule.days : [];
@@ -476,7 +478,7 @@ export function HabitSheet({
                   role="status"
                   style={{ gap: 6 }}
                 >
-                  {SAVE_LABEL[save]}
+                  {ended ? "読み取り専用" : SAVE_LABEL[save]}
                 </span>
               </>
             )}
@@ -506,462 +508,520 @@ export function HabitSheet({
               {error}
             </div>
           )}
-          <textarea
-            ref={titleRef}
-            className={styles.titleInput}
-            value={draft.title}
-            rows={2}
-            placeholder="習慣の名前(例: 朝の散歩)"
-            aria-label="習慣の名前"
-            onChange={(e) => change({ title: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
-            }}
-          />
-
-          {paused && (
-            <div className={own.paused}>
-              <span>
-                <b>一時停止中</b> · 再開するまで子タスクは作られません
-              </span>
-              <button
-                className={styles.secondary}
-                style={{ height: 36, padding: "0 14px", borderRadius: 9 }}
-                disabled={busy}
-                onClick={() => void togglePause()}
-              >
-                再開
-              </button>
-            </div>
-          )}
-
-          {!isNew && (
-            <div className={own.stat}>
-              <div className={own.dots} aria-label="直近7回の実施状況">
-                {dots.map((x, i) => (
-                  <i key={i} data-state={x} title={DOT_TITLE[x]} />
-                ))}
-              </div>
-              <span>
-                直近7回 {done}/{counted}
-                {cancelledCount > 0 && `(キャンセル${cancelledCount}を含む)`} ·
-                累計 {total}回
-              </span>
-            </div>
-          )}
-
-          <div className={styles.list}>
-            <div className={styles.item}>
-              <span className={styles.itemLabel}>プロジェクト</span>
-              <select
-                className={`${styles.input} ${styles.grow}`}
-                value={draft.projectId ?? ""}
-                aria-label="プロジェクト"
-                onChange={(e) =>
-                  change({
-                    projectId: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              >
-                <option value="">なし</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className={`${styles.item} ${styles.tall}`}>
-              <span className={styles.itemLabel}>優先度</span>
-              <div className={styles.seg} role="group" aria-label="優先度">
-                {PRIORITIES.map((p) => (
-                  <button
-                    key={p.value}
-                    style={{ width: 52 }}
-                    data-on={draft.priority === p.value ? "" : undefined}
-                    onClick={() =>
-                      change({
-                        priority: draft.priority === p.value ? null : p.value,
-                      })
-                    }
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={styles.item}>
-              <span className={styles.itemLabel}>見積もり</span>
-              <input
-                type="number"
-                min={0}
-                step={5}
-                className={`${styles.input} ${styles.mono}`}
-                style={{ width: 80 }}
-                value={draft.estimate ?? ""}
-                aria-label="見積もり(分)"
-                onChange={(e) =>
-                  change({
-                    estimate:
-                      e.target.value === "" ? null : Number(e.target.value),
-                  })
-                }
-              />
-              <span className={styles.unit}>分</span>
-            </div>
-            <div className={own.block}>
-              <div
-                className={own.blockRow}
-                style={{ alignItems: "flex-start" }}
-              >
-                <span
-                  className={styles.itemLabel}
-                  style={{ lineHeight: "36px" }}
+          {ended && current && (
+            <div className={own.endedBox} role="status">
+              <span className={own.endedIcon} aria-hidden="true">
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  プロパティ
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              </span>
+              <div className={own.endedText}>
+                <b>終了</b>
+                <span>
+                  この習慣は終了しました。すべての子タスクが完了したため、編集や再開はできません。
                 </span>
-                <PropertyRows
-                  props={draft.properties}
-                  onChange={(properties) => change({ properties })}
-                />
-              </div>
-            </div>
-            <div className={own.block}>
-              <div className={own.blockRow}>
-                <span className={styles.itemLabel}>予定時刻</span>
-                <div className={own.timeRow}>
-                  <span className={own.tiny}>開始</span>
-                  <input
-                    type="time"
-                    className={`${styles.input} ${styles.mono}`}
-                    value={draft.fixedStart}
-                    aria-label="開始時刻"
-                    onChange={(e) => changeStart(e.target.value)}
-                  />
-                  <span className={styles.unit}>〜</span>
-                  <span className={own.tiny}>終了</span>
-                  <input
-                    type="time"
-                    className={`${styles.input} ${styles.mono}`}
-                    style={{
-                      opacity: draft.fixedStart ? 1 : 0.45,
-                      borderColor: endBad != null ? "var(--danger)" : undefined,
-                    }}
-                    value={endBad ?? draft.fixedEnd}
-                    disabled={!draft.fixedStart}
-                    aria-label="終了時刻"
-                    aria-invalid={endBad != null ? true : undefined}
-                    onChange={(e) => changeEnd(e.target.value)}
-                  />
-                </div>
-              </div>
-              {(endBad != null || !draft.fixedStart) && (
-                <span
-                  className={own.timeNote}
-                  style={
-                    endBad != null ? { color: "var(--danger)" } : undefined
-                  }
-                  role={endBad != null ? "alert" : undefined}
-                >
-                  {endBad != null
-                    ? "終了は開始より後の時刻にしてください"
-                    : "開始を入れると終了も指定できます(どちらも任意)"}
-                </span>
-              )}
-            </div>
-            <div className={`${styles.item} ${styles.tall}`}>
-              <span className={styles.itemLabel}>既定の枠</span>
-              <div
-                className={`${styles.seg} ${styles.grow}`}
-                role="group"
-                aria-label="既定の枠"
-                style={draft.fixedStart ? { opacity: 0.45 } : undefined}
-              >
-                {SLOTS.map((s) => (
-                  <button
-                    key={s.key}
-                    disabled={draft.fixedStart !== ""}
-                    data-on={slotShown === s.key ? "" : undefined}
-                    onClick={() =>
-                      change({ slot: draft.slot === s.key ? null : s.key })
-                    }
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {draft.fixedStart !== "" && (
-              <div className={own.slotNote}>
-                開始時刻から{slotName(slotShown)}に作成します
-              </div>
-            )}
-          </div>
-
-          <div className={styles.labelRow}>
-            <span className={styles.label}>メモ</span>
-            <span className={styles.hint}>Markdown</span>
-          </div>
-          <textarea
-            className={styles.memo}
-            value={draft.memo}
-            rows={5}
-            aria-label="メモ"
-            placeholder="子タスクに引き継ぐメモ(手順、リンクなど)"
-            onChange={(e) => change({ memo: e.target.value })}
-          />
-          <div className={own.propNote} style={{ marginTop: 6 }}>
-            子タスクの作成時に引き継がれます。編集すると、今日以降の未完了の子にも反映されます
-          </div>
-
-          <div className={styles.label} style={{ marginTop: 22 }}>
-            繰り返し
-          </div>
-          <div
-            className={styles.seg}
-            style={{ marginTop: 8 }}
-            role="group"
-            aria-label="繰り返し"
-          >
-            {RULE_TYPES.map((t) => (
-              <button
-                key={t.key}
-                data-on={rule.type === t.key ? "" : undefined}
-                onClick={() =>
-                  change({ rule: defaultRule(t.key, draft.start, rule) })
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {rule.type === "weekly" && (
-            <div className={styles.field} style={{ marginTop: 14 }}>
-              <span className={styles.fieldLabel}>曜日(複数選択)</span>
-              <div className={styles.days}>
-                {DAY_ORDER.map((i) => {
-                  const on = days.includes(i);
-                  return (
-                    <button
-                      key={i}
-                      data-on={on ? "" : undefined}
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (on && days.length === 1) return;
-                        setRule({
-                          days: on ? days.filter((d) => d !== i) : [...days, i],
-                        });
-                      }}
-                    >
-                      {WEEKDAYS[i]}
-                    </button>
-                  );
-                })}
+                <small>累計 {total}回</small>
               </div>
             </div>
           )}
+          <fieldset className={own.form} disabled={ended}>
+            <textarea
+              ref={titleRef}
+              className={styles.titleInput}
+              value={draft.title}
+              rows={2}
+              placeholder="習慣の名前(例: 朝の散歩)"
+              aria-label="習慣の名前"
+              onChange={(e) => change({ title: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+              }}
+            />
 
-          {rule.type === "monthly" && (
-            <div className={styles.field} style={{ marginTop: 14 }}>
-              <span className={styles.fieldLabel}>日にち</span>
-              <div className={styles.grid}>
-                {Array.from({ length: 31 }, (_, k) => k + 1).map((d) => (
-                  <button
-                    key={d}
-                    className={styles.cell}
-                    data-on={rule.mday === d ? "" : undefined}
-                    onClick={() => setRule({ mday: d })}
-                  >
-                    {d}
-                  </button>
-                ))}
+            {paused && (
+              <div className={own.paused}>
+                <span>
+                  <b>一時停止中</b> · 再開するまで子タスクは作られません
+                </span>
                 <button
-                  className={`${styles.cell} ${styles.cellLast}`}
-                  data-on={rule.mday == null ? "" : undefined}
-                  onClick={() => setRule({ mday: null })}
+                  className={styles.secondary}
+                  style={{ height: 36, padding: "0 14px", borderRadius: 9 }}
+                  disabled={busy}
+                  onClick={() => void togglePause()}
                 >
-                  月末
+                  再開
                 </button>
               </div>
-              {mdayNote && (
-                <span className={styles.fieldNote}>
-                  その日がない月は月末に作成します。
+            )}
+
+            {!isNew && (
+              <div className={own.stat}>
+                <div className={own.dots} aria-label="直近7回の実施状況">
+                  {dots.map((x, i) => (
+                    <i key={i} data-state={x} title={DOT_TITLE[x]} />
+                  ))}
+                </div>
+                <span>
+                  直近7回 {done}/{counted}
+                  {cancelledCount > 0 &&
+                    `(キャンセル${cancelledCount}を含む)`}{" "}
+                  · 累計 {total}回
                 </span>
-              )}
-            </div>
-          )}
-
-          {rule.type === "yearly" && (
-            <div className={styles.field} style={{ marginTop: 14 }}>
-              <span className={styles.fieldLabel}>月と日</span>
-              <div className={own.ymd}>
-                <select
-                  className={`${styles.input} ${styles.mono}`}
-                  style={{ width: 84 }}
-                  value={rule.month}
-                  aria-label="月"
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    change({
-                      rule: {
-                        type: "yearly",
-                        month: m,
-                        day: Math.min(rule.day, maxDayOfMonth(m)),
-                      },
-                    });
-                  }}
-                >
-                  {Array.from({ length: 12 }, (_, k) => k + 1).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-                <span className={styles.unit}>月</span>
-                <select
-                  className={`${styles.input} ${styles.mono}`}
-                  style={{ width: 84, marginLeft: 6 }}
-                  value={rule.day}
-                  aria-label="日"
-                  onChange={(e) => setRule({ day: Number(e.target.value) })}
-                >
-                  {Array.from(
-                    { length: maxDayOfMonth(rule.month) },
-                    (_, k) => k + 1,
-                  ).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-                <span className={styles.unit}>日</span>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className={styles.list} style={{ marginTop: 18 }}>
-            <div className={styles.item}>
-              <span className={styles.itemLabel}>開始日</span>
-              <input
-                type="date"
-                className={`${styles.input} ${styles.mono} ${styles.grow}`}
-                value={draft.start}
-                aria-label="開始日"
-                onChange={(e) => change({ start: e.target.value })}
-              />
-            </div>
-            <div className={own.endBlock}>
-              <div className={own.endRow}>
-                <span className={styles.itemLabel}>終了条件</span>
-                <div
-                  className={`${styles.seg} ${styles.grow}`}
-                  role="group"
-                  aria-label="終了条件"
+            {finishing && current && (
+              <div className={own.finishing}>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  aria-hidden="true"
                 >
-                  {END_TYPES.map((t) => (
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 11v5M12 8h.01" />
+                </svg>
+                <span>
+                  新しい子タスクの生成は完了しました。残りの子タスクがすべて完了すると終了します
+                  {current.remaining > 0 && (
+                    <>
+                      (残り{" "}
+                      <span className={own.mono}>{current.remaining}</span> 件)
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className={styles.list}>
+              <div className={styles.item}>
+                <span className={styles.itemLabel}>プロジェクト</span>
+                <select
+                  className={`${styles.input} ${styles.grow}`}
+                  value={draft.projectId ?? ""}
+                  aria-label="プロジェクト"
+                  onChange={(e) =>
+                    change({
+                      projectId: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">なし</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={`${styles.item} ${styles.tall}`}>
+                <span className={styles.itemLabel}>優先度</span>
+                <div className={styles.seg} role="group" aria-label="優先度">
+                  {PRIORITIES.map((p) => (
                     <button
-                      key={t.key}
-                      style={{ whiteSpace: "nowrap" }}
-                      data-on={draft.end.type === t.key ? "" : undefined}
+                      key={p.value}
+                      style={{ width: 52 }}
+                      data-on={draft.priority === p.value ? "" : undefined}
                       onClick={() =>
                         change({
-                          end:
-                            t.key === "count"
-                              ? { type: "count", count: 30 }
-                              : t.key === "date"
-                                ? { type: "date", date: "" }
-                                : { type: "none" },
+                          priority: draft.priority === p.value ? null : p.value,
                         })
                       }
                     >
-                      {t.label}
+                      {p.label}
                     </button>
                   ))}
                 </div>
               </div>
-              {draft.end.type === "count" && (
-                <div className={own.endDetail}>
-                  <span className={styles.unit}>累計</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    className={`${styles.input} ${styles.mono}`}
-                    style={{ width: 80 }}
-                    value={draft.end.count ?? ""}
-                    aria-label="終了までの累計回数"
-                    onChange={(e) =>
-                      change({
-                        end: {
-                          type: "count",
-                          count:
-                            e.target.value === ""
-                              ? null
-                              : Math.max(1, Number(e.target.value)),
-                        },
-                      })
-                    }
+              <div className={styles.item}>
+                <span className={styles.itemLabel}>見積もり</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={5}
+                  className={`${styles.input} ${styles.mono}`}
+                  style={{ width: 80 }}
+                  value={draft.estimate ?? ""}
+                  aria-label="見積もり(分)"
+                  onChange={(e) =>
+                    change({
+                      estimate:
+                        e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+                <span className={styles.unit}>分</span>
+              </div>
+              <div className={own.block}>
+                <div
+                  className={own.blockRow}
+                  style={{ alignItems: "flex-start" }}
+                >
+                  <span
+                    className={styles.itemLabel}
+                    style={{ lineHeight: "36px" }}
+                  >
+                    プロパティ
+                  </span>
+                  <PropertyRows
+                    props={draft.properties}
+                    onChange={(properties) => change({ properties })}
                   />
-                  <span className={styles.unit}>回で終了</span>
                 </div>
-              )}
-              {draft.end.type === "date" && (
-                <div className={own.endDetail}>
-                  <input
-                    type="date"
-                    className={`${styles.input} ${styles.mono} ${styles.grow}`}
-                    min={draft.start}
-                    value={draft.end.date}
-                    aria-label="終了日"
-                    onChange={(e) =>
-                      change({ end: { type: "date", date: e.target.value } })
+              </div>
+              <div className={own.block}>
+                <div className={own.blockRow}>
+                  <span className={styles.itemLabel}>予定時刻</span>
+                  <div className={own.timeRow}>
+                    <span className={own.tiny}>開始</span>
+                    <input
+                      type="time"
+                      className={`${styles.input} ${styles.mono}`}
+                      value={draft.fixedStart}
+                      aria-label="開始時刻"
+                      onChange={(e) => changeStart(e.target.value)}
+                    />
+                    <span className={styles.unit}>〜</span>
+                    <span className={own.tiny}>終了</span>
+                    <input
+                      type="time"
+                      className={`${styles.input} ${styles.mono}`}
+                      style={{
+                        opacity: draft.fixedStart ? 1 : 0.45,
+                        borderColor:
+                          endBad != null ? "var(--danger)" : undefined,
+                      }}
+                      value={endBad ?? draft.fixedEnd}
+                      disabled={!draft.fixedStart}
+                      aria-label="終了時刻"
+                      aria-invalid={endBad != null ? true : undefined}
+                      onChange={(e) => changeEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {(endBad != null || !draft.fixedStart) && (
+                  <span
+                    className={own.timeNote}
+                    style={
+                      endBad != null ? { color: "var(--danger)" } : undefined
                     }
-                  />
-                  <span className={styles.unit}>まで</span>
-                </div>
-              )}
-            </div>
-            <div className={own.endBlock}>
-              <div className={own.endRow}>
-                <span className={styles.itemLabel}>期限切れの子</span>
+                    role={endBad != null ? "alert" : undefined}
+                  >
+                    {endBad != null
+                      ? "終了は開始より後の時刻にしてください"
+                      : "開始を入れると終了も指定できます(どちらも任意)"}
+                  </span>
+                )}
+              </div>
+              <div className={`${styles.item} ${styles.tall}`}>
+                <span className={styles.itemLabel}>既定の枠</span>
                 <div
                   className={`${styles.seg} ${styles.grow}`}
                   role="group"
-                  aria-label="期限切れの子の扱い"
+                  aria-label="既定の枠"
+                  style={draft.fixedStart ? { opacity: 0.45 } : undefined}
                 >
-                  <button
-                    style={{ whiteSpace: "nowrap" }}
-                    data-on={!draft.autoCancel ? "" : undefined}
-                    onClick={() => change({ autoCancel: false })}
-                  >
-                    繰り越す
-                  </button>
-                  <button
-                    style={{ whiteSpace: "nowrap" }}
-                    data-on={draft.autoCancel ? "" : undefined}
-                    onClick={() => change({ autoCancel: true })}
-                  >
-                    自動でキャンセル
-                  </button>
+                  {SLOTS.map((s) => (
+                    <button
+                      key={s.key}
+                      disabled={draft.fixedStart !== ""}
+                      data-on={slotShown === s.key ? "" : undefined}
+                      onClick={() =>
+                        change({ slot: draft.slot === s.key ? null : s.key })
+                      }
+                    >
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div
-                className={own.endDetail}
-                style={{ color: "var(--ink3)", fontSize: 12 }}
-              >
-                {draft.autoCancel
-                  ? "その日のうちに終えなかった子は、翌日に自動でキャンセルになります"
-                  : "その日のうちに終えなかった子は、翌日以降も残ります"}
+              {draft.fixedStart !== "" && (
+                <div className={own.slotNote}>
+                  開始時刻から{slotName(slotShown)}に作成します
+                </div>
+              )}
+            </div>
+
+            <div className={styles.labelRow}>
+              <span className={styles.label}>メモ</span>
+              <span className={styles.hint}>Markdown</span>
+            </div>
+            <textarea
+              className={styles.memo}
+              value={draft.memo}
+              rows={5}
+              aria-label="メモ"
+              placeholder="子タスクに引き継ぐメモ(手順、リンクなど)"
+              onChange={(e) => change({ memo: e.target.value })}
+            />
+            <div className={own.propNote} style={{ marginTop: 6 }}>
+              子タスクの作成時に引き継がれます。編集すると、今日以降の未完了の子にも反映されます
+            </div>
+
+            <div className={styles.label} style={{ marginTop: 22 }}>
+              繰り返し
+            </div>
+            <div
+              className={styles.seg}
+              style={{ marginTop: 8 }}
+              role="group"
+              aria-label="繰り返し"
+            >
+              {RULE_TYPES.map((t) => (
+                <button
+                  key={t.key}
+                  data-on={rule.type === t.key ? "" : undefined}
+                  onClick={() =>
+                    change({ rule: defaultRule(t.key, draft.start, rule) })
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {rule.type === "weekly" && (
+              <div className={styles.field} style={{ marginTop: 14 }}>
+                <span className={styles.fieldLabel}>曜日(複数選択)</span>
+                <div className={styles.days}>
+                  {DAY_ORDER.map((i) => {
+                    const on = days.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        data-on={on ? "" : undefined}
+                        aria-pressed={on}
+                        onClick={() => {
+                          if (on && days.length === 1) return;
+                          setRule({
+                            days: on
+                              ? days.filter((d) => d !== i)
+                              : [...days, i],
+                          });
+                        }}
+                      >
+                        {WEEKDAYS[i]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {rule.type === "monthly" && (
+              <div className={styles.field} style={{ marginTop: 14 }}>
+                <span className={styles.fieldLabel}>日にち</span>
+                <div className={styles.grid}>
+                  {Array.from({ length: 31 }, (_, k) => k + 1).map((d) => (
+                    <button
+                      key={d}
+                      className={styles.cell}
+                      data-on={rule.mday === d ? "" : undefined}
+                      onClick={() => setRule({ mday: d })}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                  <button
+                    className={`${styles.cell} ${styles.cellLast}`}
+                    data-on={rule.mday == null ? "" : undefined}
+                    onClick={() => setRule({ mday: null })}
+                  >
+                    月末
+                  </button>
+                </div>
+                {mdayNote && (
+                  <span className={styles.fieldNote}>
+                    その日がない月は月末に作成します。
+                  </span>
+                )}
+              </div>
+            )}
+
+            {rule.type === "yearly" && (
+              <div className={styles.field} style={{ marginTop: 14 }}>
+                <span className={styles.fieldLabel}>月と日</span>
+                <div className={own.ymd}>
+                  <select
+                    className={`${styles.input} ${styles.mono}`}
+                    style={{ width: 84 }}
+                    value={rule.month}
+                    aria-label="月"
+                    onChange={(e) => {
+                      const m = Number(e.target.value);
+                      change({
+                        rule: {
+                          type: "yearly",
+                          month: m,
+                          day: Math.min(rule.day, maxDayOfMonth(m)),
+                        },
+                      });
+                    }}
+                  >
+                    {Array.from({ length: 12 }, (_, k) => k + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <span className={styles.unit}>月</span>
+                  <select
+                    className={`${styles.input} ${styles.mono}`}
+                    style={{ width: 84, marginLeft: 6 }}
+                    value={rule.day}
+                    aria-label="日"
+                    onChange={(e) => setRule({ day: Number(e.target.value) })}
+                  >
+                    {Array.from(
+                      { length: maxDayOfMonth(rule.month) },
+                      (_, k) => k + 1,
+                    ).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <span className={styles.unit}>日</span>
+                </div>
+              </div>
+            )}
+
+            <div className={styles.list} style={{ marginTop: 18 }}>
+              <div className={styles.item}>
+                <span className={styles.itemLabel}>開始日</span>
+                <input
+                  type="date"
+                  className={`${styles.input} ${styles.mono} ${styles.grow}`}
+                  value={draft.start}
+                  aria-label="開始日"
+                  onChange={(e) => change({ start: e.target.value })}
+                />
+              </div>
+              <div className={own.endBlock}>
+                <div className={own.endRow}>
+                  <span className={styles.itemLabel}>終了条件</span>
+                  <div
+                    className={`${styles.seg} ${styles.grow}`}
+                    role="group"
+                    aria-label="終了条件"
+                  >
+                    {END_TYPES.map((t) => (
+                      <button
+                        key={t.key}
+                        style={{ whiteSpace: "nowrap" }}
+                        data-on={draft.end.type === t.key ? "" : undefined}
+                        onClick={() =>
+                          change({
+                            end:
+                              t.key === "count"
+                                ? { type: "count", count: 30 }
+                                : t.key === "date"
+                                  ? { type: "date", date: "" }
+                                  : { type: "none" },
+                          })
+                        }
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {draft.end.type === "count" && (
+                  <div className={own.endDetail}>
+                    <span className={styles.unit}>累計</span>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className={`${styles.input} ${styles.mono}`}
+                      style={{ width: 80 }}
+                      value={draft.end.count ?? ""}
+                      aria-label="終了までの累計回数"
+                      onChange={(e) =>
+                        change({
+                          end: {
+                            type: "count",
+                            count:
+                              e.target.value === ""
+                                ? null
+                                : Math.max(1, Number(e.target.value)),
+                          },
+                        })
+                      }
+                    />
+                    <span className={styles.unit}>回で終了</span>
+                  </div>
+                )}
+                {draft.end.type === "date" && (
+                  <div className={own.endDetail}>
+                    <input
+                      type="date"
+                      className={`${styles.input} ${styles.mono} ${styles.grow}`}
+                      min={draft.start}
+                      value={draft.end.date}
+                      aria-label="終了日"
+                      onChange={(e) =>
+                        change({ end: { type: "date", date: e.target.value } })
+                      }
+                    />
+                    <span className={styles.unit}>まで</span>
+                  </div>
+                )}
+              </div>
+              <div className={own.endBlock}>
+                <div className={own.endRow}>
+                  <span className={styles.itemLabel}>期限切れの子</span>
+                  <div
+                    className={`${styles.seg} ${styles.grow}`}
+                    role="group"
+                    aria-label="期限切れの子の扱い"
+                  >
+                    <button
+                      style={{ whiteSpace: "nowrap" }}
+                      data-on={!draft.autoCancel ? "" : undefined}
+                      onClick={() => change({ autoCancel: false })}
+                    >
+                      繰り越す
+                    </button>
+                    <button
+                      style={{ whiteSpace: "nowrap" }}
+                      data-on={draft.autoCancel ? "" : undefined}
+                      onClick={() => change({ autoCancel: true })}
+                    >
+                      自動でキャンセル
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className={own.endDetail}
+                  style={{ color: "var(--ink3)", fontSize: 12 }}
+                >
+                  {draft.autoCancel
+                    ? "その日のうちに終えなかった子は、翌日に自動でキャンセルになります"
+                    : "その日のうちに終えなかった子は、翌日以降も残ります"}
+                </div>
               </div>
             </div>
-          </div>
-          <div className={styles.summary} style={{ marginTop: 14 }}>
-            {draftSummary(draft, total)}
-          </div>
+            <div className={styles.summary} style={{ marginTop: 14 }}>
+              {draftSummary(draft, total)}
+            </div>
+          </fieldset>
         </div>
 
         <div className={styles.footer}>
@@ -969,7 +1029,9 @@ export function HabitSheet({
             <div className={own.confirm}>
               <div className={own.confirmTitle}>この習慣を削除しますか?</div>
               <div className={own.confirmText}>
-                今日以降のまだ終えていない子タスクも削除されます。完了した記録は残ります。
+                {ended
+                  ? "この習慣を一覧から削除します。完了した子タスクの記録は残ります。"
+                  : "今日以降のまだ終えていない子タスクも削除されます。完了した記録は残ります。"}
               </div>
               <div className={own.confirmActions}>
                 <button
@@ -1022,13 +1084,15 @@ export function HabitSheet({
                 </svg>
                 削除
               </button>
-              <button
-                className={styles.secondary}
-                disabled={busy}
-                onClick={() => void togglePause()}
-              >
-                {paused ? "再開" : "一時停止"}
-              </button>
+              {!ended && (
+                <button
+                  className={styles.secondary}
+                  disabled={busy}
+                  onClick={() => void togglePause()}
+                >
+                  {paused ? "再開" : "一時停止"}
+                </button>
+              )}
             </>
           )}
         </div>

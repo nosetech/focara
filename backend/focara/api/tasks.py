@@ -8,8 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from focara.api.deps import SessionDep
-from focara.db.models import Project, Task, TaskLog
-from focara.habit_generator import slot_for_datetime
+from focara.db.models import Habit, Project, Task, TaskLog
+from focara.habit_generator import finish_if_completed, slot_for_datetime
 from focara.task_status import (
     InvalidTransition,
     MissingWaitCondition,
@@ -233,6 +233,12 @@ def log_if_done(session: Session, task: Task, note: str | None = None) -> None:
     """タスクが完了したら完了を記録する(習慣の次の回は定期処理で先行生成済み)。"""
     if task.status == "done":
         add_log(session, task, "completed", note)
+        # 習慣の最後の子を完了したら、親を終了にする
+        if task.habit_id is not None:
+            habit = session.get(Habit, task.habit_id)
+            if habit is not None:
+                session.flush()
+                finish_if_completed(session, habit)
 
 
 @router.post("/{task_id}/transition", response_model=TaskOut)

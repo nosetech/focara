@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  asListRow,
+  habitState,
   defaultRule,
   draftBody,
   draftFromHabit,
@@ -38,6 +40,9 @@ const habit = (over: Partial<Habit> = {}): Habit => ({
   recurrence_end_count: null,
   start_date: "2026-10-01",
   active: true,
+  ended: false,
+  finishing: false,
+  remaining: 0,
   auto_cancel_overdue: false,
   recent: [],
   created_at: "2026-10-01T00:00:00Z",
@@ -322,4 +327,15 @@ test("メモは編集値と保存ペイロードを行き来し、空文字は n
   const cleared = draftBody({ ...d, memo: "" });
   assert.ok("body" in cleared);
   assert.equal(cleared.body.memo, null);
+});
+
+test("habitState: 終了は一時停止中と区別する", () => {
+  assert.equal(habitState({ active: true, ended: false }), "habit");
+  assert.equal(habitState({ active: false, ended: false }), "paused");
+  assert.equal(habitState({ active: true, ended: true }), "ended");
+  assert.equal(habitState({ active: false, ended: true }), "ended");
+  assert.equal(
+    asListRow({ active: true, ended: true } as never).status,
+    "ended",
+  );
 });

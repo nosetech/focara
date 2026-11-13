@@ -40,6 +40,11 @@ export interface Habit {
   recurrence_end_count: number | null;
   start_date: string;
   active: boolean;
+  /** 終了条件に達し、子が全て完了した。編集・再開不可で、一時停止中(active=false)とは別の状態 */
+  ended: boolean;
+  /** 終了条件に達したが未完了の子が残っているため有効のまま(remaining は未完了の子の数) */
+  finishing: boolean;
+  remaining: number;
   /** 予定日を過ぎても未完了の子を、毎日の定期処理で自動キャンセルする */
   auto_cancel_overdue: boolean;
   recent: HabitOccurrence[];
@@ -361,8 +366,16 @@ export const DOT_TITLE: Record<DotState, string> = {
 };
 
 /** 一覧で扱う共通の行(絞り込み・並び替えは inbox と同じ関数を使う)。 */
+/** 習慣の状態。終了(ended)は一時停止中(active=false)と区別する。 */
+export function habitState(h: {
+  active: boolean;
+  ended?: boolean;
+}): "habit" | "paused" | "ended" {
+  return h.ended ? "ended" : h.active ? "habit" : "paused";
+}
+
 export function asListRow(h: Habit) {
-  return { ...h, status: h.active ? "habit" : "paused" };
+  return { ...h, status: habitState(h) };
 }
 
 /**

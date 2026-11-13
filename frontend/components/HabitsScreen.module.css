@@ -7,6 +7,22 @@
   color: var(--ink2);
 }
 
+.tag.ended {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: var(--sunk);
+  vertical-align: middle;
+}
+
+[data-focused] .tag.ended {
+  background: var(--surface);
+}
+
 .paused {
   opacity: 0.6;
 }

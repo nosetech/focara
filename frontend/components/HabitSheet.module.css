@@ -276,3 +276,96 @@
   min-width: 44px;
   padding: 0 10px;
 }
+
+.form {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form:disabled input,
+.form:disabled select,
+.form:disabled textarea {
+  background: transparent !important;
+  opacity: 1;
+  cursor: default;
+  resize: none;
+}
+
+.form:disabled button {
+  cursor: default;
+}
+
+.endedBox {
+  margin: 2px 0 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+}
+
+.endedIcon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink2);
+}
+
+.endedText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.endedText b {
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.endedText small {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.finishing {
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink2);
+}
+
+.finishing svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.mono {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+}
+
+/* 終了した習慣では、プロパティの並べ替え・削除・追加を出さない */
+.form:disabled .iconBtn,
+.form:disabled .addBtn {
+  display: none;
+}
