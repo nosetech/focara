@@ -116,7 +116,7 @@ export function OrganizeShell({
   const refreshCounts = useCallback(() => {
     Promise.all([
       apiFetch<{ status: string; scheduled_date?: string | null }[]>("/tasks"),
-      apiFetch<{ active: boolean }[]>("/habits"),
+      apiFetch<{ active: boolean; ended: boolean }[]>("/habits"),
     ])
       .then(([tasks, habits]) => setCounts(countTasks(tasks, habits)))
       .catch(() => {});

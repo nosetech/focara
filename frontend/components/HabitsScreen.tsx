@@ -132,14 +132,33 @@ export function HabitsScreen({
               return (
                 <li
                   key={h.id}
-                  className={`${styles.row} ${h.active ? "" : own.paused}`}
+                  className={`${styles.row} ${h.active && !h.ended ? "" : own.paused}`}
                   data-focused={current?.id === h.id ? "" : undefined}
                   onClick={() => setSel(h.id)}
                 >
                   <div className={styles.body}>
                     <div className={styles.title}>
                       {h.title}
-                      {!h.active && <span className={own.tag}>一時停止中</span>}
+                      {h.ended ? (
+                        <span className={`${own.tag} ${own.ended}`}>
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" />
+                          </svg>
+                          終了
+                        </span>
+                      ) : (
+                        !h.active && <span className={own.tag}>一時停止中</span>
+                      )}
                     </div>
                     <div className={styles.meta}>
                       <span>

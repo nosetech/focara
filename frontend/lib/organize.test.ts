@@ -41,3 +41,15 @@ test("日付ラベルと補足", () => {
   const counts = { inbox: 3, assign: 0, waiting: 0, someday: 0, habits: 0 };
   assert.equal(screenSub("inbox", counts, d), "3件 · 未整理");
 });
+
+test("習慣の件数は終了を含めない", () => {
+  const c = countTasks(
+    [],
+    [
+      { active: true, ended: false },
+      { active: true, ended: true },
+      { active: false, ended: false },
+    ],
+  );
+  assert.equal(c.habits, 1);
+});

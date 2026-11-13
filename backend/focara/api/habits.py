@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -11,8 +11,10 @@ from focara.api.deps import ConfigDep, SessionDep
 from focara.api.tasks import ensure_project_open
 from focara.db.models import Habit, HabitProperty, Task
 from focara.habit_generator import (
+    CLOSED,
     finish_if_completed,
     generate_children,
+    has_reached_end,
     regenerate_future_children,
     remove_future_children,
     resume,
@@ -122,6 +124,9 @@ class HabitOut(HabitFields):
     active: bool
     # 終了条件に達し、子が全て完了した(編集・再開不可)
     ended: bool = False
+    # 終了条件に達したが、未完了の子が残っているため有効のまま(remaining は未完了の子の数)
+    finishing: bool = False
+    remaining: int = 0
     generated_until: date | None = None
     properties: list[PropertySpec] = []
     # 直近の実施状況(今日以前の子を新しい順に最大7件)
@@ -140,6 +145,14 @@ def _to_out(session: Session, habit: Habit) -> HabitOut:
         .order_by(Task.occurrence_date.desc())
         .limit(RECENT_COUNT)
     )
+    if habit.active and not habit.ended and has_reached_end(session, habit):
+        out.finishing = True
+        out.remaining = (
+            session.scalar(
+                select(func.count()).where(Task.habit_id == habit.id, Task.status.notin_(CLOSED))
+            )
+            or 0
+        )
     out.recent = [Occurrence(task_id=i, occurrence_date=d, status=s) for i, d, s in rows]
     return out
 

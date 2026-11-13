@@ -838,3 +838,18 @@ def test_migration_0014_separates_ended_from_paused(tmp_path):
         (5, 0, 0),
         (6, 1, 0),
     ]
+
+
+def test_finishing_flag_and_remaining(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=3)
+    got = client.get(f"/api/habits/{h['id']}").json()
+    assert (got["finishing"], got["remaining"]) == (True, 3)
+    kid = _children(client, h["id"])[0]
+    client.post(f"/api/tasks/{kid['id']}/complete")
+    got = client.get(f"/api/habits/{h['id']}").json()
+    assert (got["finishing"], got["remaining"]) == (True, 2)
+    for kid in _children(client, h["id"])[1:]:
+        client.post(f"/api/tasks/{kid['id']}/complete")
+    got = client.get(f"/api/habits/{h['id']}").json()
+    assert (got["ended"], got["finishing"]) == (True, False)
+    assert client.get(f"/api/habits/{_habit(client)['id']}").json()["finishing"] is False
