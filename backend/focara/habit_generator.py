@@ -46,9 +46,10 @@ def generate_children(session: Session, habit: Habit, today: date, ahead_days: i
 
     unique(habit_id, occurrence_date) により再実行しても重複せず、ユーザーが削除した子は
     generated_until を過ぎているため復活しない。停止中に過ぎた日は遡って作らない。
-    終了条件(date 超過 / count 到達)を満たしたら active=False にする。commit は呼び出し側。
+    終了条件に達しても active は変えず、生成を止めるだけにする(終了は finish_if_completed)。
+    commit は呼び出し側。
     """
-    if not habit.active:
+    if not habit.active or habit.ended:
         return 0
     end = today + timedelta(days=ahead_days)
     start = max(today, date.fromisoformat(habit.start_date))
@@ -62,14 +63,11 @@ def generate_children(session: Session, habit: Habit, today: date, ahead_days: i
         else None
     )
     created = 0
-    finished = False
     d = next_occurrence(habit, start - timedelta(days=1))
     while d <= end:
         if end_date is not None and d > end_date:
-            finished = True
             break
         if habit.recurrence_end_type == "count" and total >= habit.recurrence_end_count:
-            finished = True
             break
         if _iso(d) not in existing:
             session.add(
@@ -93,27 +91,51 @@ def generate_children(session: Session, habit: Habit, today: date, ahead_days: i
             total += 1
             created += 1
         d = next_occurrence(habit, d)
-    if not finished:
-        # 次の候補が終了条件を超えているなら終了
-        if end_date is not None and d > end_date:
-            finished = True
-        elif habit.recurrence_end_type == "count" and total >= habit.recurrence_end_count:
-            finished = True
     habit.generated_until = _iso(end)
-    if finished:
-        habit.active = False
     session.flush()
     return created
 
 
+def has_reached_end(session: Session, habit: Habit) -> bool:
+    """終了条件(累計回数 / 終了日)に達し、これ以上子を生成しないかを返す。"""
+    if habit.recurrence_end_type == "count":
+        total = session.scalar(select(func.count()).where(Task.habit_id == habit.id)) or 0
+        return total >= habit.recurrence_end_count
+    if habit.recurrence_end_type == "date":
+        base = date.fromisoformat(habit.start_date) - timedelta(days=1)
+        if habit.generated_until:
+            base = max(base, date.fromisoformat(habit.generated_until))
+        return next_occurrence(habit, base) > date.fromisoformat(habit.recurrence_end_date)
+    return False
+
+
+def finish_if_completed(session: Session, habit: Habit) -> bool:
+    """終了条件に達し、子が1件以上あって全て完了済みなら親を終了にする。commit は呼び出し側。
+
+    一時停止中・終了済みは対象外。終了は不可逆で、子を未完了に戻しても戻さない。
+    完了済みには、自動キャンセルされた子も含める(終わらない習慣を作らないため)。
+    """
+    if habit.ended or not habit.active or not has_reached_end(session, habit):
+        return False
+    children = list(session.scalars(select(Task.status).where(Task.habit_id == habit.id)))
+    if not children or any(s not in CLOSED for s in children):
+        return False
+    habit.ended = True
+    session.flush()
+    return True
+
+
 def generate_all(session: Session, today: date, ahead_days: int) -> int:
-    """有効な全習慣の子を生成する(起動時・日付変更時の定期処理)。"""
-    habits = list(session.scalars(select(Habit).where(Habit.active.is_(True))))
+    """有効な全習慣の子を生成し、終了条件を満たした習慣を終了にする(起動時・日付変更時の定期処理)。"""
+    habits = list(
+        session.scalars(select(Habit).where(Habit.active.is_(True), Habit.ended.is_(False)))
+    )
     created = 0
     for habit in habits:
         # 1件の失敗で他の習慣の生成を止めないよう、習慣ごとにコミット・ロールバックする
         try:
             created += generate_children(session, habit, today, ahead_days)
+            finish_if_completed(session, habit)
             session.commit()
         except Exception:  # noqa: BLE001
             session.rollback()

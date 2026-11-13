@@ -11,6 +11,7 @@ from focara.api.deps import ConfigDep, SessionDep
 from focara.api.tasks import ensure_project_open
 from focara.db.models import Habit, HabitProperty, Task
 from focara.habit_generator import (
+    finish_if_completed,
     generate_children,
     regenerate_future_children,
     remove_future_children,
@@ -119,6 +120,8 @@ class HabitOut(HabitFields):
     recurrence_end_type: RecurrenceEndType
     start_date: date
     active: bool
+    # 終了条件に達し、子が全て完了した(編集・再開不可)
+    ended: bool = False
     generated_until: date | None = None
     properties: list[PropertySpec] = []
     # 直近の実施状況(今日以前の子を新しい順に最大7件)
@@ -146,6 +149,11 @@ def _get_or_404(session: Session, habit_id: int) -> Habit:
     if habit is None:
         raise HTTPException(404, "習慣が見つかりません")
     return habit
+
+
+def _ensure_not_ended(habit: Habit) -> None:
+    if habit.ended:
+        raise HTTPException(409, "終了した習慣は編集・一時停止・再開できません")
 
 
 def _columns(values: dict) -> dict:
@@ -232,6 +240,7 @@ def create_habit(body: HabitCreate, session: SessionDep, cfg: ConfigDep) -> Habi
 @router.patch("/{habit_id}", response_model=HabitOut)
 def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: ConfigDep) -> HabitOut:
     habit = _get_or_404(session, habit_id)
+    _ensure_not_ended(habit)
     values = body.model_dump(exclude_unset=True)
     for key in ("title", "recurrence_type", "recurrence_end_type", "start_date"):
         if key in values and values[key] is None:
@@ -270,6 +279,8 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
         sync_properties_to_children(session, habit, today, old_specs)
     if any(k in changed for k in RULE_FIELDS):
         regenerate_future_children(session, habit, today, cfg.habit.generate_ahead_days)
+    # 終了条件の変更で、全ての子が完了済みの習慣が終了になることがある
+    finish_if_completed(session, habit)
     _commit(session)
     return _to_out(session, habit)
 
@@ -278,6 +289,7 @@ def update_habit(habit_id: int, body: HabitUpdate, session: SessionDep, cfg: Con
 def pause_habit(habit_id: int, session: SessionDep) -> HabitOut:
     """一時停止: 未来の未完了の子を削除し、生成を止める。"""
     habit = _get_or_404(session, habit_id)
+    _ensure_not_ended(habit)
     habit.active = False
     remove_future_children(session, habit, date.today())
     _commit(session)
@@ -287,6 +299,7 @@ def pause_habit(habit_id: int, session: SessionDep) -> HabitOut:
 @router.post("/{habit_id}/resume", response_model=HabitOut)
 def resume_habit(habit_id: int, session: SessionDep, cfg: ConfigDep) -> HabitOut:
     habit = _get_or_404(session, habit_id)
+    _ensure_not_ended(habit)
     resume(session, habit, date.today(), cfg.habit.generate_ahead_days)
     _commit(session)
     return _to_out(session, habit)

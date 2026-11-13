@@ -130,13 +130,16 @@ def test_skipped_days_not_backfilled(engine, client):
 def test_end_count(client):
     h = _habit(client, recurrence_end_type="count", recurrence_end_count=3)
     assert len(_children(client, h["id"])) == 3
-    assert client.get(f"/api/habits/{h['id']}").json()["active"] is False
+    got = client.get(f"/api/habits/{h['id']}").json()
+    # 子が未完了の間は有効のまま(一時停止にも終了にもならない)
+    assert (got["active"], got["ended"]) == (True, False)
 
 
 def test_end_date(client):
     h = _habit(client, recurrence_end_type="date", recurrence_end_date=_iso(4))
     assert [k["occurrence_date"] for k in _children(client, h["id"])] == [_iso(i) for i in range(5)]
-    assert client.get(f"/api/habits/{h['id']}").json()["active"] is False
+    got = client.get(f"/api/habits/{h['id']}").json()
+    assert (got["active"], got["ended"]) == (True, False)
 
 
 def test_complete_child_logs_with_habit_and_no_spawn(client):
@@ -674,3 +677,164 @@ def test_duration_property_inherited_by_children(client):
         },
     )
     assert bad.status_code == 422
+
+
+def _complete_all(client, habit_id: int) -> None:
+    for kid in _children(client, habit_id):
+        assert client.post(f"/api/tasks/{kid['id']}/complete").status_code == 200
+
+
+def _state(client, habit_id: int) -> tuple[bool, bool]:
+    got = client.get(f"/api/habits/{habit_id}").json()
+    return got["active"], got["ended"]
+
+
+def test_ends_when_last_child_completed(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=3)
+    kids = _children(client, h["id"])
+    for kid in kids[:2]:
+        client.post(f"/api/tasks/{kid['id']}/complete")
+    assert _state(client, h["id"]) == (True, False)
+    client.post(f"/api/tasks/{kids[2]['id']}/complete")
+    assert _state(client, h["id"]) == (True, True)
+
+
+def test_end_is_irreversible(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=1)
+    _complete_all(client, h["id"])
+    kid = _children(client, h["id"])[0]
+    assert (
+        client.post(f"/api/tasks/{kid['id']}/transition", json={"status": "next"}).status_code
+        == 200
+    )
+    assert _state(client, h["id"]) == (True, True)
+
+
+def test_no_end_without_end_condition(client):
+    h = _habit(client)
+    _complete_all(client, h["id"])
+    assert _state(client, h["id"]) == (True, False)
+
+
+def test_edit_before_end_extends_children(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=3)
+    assert client.patch(f"/api/habits/{h['id']}", json={"title": "新タイトル"}).status_code == 200
+    res = client.patch(f"/api/habits/{h['id']}", json={"recurrence_end_count": 5})
+    assert res.status_code == 200
+    kids = _children(client, h["id"])
+    assert len(kids) == 5 and {k["title"] for k in kids} == {"新タイトル"}
+    assert _state(client, h["id"]) == (True, False)
+
+
+def test_date_end_waits_for_children(client):
+    h = _habit(client, recurrence_end_type="date", recurrence_end_date=_iso(2))
+    kids = _children(client, h["id"])
+    assert len(kids) == 3
+    for kid in kids[:2]:
+        client.post(f"/api/tasks/{kid['id']}/complete")
+    assert _state(client, h["id"]) == (True, False)
+    client.post(f"/api/tasks/{kids[2]['id']}/complete")
+    assert _state(client, h["id"]) == (True, True)
+
+
+def test_edit_end_condition_ends_when_all_done(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=5)
+    kids = _children(client, h["id"])
+    for kid in kids[:2]:
+        client.post(f"/api/tasks/{kid['id']}/complete")
+    # 累計回数を完了済みの数まで減らすと、未来の未完了の子が消えて、その場で終了になる
+    client.patch(f"/api/habits/{h['id']}", json={"recurrence_end_count": 2})
+    assert _state(client, h["id"]) == (True, True)
+
+
+def test_generate_all_ends_habit(client, engine):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=1)
+    with Session(engine) as s:
+        for t in s.scalars(select(Task).where(Task.habit_id == h["id"])):
+            t.status = "done"
+        s.commit()
+        assert generate_all(s, date.today(), AHEAD) == 0
+    assert _state(client, h["id"]) == (True, True)
+
+
+def test_ended_habit_rejects_changes_but_can_be_deleted(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=1)
+    _complete_all(client, h["id"])
+    hid = h["id"]
+    assert client.patch(f"/api/habits/{hid}", json={"title": "x"}).status_code == 409
+    assert client.post(f"/api/habits/{hid}/pause").status_code == 409
+    assert client.post(f"/api/habits/{hid}/resume").status_code == 409
+    assert client.delete(f"/api/habits/{hid}").status_code == 204
+    # 完了済みの子は実績として残る
+    assert len(client.get("/api/tasks?status=done").json()) == 1
+
+
+def test_pause_and_resume_still_work(client):
+    h = _habit(client, recurrence_end_type="count", recurrence_end_count=3)
+    assert client.post(f"/api/habits/{h['id']}/pause").json()["active"] is False
+    got = client.post(f"/api/habits/{h['id']}/resume").json()
+    assert (got["active"], got["ended"]) == (True, False)
+    assert len(_children(client, h["id"])) == 3
+
+
+def test_migration_0014_separates_ended_from_paused(tmp_path):
+    from sqlalchemy import text
+
+    e = create_db_engine(tmp_path / "old.db")
+    upgrade_db(e, "0013")
+    now = "2026-01-01 00:00:00.000000"
+    past, future = _iso(-5), _iso(30)
+
+    def add_habit(conn, hid, active, end_type, end_count=None, end_date=None):
+        conn.execute(
+            text(
+                "INSERT INTO habits (id, title, recurrence_type, recurrence_weekdays,"
+                " recurrence_end_type, recurrence_end_count, recurrence_end_date, start_date,"
+                " active, created_at, updated_at) VALUES (:id, 'h', 'weekly', 127, :t, :c, :d,"
+                " :s, :a, :n, :n)"
+            ),
+            {
+                "id": hid,
+                "t": end_type,
+                "c": end_count,
+                "d": end_date,
+                "s": past,
+                "a": active,
+                "n": now,
+            },
+        )
+
+    def add_child(conn, hid, status, day):
+        conn.execute(
+            text(
+                "INSERT INTO tasks (title, status, habit_id, occurrence_date, created_at,"
+                " updated_at) VALUES ('t', :s, :h, :d, :n, :n)"
+            ),
+            {"s": status, "h": hid, "d": day, "n": now},
+        )
+
+    with e.begin() as conn:
+        add_habit(conn, 1, 0, "count", end_count=2)  # 終了条件到達・全完了 → 終了
+        add_child(conn, 1, "done", _iso(-2))
+        add_child(conn, 1, "done", _iso(-1))
+        add_habit(conn, 2, 0, "count", end_count=2)  # 到達済みだが未完了 → 有効に戻す
+        add_child(conn, 2, "done", _iso(-2))
+        add_child(conn, 2, "next", _iso(-1))
+        add_habit(conn, 3, 0, "date", end_date=past)  # 終了日超過・全完了 → 終了
+        add_child(conn, 3, "done", _iso(-6))
+        add_habit(conn, 4, 0, "count", end_count=5)  # 到達していない → 一時停止のまま
+        add_child(conn, 4, "done", _iso(-2))
+        add_habit(conn, 5, 0, "date", end_date=future)  # 終了日前 → 一時停止のまま
+        add_habit(conn, 6, 1, "none")  # 有効のまま
+    upgrade_db(e)
+    with e.connect() as conn:
+        rows = conn.execute(text("SELECT id, active, ended FROM habits ORDER BY id")).all()
+    e.dispose()
+    assert [tuple(r) for r in rows] == [
+        (1, 1, 1),
+        (2, 1, 0),
+        (3, 1, 1),
+        (4, 0, 0),
+        (5, 0, 0),
+        (6, 1, 0),
+    ]

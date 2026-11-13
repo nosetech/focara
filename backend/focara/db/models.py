@@ -171,6 +171,10 @@ class Habit(Base):
     active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=sa_true()
     )
+    # 終了条件に達し、生成した子が全て完了したら True(不可逆。編集・再開不可)。active とは直交
+    ended: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     # 子を生成済みの最終日(YYYY-MM-DD)
     generated_until: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=_now, nullable=False)
