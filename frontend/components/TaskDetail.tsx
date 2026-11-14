@@ -90,11 +90,14 @@ const SHEET_DEFAULT_WIDTH = 420;
 export function TaskDetail({
   taskId,
   onClose,
+  onSaved,
   onMakeHabit,
   variant = "sheet",
 }: {
   taskId: number;
   onClose: () => void;
+  /** 保存が全て終わったとき(1件以上成功)に呼ぶ。一覧の取り直し用 */
+  onSaved?: () => void;
   /** 渡すと、inbox のタスクに「習慣にする」を出す。保存を終えてから現在の内容で呼ぶ */
   onMakeHabit?: (src: HabitSource) => void;
   /** sheet: 画面下から出るシート(モバイル)/ panel: 整理画面の右ペインに埋め込む */
@@ -137,6 +140,11 @@ export function TaskDetail({
 
   const seq = useRef(0);
   const pending = useRef(0);
+  const savedAny = useRef(false);
+  const onSavedRef = useRef(onSaved);
+  useEffect(() => {
+    onSavedRef.current = onSaved;
+  });
   const chains = useRef(new Map<string, Promise<void>>());
   const rowIds = useRef(new Map<string, number>());
   const failed = useRef(new Map<string, () => Promise<void>>());
@@ -220,12 +228,18 @@ export function TaskDetail({
       try {
         await fn();
         failed.current.delete(name);
+        savedAny.current = true;
       } catch {
         failed.current.set(name, fn);
       } finally {
         pending.current -= 1;
-        if (pending.current === 0)
+        if (pending.current === 0) {
           setSave(failed.current.size > 0 ? "error" : "saved");
+          if (savedAny.current) {
+            savedAny.current = false;
+            onSavedRef.current?.();
+          }
+        }
       }
     });
     chains.current.set(name, next);
@@ -554,9 +568,21 @@ export function TaskDetail({
     flushCond();
   };
 
-  const close = () => {
+  /** 閉じる。未送信分と進行中の保存が終わってから onClose を呼ぶ(一覧の取り直しが古い値を拾わない)。 */
+  const close = async () => {
     flush();
-    onClose();
+    setBusy(true);
+    try {
+      await Promise.all([...chains.current.values()]);
+      // 保存に失敗していたら、編集内容を残すため閉じない
+      if (failed.current.size > 0) {
+        setSave("error");
+        return;
+      }
+      onClose();
+    } finally {
+      setBusy(false);
+    }
   };
 
   /** 完了・後回し・未完了に戻す。成功したら閉じる(呼び出し側が一覧を取り直す)。 */

@@ -18,6 +18,7 @@ import { formatEstimate } from "@/lib/inbox";
 import { formatClock, toDateParam, type TimeSlot } from "@/lib/run";
 import { useOrganize } from "./OrganizeContext";
 import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
 import { HabitBadge } from "./HabitBadge";
@@ -60,6 +61,11 @@ export function AssignScreen() {
     },
     [day, showToast],
   );
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchAll(false);
+    refreshCounts();
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -286,9 +292,9 @@ export function AssignScreen() {
         taskId={selId}
         onClose={() => {
           setSelId(null);
-          void fetchAll(false);
-          refreshCounts();
+          refreshNow();
         }}
+        onSaved={onSaved}
       />
     </>
   );
