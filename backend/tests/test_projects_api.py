@@ -240,3 +240,14 @@ def test_tags_deleted_with_project(client):
     assert client.delete(f"/api/projects/{pid}").status_code == 204
     with engine.connect() as c:
         assert c.execute(text("SELECT COUNT(*) FROM project_tags")).scalar() == 0
+
+
+def test_tags_update_keeping_same_tag(client):
+    """同名タグを含む更新(名前だけの変更でもフロントは tags を再送する)で一意制約に違反しない。"""
+    pid = client.post("/api/projects", json={"name": "p", "tags": ["a", "b"]}).json()["id"]
+    res = client.patch(f"/api/projects/{pid}", json={"name": "r", "tags": ["a", "b"]})
+    assert res.status_code == 200
+    assert res.json()["tags"] == ["a", "b"]
+    res = client.patch(f"/api/projects/{pid}", json={"tags": ["a", "c"]})
+    assert res.status_code == 200
+    assert res.json()["tags"] == ["a", "c"]
