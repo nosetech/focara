@@ -157,7 +157,12 @@ def update_project(project_id: int, body: ProjectUpdate, session: SessionDep) ->
     if "tags" in body.model_fields_set:
         if body.tags is None:
             raise HTTPException(422, "tags は null にできません")
-        project.tags = [ProjectTag(name=t) for t in normalize_tags(body.tags)]
+        # 全置換だと INSERT が DELETE より先に走り一意制約に違反するため差分更新する
+        wanted = normalize_tags(body.tags)
+        for tag in [t for t in project.tags if t.name not in wanted]:
+            project.tags.remove(tag)
+        existing = {t.name for t in project.tags}
+        project.tags.extend(ProjectTag(name=t) for t in wanted if t not in existing)
     for key, value in values.items():
         setattr(project, key, value)
     session.commit()
