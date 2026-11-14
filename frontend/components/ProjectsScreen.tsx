@@ -32,6 +32,7 @@ import { TASK_ADDED_EVENT } from "./QuickAdd";
 import { TagChips } from "./TagChips";
 import { TagInput } from "./TagInput";
 import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
 import styles from "./ProjectsScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -86,6 +87,11 @@ export function ProjectsScreen() {
     },
     [showToast],
   );
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchAll(false);
+    refreshCounts();
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -413,9 +419,9 @@ export function ProjectsScreen() {
         showEmpty
         onClose={() => {
           setDetailId(null);
-          void fetchAll(false);
-          refreshCounts();
+          refreshNow();
         }}
+        onSaved={onSaved}
       />
       {formDialog}
       {confirmComplete && selected && (

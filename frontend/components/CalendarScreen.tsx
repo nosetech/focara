@@ -17,6 +17,7 @@ import { formatDay } from "@/lib/organize";
 import { SLOTS, toDateParam, type TimeSlot } from "@/lib/run";
 import { useOrganize } from "./OrganizeContext";
 import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
 import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
 import { TASK_ADDED_EVENT } from "./QuickAdd";
 import { HabitBadge } from "./HabitBadge";
@@ -66,6 +67,11 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
     },
     [mode, anchor, showToast],
   );
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchAll(false);
+    refreshCounts();
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -236,9 +242,9 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
           taskId={selId}
           onClose={() => {
             setSelId(null);
-            void fetchAll(false);
-            refreshCounts();
+            refreshNow();
           }}
+          onSaved={onSaved}
         />
       </>
     );
@@ -367,9 +373,9 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
         taskId={selId}
         onClose={() => {
           setSelId(null);
-          void fetchAll(false);
-          refreshCounts();
+          refreshNow();
         }}
+        onSaved={onSaved}
       />
     </>
   );

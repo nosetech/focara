@@ -24,6 +24,7 @@ import type { PropertyType } from "@/lib/taskDetail";
 import { seedFromTask, type HabitDraft } from "@/lib/habits";
 import { HabitSheetHost } from "./HabitSheetHost";
 import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
 import styles from "./InboxScreen.module.css";
 
 type Load = "loading" | "error" | "ready";
@@ -57,18 +58,22 @@ export function InboxScreen() {
   const [habitSeed, setHabitSeed] = useState<Partial<HabitDraft>>({});
   const busy = useRef(false);
 
-  const fetchTasks = useCallback(async (initial: boolean) => {
-    if (initial) setLoad("loading");
-    try {
-      const list = await apiFetch<InboxTask[]>("/tasks", {
-        query: { status: "inbox" },
-      });
-      setTasks(list);
-      setLoad("ready");
-    } catch {
-      if (initial) setLoad("error");
-    }
-  }, []);
+  const fetchTasks = useCallback(
+    async (initial: boolean) => {
+      if (initial) setLoad("loading");
+      try {
+        const list = await apiFetch<InboxTask[]>("/tasks", {
+          query: { status: "inbox" },
+        });
+        setTasks(list);
+        setLoad("ready");
+      } catch {
+        if (initial) setLoad("error");
+        else showToast({ msg: "更新できませんでした。もう一度お試しください" });
+      }
+    },
+    [showToast],
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -80,6 +85,11 @@ export function InboxScreen() {
     window.addEventListener(TASK_ADDED_EVENT, onAdded);
     return () => window.removeEventListener(TASK_ADDED_EVENT, onAdded);
   }, [fetchTasks, refreshCounts]);
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchTasks(false);
+    void refreshCounts();
+  });
 
   const projectName = useCallback(
     (id: number | null) => projects.find((p) => p.id === id)?.name ?? "",
@@ -456,9 +466,9 @@ export function InboxScreen() {
         onClose={() => {
           setSheetOpen(false);
           setPanelOpen(false);
-          void fetchTasks(false);
-          void refreshCounts();
+          refreshNow();
         }}
+        onSaved={onSaved}
       />
     </>
   );

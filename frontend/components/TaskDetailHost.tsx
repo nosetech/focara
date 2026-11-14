@@ -30,12 +30,15 @@ export function useIsDesktop() {
 export function TaskDetailHost({
   taskId,
   onClose,
+  onSaved,
   showEmpty = false,
   sheetOpen = true,
   onMakeHabit,
 }: {
   taskId: number | null;
   onClose: () => void;
+  /** 詳細の保存が終わったとき。一覧を取り直す(閉じなくても最新にするため) */
+  onSaved?: () => void;
   showEmpty?: boolean;
   /** モバイルのシートを開くか。キーボード操作で常に選択中になる画面は、タップするまで閉じておく */
   sheetOpen?: boolean;
@@ -52,6 +55,7 @@ export function TaskDetailHost({
         variant={desktop ? "panel" : "sheet"}
         taskId={taskId}
         onClose={onClose}
+        onSaved={onSaved}
         onMakeHabit={onMakeHabit}
       />
     ) : null;

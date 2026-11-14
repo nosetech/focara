@@ -16,6 +16,7 @@ import {
   OrganizeLoading,
 } from "./OrganizeStates";
 import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
 import styles from "./InboxScreen.module.css";
 import extra from "./StatusListScreen.module.css";
 
@@ -47,6 +48,11 @@ export function StatusListScreen({ status }: { status: ListStatus }) {
     },
     [status, showToast],
   );
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchAll(false);
+    refreshCounts();
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -179,9 +185,9 @@ export function StatusListScreen({ status }: { status: ListStatus }) {
         showEmpty
         onClose={() => {
           setSelId(null);
-          void fetchAll(false);
-          refreshCounts();
+          refreshNow();
         }}
+        onSaved={onSaved}
       />
     </>
   );
