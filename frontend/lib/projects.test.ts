@@ -10,10 +10,12 @@ import {
   movedOrder,
   normalizeTags,
   openTaskCount,
+  projectHabits,
   projectProgress,
   type ProjectTask,
   TAG_SEPARATOR,
   visibleProjects,
+  withoutHabitChildren,
 } from "./projects.ts";
 
 const t = (id: number, o: Partial<ProjectTask> = {}): ProjectTask => ({
@@ -165,4 +167,26 @@ test("addTags: 追加し、重複(大文字小文字を区別)は dup で返す"
 
 test("TAG_SEPARATOR: 半角カンマ・読点・全角カンマで区切る", () => {
   assert.deepEqual("a,b、c，d".split(TAG_SEPARATOR), ["a", "b", "c", "d"]);
+});
+
+test("projectHabits: 指定プロジェクトの習慣だけを返す(一時停止中も含む)", () => {
+  const hs = [
+    { id: 1, project_id: 5, active: true },
+    { id: 2, project_id: 5, active: false },
+    { id: 3, project_id: 6, active: true },
+    { id: 4, project_id: null, active: true },
+  ];
+  assert.deepEqual(
+    projectHabits(hs, 5).map((h) => h.id),
+    [1, 2],
+  );
+  assert.deepEqual(projectHabits(hs, 9), []);
+});
+
+test("withoutHabitChildren: 習慣の子タスクを除き、通常のタスクは残す", () => {
+  const ts = [t(1), t(2, { habit_id: 7 }), t(3)];
+  assert.deepEqual(
+    withoutHabitChildren(ts).map((x) => x.id),
+    [1, 3],
+  );
 });
