@@ -17,11 +17,14 @@ import {
   isProjectDone,
   movedOrder,
   openTaskCount,
+  projectHabits,
   projectProgress,
   type ProjectSummary,
   type ProjectTask,
   visibleProjects,
+  withoutHabitChildren,
 } from "@/lib/projects";
+import { habitRuleText, type Habit } from "@/lib/habits";
 import { useOrganize } from "./OrganizeContext";
 import {
   OrganizeEmpty,
@@ -31,6 +34,7 @@ import {
 import { TASK_ADDED_EVENT } from "./QuickAdd";
 import { TagChips } from "./TagChips";
 import { TagInput } from "./TagInput";
+import { HabitSheetHost } from "./HabitSheetHost";
 import { TaskDetailHost } from "./TaskDetailHost";
 import { useTaskDetailSync } from "./useTaskDetailSync";
 import styles from "./ProjectsScreen.module.css";
@@ -60,6 +64,8 @@ export function ProjectsScreen() {
   } = useOrganize();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitId, setHabitId] = useState<number | null>(null);
   const [load, setLoad] = useState<Load>("loading");
   const [selId, setSelId] = useState<number | null>(null);
   const [form, setForm] = useState<Form | null>(null);
@@ -73,12 +79,14 @@ export function ProjectsScreen() {
     async (initial: boolean) => {
       if (initial) setLoad("loading");
       try {
-        const [ps, ts] = await Promise.all([
+        const [ps, ts, hs] = await Promise.all([
           apiFetch<ProjectSummary[]>("/projects"),
           apiFetch<ProjectTask[]>("/tasks"),
+          apiFetch<Habit[]>("/habits"),
         ]);
         setProjects(ps);
         setTasks(ts);
+        setHabits(hs);
         setLoad("ready");
       } catch {
         if (initial) setLoad("error");
@@ -118,9 +126,15 @@ export function ProjectsScreen() {
   );
   const selected = listed.find((p) => p.id === selId) ?? null;
   const owned = useMemo(
-    () => tasks.filter((t) => t.project_id === selected?.id),
+    () =>
+      withoutHabitChildren(tasks.filter((t) => t.project_id === selected?.id)),
     [tasks, selected],
   );
+  const ownedHabits = useMemo(
+    () => (selected ? projectHabits(habits, selected.id) : []),
+    [habits, selected],
+  );
+  const currentHabit = habits.find((h) => h.id === habitId);
   const shown = useMemo(
     () =>
       filterInbox(byProjectOrder(owned), { ...filters, project: "" }, () => ""),
@@ -368,7 +382,13 @@ export function ProjectsScreen() {
 
   const taskRow = (t: ProjectTask, g: { tasks: ProjectTask[] }, i: number) => (
     <li key={t.id} className={styles.row}>
-      <button className={styles.rowBody} onClick={() => setDetailId(t.id)}>
+      <button
+        className={styles.rowBody}
+        onClick={() => {
+          setHabitId(null);
+          setDetailId(t.id);
+        }}
+      >
         <span
           className={styles.title}
           data-done={t.status === "done" ? "" : undefined}
@@ -422,6 +442,24 @@ export function ProjectsScreen() {
           refreshNow();
         }}
         onSaved={onSaved}
+      />
+      <HabitSheetHost
+        key={currentHabit?.id ?? "none"}
+        open={currentHabit != null}
+        mode="edit"
+        habit={currentHabit}
+        onChanged={(next) =>
+          setHabits((hs) => hs.map((h) => (h.id === next.id ? next : h)))
+        }
+        onDeleted={() => {
+          setHabits((hs) => hs.filter((h) => h.id !== habitId));
+          setHabitId(null);
+          refreshCounts();
+        }}
+        onClose={() => {
+          setHabitId(null);
+          void fetchAll(false);
+        }}
       />
       {formDialog}
       {confirmComplete && selected && (
@@ -743,8 +781,42 @@ export function ProjectsScreen() {
                 </div>
               </div>
 
+              {ownedHabits.length > 0 && (
+                <section>
+                  <div className={styles.groupLabel}>
+                    習慣
+                    <span className={styles.mono}>{ownedHabits.length}</span>
+                  </div>
+                  <ul className={styles.list}>
+                    {ownedHabits.map((h) => (
+                      <li key={h.id}>
+                        <button
+                          className={styles.outline}
+                          style={{ width: "100%", textAlign: "left" }}
+                          onClick={() => {
+                            setDetailId(null);
+                            setHabitId(h.id);
+                          }}
+                        >
+                          {h.title}
+                          <span className={styles.mono}>
+                            {" "}
+                            {habitRuleText(h)}
+                            {h.ended
+                              ? " · 終了"
+                              : !h.active
+                                ? " · 一時停止中"
+                                : ""}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {groups.length === 0 ? (
-                owned.length === 0 ? (
+                owned.length === 0 && ownedHabits.length === 0 ? (
                   <OrganizeEmpty
                     title={`この${PREFIX}にタスクはありません`}
                     text={`上の「タスクを追加」か、タスク詳細の「${PREFIX}」から、ここにまとめられます。`}

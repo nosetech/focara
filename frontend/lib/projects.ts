@@ -147,3 +147,18 @@ export function addTags(
   }
   return { tags: next, dup };
 }
+
+/** プロジェクトの習慣(親)。一時停止中・終了済みも含める。 */
+export function projectHabits<T extends { project_id: number | null }>(
+  habits: readonly T[],
+  projectId: number,
+): T[] {
+  return habits.filter((h) => h.project_id === projectId);
+}
+
+/** プロジェクト画面に出すタスク。習慣から生成された子(habit_id あり)は除く。 */
+export function withoutHabitChildren<T extends { habit_id: number | null }>(
+  tasks: readonly T[],
+): T[] {
+  return tasks.filter((t) => t.habit_id == null);
+}
