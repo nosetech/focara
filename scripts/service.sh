@@ -55,7 +55,7 @@ ensure_frontend_build() {
 render_plist() {
   local svc=$1 node_dir path extra=""
   node_dir="$(dirname "$(command -v node)")"
-  path="$node_dir:$(dirname "$(command -v uv)"):/usr/local/bin:/usr/bin:/bin"
+  path="$node_dir:$(dirname "$(command -v uv)"):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
   if [ -n "${FOCARA_CONFIG:-}" ]; then
     local cfg=${FOCARA_CONFIG//&/&amp;}; cfg=${cfg//</&lt;}; cfg=${cfg//>/&gt;}
     extra="
@@ -81,8 +81,25 @@ PY
   plutil -lint "$(plist_path "$svc")" >/dev/null
 }
 
-bootstrap_svc() { launchctl bootstrap "$DOMAIN" "$(plist_path "$1")"; }
-bootout_svc() { if service_loaded "$1"; then launchctl bootout "$DOMAIN/$(service_label "$1")"; fi; }
+# bootout は非同期に終わるため、登録が消えるまで待つ(最大約10秒)。失敗しても続行する
+bootout_svc() {
+  local _
+  service_loaded "$1" || return 0
+  launchctl bootout "$DOMAIN/$(service_label "$1")" 2>/dev/null || true
+  for _ in $(seq 1 50); do
+    service_loaded "$1" || return 0
+    sleep 0.2
+  done
+  echo "$1 の登録解除が完了しません: $(service_label "$1")" >&2
+  return 1
+}
+
+# 直前の bootout 直後は失敗することがあるため、1回だけ待ってリトライする
+bootstrap_svc() {
+  launchctl bootstrap "$DOMAIN" "$(plist_path "$1")" 2>/dev/null && return 0
+  sleep 2
+  launchctl bootstrap "$DOMAIN" "$(plist_path "$1")"
+}
 
 # 登録(再実行で更新)。backend を先に、frontend を後に起動する
 register_all() {
@@ -112,7 +129,7 @@ case "$CMD" in
     ;;
   uninstall)
     for svc in frontend backend; do
-      bootout_svc "$svc"
+      bootout_svc "$svc" || true
       rm -f "$(plist_path "$svc")"
       echo "$svc の登録を解除しました"
     done
@@ -126,7 +143,7 @@ case "$CMD" in
     ;;
   stop)
     for svc in frontend backend; do
-      if service_loaded "$svc"; then bootout_svc "$svc"; echo "$svc を停止しました(次回ログイン時に再び起動します。恒久的に止めるには uninstall)"; else echo "$svc は起動していません"; fi
+      if service_loaded "$svc"; then bootout_svc "$svc" && echo "$svc を停止しました(次回ログイン時に再び起動します。恒久的に止めるには uninstall)"; else echo "$svc は起動していません"; fi
     done
     ;;
   status)

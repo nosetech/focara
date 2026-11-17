@@ -30,16 +30,22 @@ backend / frontend を、macOS の per-user LaunchAgent として登録し、ロ
 LAN_IP=192.168.10.101 scripts/service.sh restart
 ```
 
+**更新時の注意**: `restart` は frontend を再ビルドしません(`frontend/.next/BUILD_ID` がなければ build するだけ)。`git pull` などでコードを更新したら、`frontend/` で `npm run build` をしてから `restart` してください。また `node` / `uv` の場所(nvm・volta 等のバージョン付きパス)は install 時に plist へ埋め込まれるため、更新・移動したら `restart` で作り直してください。パスが無効なままだと launchd が再起動を繰り返します。
+
 `/api/*` の中継先 `BACKEND_URL` は frontend が実行時に読むため、`backend.port` を変えても再ビルドは不要です。frontend のコードを更新したときは `npm run build` をしてから `restart` してください。
 
 ## 複数 instance
 
-`config.yaml` の `instance`(と、ポート・`db.path`・`log.dir`)を変えた別の展開先では、ラベルが異なるので並行して登録できます。設定ファイルは `FOCARA_CONFIG` で切り替えられます。
+`config.yaml` の `instance`(と、ポート・`db.path`・`log.dir`)を変えた別の展開先では、ラベルが異なるので並行して登録できます。設定ファイルは `FOCARA_CONFIG`(絶対パス推奨)で切り替えられます。
 
 ## 二重起動の防止
 
 - `start.sh` は、サービスが launchd に登録(起動)されていると、メッセージを出して止まります。
 - `service.sh install` / `start` / `restart` は、`start.sh` で起動中のプロセスがあると止まります。
+
+## ログ
+
+stdout / stderr は `log.dir` の `backend.log` / `frontend.log` に追記し続け、ローテーションはしません。大きくなったら手動で整理してください。
 
 ## スリープ
 
