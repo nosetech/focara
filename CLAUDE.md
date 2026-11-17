@@ -16,6 +16,8 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 
 - `scripts/start.sh` / `scripts/stop.sh`: backend と frontend をまとめて起動・停止(`LAN_IP` / `TAILSCALE_IP` のどちらか一方で frontend の bind 先を指定。未指定は `127.0.0.1`、両方指定はエラー。`0.0.0.0` は使わない)
 
+- `scripts/service.sh install|uninstall|start|stop|restart|status`: launchd の LaunchAgent による常時起動(運用用。詳細は `docs/service.md`)。登録は利用者のログイン項目を変更するため、人間の了承なしに実行しない。`start.sh` とは併用不可。
+
 - `scripts/dev-instance.sh start|stop|status`: 動作確認用インスタンス(運用と分離。ポートは18000番台から自動採番、設定・DB・ログ・PID記録は `.dev-run/`)。画面・APIの動作確認はこれで行う。`pkill` / `killall` / ポート検索による kill はしない(運用や他worktreeのインスタンスを巻き込むため)。
 
 backend(`backend/` で実行。uv + Python 3.11+):

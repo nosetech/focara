@@ -42,6 +42,7 @@ scripts/dev-instance.sh stop    # 起動したプロセスグループだけを�
 - 設定(`.dev-run/config.yaml`、毎回生成)・DB(`.dev-run/focara.db`)・ログ・PID記録はすべて worktree 直下の `.dev-run/`(`.gitignore` 対象)に置かれ、運用の `config/config.yaml` や `data/focara.db` は参照・変更しません。worktree ごとに独立しているため、複数worktreeで同時に起動できます。
 - `stop` は `.dev-run/` に記録したPID/PGID/目印と一致するプロセスグループだけを止めます。不一致の場合は何も止めずにエラー終了します。`pkill` / `killall` やポート検索による kill は、運用や他worktreeのインスタンスを巻き込むため行わないでください。
 - `NODE_ENV` は子プロセスに引き継ぎません(`NODE_ENV=production` の shell でも `next dev` が動作します)。
+- 常時起動(`scripts/service.sh`、launchd)は運用インスタンス用です。動作確認では `install` しないでください(登録名は `instance` で決まるため、`instance` が同じ運用の登録を上書きします)。
 - 現状 Focara には Slack通知・AI呼び出し・launchdジョブなどの外部副作用がありません。今後追加する際は、動作確認用インスタンスでは無効化してください。
 
 ## バージョン

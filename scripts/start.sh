@@ -12,6 +12,10 @@ MODE="${FOCARA_FRONTEND_MODE:-start}"
 case "$MODE" in start | dev) ;; *) echo "FOCARA_FRONTEND_MODE は start か dev を指定してください: $MODE" >&2; exit 1 ;; esac
 
 for svc in backend frontend; do
+  if [ "$(uname)" = Darwin ] && service_loaded "$svc"; then
+    echo "$svc は launchd(常時起動)に登録されています。scripts/service.sh stop か uninstall を実行してください" >&2
+    exit 1
+  fi
   if is_running "$svc"; then
     echo "$svc は既に起動しています(pid $(cat "$(pid_file "$svc")"))。先に scripts/stop.sh を実行してください" >&2
     exit 1
