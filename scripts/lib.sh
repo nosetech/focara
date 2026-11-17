@@ -38,3 +38,7 @@ is_running() {
   local f; f="$(pid_file "$1")"
   [ -f "$f" ] && kill -0 "$(cat "$f")" 2>/dev/null
 }
+
+# launchd(常時起動)のラベルと登録状態。service.sh / start.sh 共通。
+service_label() { echo "com.nosetech.focara.$INSTANCE.$1"; }
+service_loaded() { launchctl print "gui/$(id -u)/$(service_label "$1")" >/dev/null 2>&1; }

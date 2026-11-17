@@ -18,6 +18,20 @@ scripts/stop.sh    # 停止
 
 設定は `config/config.yaml`(`config/config.yaml.example` をコピー)から読みます。ログと PID ファイルは `log.dir`(既定 `backend/logs/`)に出力します。
 
+## 常時起動(macOS / launchd)
+
+Mac へのログイン時に自動で起動し、落ちても自動で再起動させるには、launchd の LaunchAgent に登録します。
+
+```sh
+scripts/service.sh install    # 登録して起動(再実行で更新)
+scripts/service.sh status     # 状態
+scripts/service.sh restart    # config.yaml / LAN_IP / TAILSCALE_IP を読み直して再起動
+scripts/service.sh stop       # 停止(次回ログイン時に再び起動)
+scripts/service.sh uninstall  # 登録解除(plist も削除)
+```
+
+事前に `backend/` で `uv sync`、`frontend/` で `npm install` を済ませてください。`scripts/start.sh` との併用はできません(二重起動を防ぐため、どちらかが動いていると他方は止まります)。詳細は [docs/service.md](./docs/service.md) を参照してください。
+
 ## LAN/Tailscaleからアクセスする
 
 既定ではすべて `127.0.0.1` のみで待ち受けます。別端末から使うときは **frontend の bind 先だけ** を切り替えます(backend は常に `127.0.0.1` のままで、frontend の `/api/*` 中継経由でのみ到達します)。
