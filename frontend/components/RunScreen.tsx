@@ -14,6 +14,7 @@ import {
   SWIPE_THRESHOLD,
   SLOT_LABEL,
   buildRunView,
+  completedSlots,
   currentSlot,
   canCancel,
   dragOffset,
@@ -22,6 +23,7 @@ import {
   formatNow,
   isDayOver,
   progressPercent,
+  slotFinishedBanner,
   moveBody,
   postponeBody,
   restoreBody,
@@ -267,6 +269,8 @@ export function RunScreen() {
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
   const { openQuickAdd } = useShell();
   const headView = load.state === "ready" ? buildRunView(load.tasks) : null;
+  const finishedSlots =
+    load.state === "ready" ? completedSlots(load.tasks) : [];
   // 「いま着手」の画面を出しているか(出していなければ追加ボタンだけの下部バーを出す)
   const showsRun =
     !!headView &&
@@ -303,8 +307,39 @@ export function RunScreen() {
         </div>
         <div className={styles.slotMarks}>
           {SLOTS.map((s) => (
-            <span key={s.key} data-on={s.key === slot ? "" : undefined}>
+            <span
+              key={s.key}
+              data-on={s.key === slot ? "" : undefined}
+              title={
+                finishedSlots.includes(s.key)
+                  ? `${s.label}の予定を終えました`
+                  : s.key === slot
+                    ? "現在の時間帯"
+                    : undefined
+              }
+            >
+              {finishedSlots.includes(s.key) && (
+                <svg
+                  className={styles.slotCheck}
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              )}
               {s.label}
+              {finishedSlots.includes(s.key) && (
+                <span className={styles.srOnly}>（終了）</span>
+              )}
+              {s.key === slot && (
+                <span className={styles.srOnly}>（現在）</span>
+              )}
             </span>
           ))}
         </div>
@@ -517,6 +552,7 @@ function Ready({
     );
   }
 
+  const finished = slotFinishedBanner(tasks);
   const rest = view.queue.slice(1);
   const shown = rest.slice(0, MAX_UPCOMING);
   const pct = Math.round((view.done.length / view.total) * 100);
@@ -581,7 +617,7 @@ function Ready({
 
   return (
     <div className={styles.runLayout}>
-      <div className={styles.runMain}>
+      <div className={styles.runMain} data-banner={finished ? "" : undefined}>
         <div className={styles.progress}>
           <div className={styles.bar}>
             <div style={{ width: `${pct}%` }} />
@@ -602,7 +638,43 @@ function Ready({
           </div>
         </div>
 
-        <div className={styles.now}>
+        {finished && (
+          <div className={styles.slotBanner} role="status">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+            <span>
+              {SLOT_LABEL[finished.slot]}の予定を終えました
+              <span className={styles.sep} aria-hidden="true">
+                ·
+              </span>
+              <span className={styles.mono}>{finished.done}</span>件完了
+              {finished.cancelled > 0 && (
+                <>
+                  <span className={styles.sep} aria-hidden="true">
+                    ·
+                  </span>
+                  <span className={styles.mono}>{finished.cancelled}</span>
+                  件キャンセル
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
+        <div
+          className={styles.now}
+          data-after-banner={finished ? "" : undefined}
+        >
           <span className={styles.dot} />
           いま着手
         </div>

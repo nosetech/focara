@@ -3,6 +3,9 @@ import { test } from "node:test";
 import {
   buildRunView,
   canCancel,
+  completedSlots,
+  isSlotFinished,
+  slotFinishedBanner,
   currentSlot,
   postponeBody,
   dragOffset,
@@ -166,5 +169,72 @@ test("buildRunView / sortRunTasks: 枠の中は実行順(予定時刻ありは�
   assert.deepEqual(
     sortRunTasks([evening, at(1, null, 0)]).map((x) => x.id),
     [1, 6],
+  );
+});
+
+const inSlot = (
+  id: number,
+  status: string,
+  slot: RunTask["time_slot"],
+): RunTask => ({ ...t(id, status, null), time_slot: slot });
+
+test("completedSlots: 全て完了した枠だけ。キャンセルは母数から外す", () => {
+  const tasks = [
+    inSlot(1, "done", "morning"),
+    inSlot(2, "cancelled", "morning"),
+    inSlot(3, "done", "afternoon"),
+    inSlot(4, "next", "afternoon"),
+    inSlot(5, "done", null),
+  ];
+  assert.deepEqual(completedSlots(tasks), ["morning"]);
+  assert.equal(isSlotFinished(tasks, "morning"), true);
+  assert.equal(isSlotFinished(tasks, "afternoon"), false);
+});
+
+test("completedSlots: タスクが0件、またはキャンセルのみの枠は終えた扱いにしない", () => {
+  assert.deepEqual(completedSlots([inSlot(1, "cancelled", "morning")]), []);
+  assert.deepEqual(completedSlots([]), []);
+});
+
+test("slotFinishedBanner: 午前を終えて午後が未着手のときに出す", () => {
+  const tasks = [
+    inSlot(1, "done", "morning"),
+    inSlot(2, "done", "morning"),
+    inSlot(3, "cancelled", "morning"),
+    inSlot(4, "next", "afternoon"),
+  ];
+  assert.deepEqual(slotFinishedBanner(tasks), {
+    slot: "morning",
+    done: 2,
+    cancelled: 1,
+  });
+});
+
+test("slotFinishedBanner: 午後に着手(完了)済み、午前が未完了、午前0件では出さない", () => {
+  assert.equal(
+    slotFinishedBanner([
+      inSlot(1, "done", "morning"),
+      inSlot(2, "done", "afternoon"),
+      inSlot(3, "next", "afternoon"),
+    ]),
+    null,
+  );
+  assert.equal(
+    slotFinishedBanner([
+      inSlot(1, "next", "morning"),
+      inSlot(2, "next", "afternoon"),
+    ]),
+    null,
+  );
+  assert.equal(slotFinishedBanner([inSlot(1, "next", "afternoon")]), null);
+});
+
+test("slotFinishedBanner: 午後を終えて夜に移るときも出す(午前なしでも直前の枠で判定)", () => {
+  assert.deepEqual(
+    slotFinishedBanner([
+      inSlot(1, "done", "afternoon"),
+      inSlot(2, "next", "evening"),
+    ]),
+    { slot: "afternoon", done: 1, cancelled: 0 },
   );
 });

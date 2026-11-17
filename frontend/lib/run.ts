@@ -110,6 +110,57 @@ export function buildRunView(input: RunTask[]): RunView {
   };
 }
 
+/**
+ * 終えた枠(キャンセルを除いて1件以上あり、全て完了)。枠が未設定のタスクは対象外。
+ * キャンセルした習慣の子は buildRunView と同じく母数から外す。
+ */
+export function completedSlots(tasks: readonly RunTask[]): TimeSlot[] {
+  return SLOTS.map((s) => s.key).filter((slot) => {
+    const live = tasks.filter(
+      (t) => t.time_slot === slot && t.status !== "cancelled",
+    );
+    return live.length > 0 && live.every((t) => t.status === "done");
+  });
+}
+
+export function isSlotFinished(
+  tasks: readonly RunTask[],
+  slot: TimeSlot,
+): boolean {
+  return completedSlots(tasks).includes(slot);
+}
+
+export interface SlotFinishedBanner {
+  slot: TimeSlot;
+  done: number;
+  cancelled: number;
+}
+
+/**
+ * 「いま着手」の上に出す、直前の枠を終えたことの表示。
+ * 「いま着手」のタスクの枠がまだ着手前(その枠の完了が0件)で、
+ * 直前の(タスクがある)枠を全て終えているときに返す。状態は持たず、完了状況だけで決める。
+ */
+export function slotFinishedBanner(
+  tasks: readonly RunTask[],
+): SlotFinishedBanner | null {
+  const cur = buildRunView([...tasks]).queue[0];
+  if (!cur?.time_slot) return null;
+  const rank = SLOT_RANK[cur.time_slot];
+  if (tasks.some((t) => t.time_slot === cur.time_slot && t.status === "done"))
+    return null;
+  const prev = SLOTS.filter(
+    (s) => SLOT_RANK[s.key] < rank && tasks.some((t) => t.time_slot === s.key),
+  ).at(-1)?.key;
+  if (!prev || !isSlotFinished(tasks, prev)) return null;
+  const inPrev = tasks.filter((t) => t.time_slot === prev);
+  return {
+    slot: prev,
+    done: inPrev.filter((t) => t.status === "done").length,
+    cancelled: inPrev.filter((t) => t.status === "cancelled").length,
+  };
+}
+
 /** 後回しを元に戻すためのPATCH本文。移動前の位置と日時固定を復元する。 */
 /** 後回し: 現在の時間帯の最後に移動する(時間帯はクライアントの時計で決める)。 */
 export function postponeBody(now: Date) {
