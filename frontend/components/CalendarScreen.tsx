@@ -218,14 +218,27 @@ export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
                         {t.title}
                         {t.habit_id != null && <HabitBadge />}
                       </span>
-                      <span className={styles.meta}>
-                        {[
-                          projectName(t.project_id),
-                          formatEstimate(t.estimate_minutes),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                      {(() => {
+                        const project = projectName(t.project_id);
+                        const estimate = formatEstimate(t.estimate_minutes);
+                        return (
+                          <span className={styles.meta}>
+                            {project && (
+                              <span className={styles.metaProject}>
+                                {project}
+                              </span>
+                            )}
+                            {project && estimate && (
+                              <span className={styles.metaSep}>·</span>
+                            )}
+                            {estimate && (
+                              <span className={styles.metaEstimate}>
+                                {estimate}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </div>
                   ))}
                   {items.length === 0 && (
