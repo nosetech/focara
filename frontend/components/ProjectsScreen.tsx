@@ -436,7 +436,7 @@ export function ProjectsScreen() {
     <>
       <TaskDetailHost
         taskId={detailId}
-        showEmpty
+        showEmpty={habitId == null}
         onClose={() => {
           setDetailId(null);
           refreshNow();
@@ -789,24 +789,27 @@ export function ProjectsScreen() {
                   </div>
                   <ul className={styles.list}>
                     {ownedHabits.map((h) => (
-                      <li key={h.id}>
+                      <li key={h.id} className={styles.row}>
                         <button
-                          className={styles.outline}
-                          style={{ width: "100%", textAlign: "left" }}
+                          className={styles.rowBody}
                           onClick={() => {
                             setDetailId(null);
                             setHabitId(h.id);
                           }}
                         >
-                          {h.title}
-                          <span className={styles.mono}>
-                            {" "}
-                            {habitRuleText(h)}
-                            {h.ended
-                              ? " · 終了"
-                              : !h.active
-                                ? " · 一時停止中"
-                                : ""}
+                          <span
+                            className={styles.title}
+                            data-done={h.ended ? "" : undefined}
+                          >
+                            {h.title}
+                          </span>
+                          <span className={styles.meta}>
+                            <span>{habitRuleText(h)}</span>
+                            {h.ended ? (
+                              <span>終了</span>
+                            ) : !h.active ? (
+                              <span>一時停止中</span>
+                            ) : null}
                           </span>
                         </button>
                       </li>
