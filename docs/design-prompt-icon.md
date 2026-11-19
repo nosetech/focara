@@ -25,7 +25,7 @@ Focara(フォカラ)のアプリアイコンと favicon の案を作ってくだ
 
 ## アセット
 
-- `frontend/app/icon.svg`: マスター。`prefers-color-scheme` でライト/ダークを切り替える。
+- `frontend/public/icons/icon-master.svg`: マスター。`prefers-color-scheme` でライト/ダークを切り替える。
 - `frontend/app/favicon.ico`: ライト配色(16/32/48px)。
 - `frontend/public/icons/`: `icon-192.png` / `icon-512.png` / `apple-touch-icon.png`(ライト配色・全面塗り)、`icon-maskable-512.png`(F と点を 80% に縮小して余白を確保)。
 - 画面ロゴ: `frontend/components/BrandLogo.tsx`(CSS変数でテーマ追従)。
