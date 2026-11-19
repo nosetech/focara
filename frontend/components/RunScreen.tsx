@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type PointerEvent,
+  type RefObject,
   type ReactNode,
 } from "react";
 import { DEFAULT_DAY_END_HOUR, apiFetch, fetchDayEndHour } from "@/lib/api";
@@ -41,6 +42,7 @@ import { Toast, type ToastMessage } from "./Toast";
 import { ErrorState, LoadingState } from "./StateView";
 import { HabitBadge } from "./HabitBadge";
 import { TagChips } from "./TagChips";
+import { RunProperties, type RunPropertiesHandle } from "./RunProperties";
 import { useShell } from "./ShellContext";
 import Link from "next/link";
 import { ThemeIconButton } from "./ThemeIconButton";
@@ -72,6 +74,8 @@ export function RunScreen() {
   const [dayEndHour, setDayEndHour] = useState(DEFAULT_DAY_END_HOUR);
   const [resched, setResched] = useState(false);
   const [addToday, setAddToday] = useState(false);
+  const [propBlocked, setPropBlocked] = useState(false);
+  const propsRef = useRef<RunPropertiesHandle>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const fetchAll = useCallback(async (silent = false) => {
@@ -107,6 +111,11 @@ export function RunScreen() {
     async (task: RunTask) => {
       setBusy(true);
       try {
+        // 入力中のプロパティの値を先に保存する。保存できないときは完了しない
+        if (propsRef.current && !(await propsRef.current.flush())) {
+          showToast({ msg: "プロパティの値を確認してください" });
+          return;
+        }
         await apiFetch(`/tasks/${task.id}/complete`, { method: "POST" });
         showToast({
           msg: "完了しました · 今日の記録に追加",
@@ -401,6 +410,9 @@ export function RunScreen() {
           projects={load.projects}
           slot={slot}
           busy={busy}
+          propsRef={propsRef}
+          propBlocked={propBlocked}
+          onPropBlocked={setPropBlocked}
           onComplete={complete}
           onPostpone={postpone}
           onCancel={cancelTask}
@@ -481,6 +493,9 @@ function Ready({
   projects,
   slot,
   busy,
+  propsRef,
+  propBlocked,
+  onPropBlocked,
   onComplete,
   onPostpone,
   onCancel,
@@ -496,6 +511,9 @@ function Ready({
   projects: Map<number, ProjectInfo>;
   slot: TimeSlot | null;
   busy: boolean;
+  propsRef: RefObject<RunPropertiesHandle | null>;
+  propBlocked: boolean;
+  onPropBlocked: (blocked: boolean) => void;
   onComplete: (t: RunTask) => Promise<void>;
   onPostpone: (t: RunTask) => Promise<boolean>;
   onCancel: (t: RunTask) => Promise<boolean>;
@@ -717,10 +735,18 @@ function Ready({
           {cur.memo && <p className={styles.memo}>{cur.memo}</p>}
         </SwipeCard>
 
+        {/* 値の入力欄はスワイプ・タップ判定の外(カードの下)に置く。現在タスクのみ */}
+        <RunProperties
+          key={`props-${cur.id}`}
+          taskId={cur.id}
+          handleRef={propsRef}
+          onBlockedChange={onPropBlocked}
+        />
+
         <div className={styles.actions}>
           <button
             className={styles.complete}
-            disabled={busy}
+            disabled={busy || propBlocked}
             onClick={() => void onComplete(cur)}
           >
             <svg
