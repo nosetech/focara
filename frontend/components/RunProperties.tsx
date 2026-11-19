@@ -97,7 +97,7 @@ export function RunProperties({
           return false;
         }
         if (!needsSave(r)) {
-          patchRow(id, { error: null });
+          patchRow(id, { error: null, saveError: null });
           return true;
         }
         const body = propertyBody({
@@ -109,7 +109,7 @@ export function RunProperties({
           unit: r.unit,
         });
         if (!body || "error" in body) return false;
-        patchRow(id, { saving: true, error: null });
+        patchRow(id, { saving: true, error: null, saveError: null });
         try {
           await apiFetch<TaskProperty>(`/tasks/${taskId}/properties/${id}`, {
             method: "PATCH",
@@ -119,6 +119,7 @@ export function RunProperties({
             saving: false,
             justSaved: true,
             error: null,
+            saveError: null,
             saved: r.value,
           });
           return true;
@@ -126,7 +127,7 @@ export function RunProperties({
           patchRow(id, {
             saving: false,
             justSaved: false,
-            error: "保存できませんでした",
+            saveError: "保存できませんでした。完了を押すと再試行します",
           });
           return false;
         }
@@ -220,7 +221,7 @@ export function RunProperties({
                   id={inputId}
                   className={styles.input}
                   data-mono={mono ? "" : undefined}
-                  data-error={r.error ? "" : undefined}
+                  data-error={r.error || r.saveError ? "" : undefined}
                   type={r.value_type === "date" ? "date" : "text"}
                   inputMode={r.value_type === "number" ? "decimal" : undefined}
                   placeholder={
@@ -232,7 +233,9 @@ export function RunProperties({
                   }
                   value={r.value}
                   aria-invalid={r.error ? true : undefined}
-                  aria-describedby={r.error ? `${inputId}-err` : undefined}
+                  aria-describedby={
+                    r.error || r.saveError ? `${inputId}-err` : undefined
+                  }
                   onFocus={(e) => {
                     setFocusedId(r.id);
                     // ソフトウェアキーボードで隠れないように、入力欄を見える位置へ
@@ -266,13 +269,13 @@ export function RunProperties({
                 />
                 {r.unit && <span className={styles.unit}>{r.unit}</span>}
               </div>
-              {r.error && (
+              {(r.error ?? r.saveError) && (
                 <div
                   id={`${inputId}-err`}
                   className={styles.error}
                   role="alert"
                 >
-                  {r.error}
+                  {r.error ?? r.saveError}
                 </div>
               )}
             </div>

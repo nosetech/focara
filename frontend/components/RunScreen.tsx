@@ -264,6 +264,7 @@ export function RunScreen() {
       if (el && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(el.tagName)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Enter") {
+        if (propBlocked) return;
         e.preventDefault();
         void complete(curTask);
       } else if (e.key === "s" || e.key === "S") {
@@ -273,7 +274,7 @@ export function RunScreen() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [curTask, busy, detailId, complete, postpone]);
+  }, [curTask, busy, detailId, complete, postpone, propBlocked]);
 
   const slot: TimeSlot | null = now ? currentSlot(now) : null;
   const { openQuickAdd } = useShell();

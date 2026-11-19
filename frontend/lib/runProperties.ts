@@ -13,7 +13,10 @@ export interface RunPropertyRow {
   unit: string;
   value: string;
   saved: string;
+  /** 入力不正(完了を止める) */
   error: string | null;
+  /** 保存失敗(通信エラーなど。完了を押すと再試行する) */
+  saveError: string | null;
   saving: boolean;
   /** 直近の保存が成功したか(「保存済み」の表示用) */
   justSaved: boolean;
@@ -30,6 +33,7 @@ export function toRows(props: TaskProperty[]): RunPropertyRow[] {
       value: d.value,
       saved: d.value,
       error: null,
+      saveError: null,
       saving: false,
       justSaved: false,
     };
@@ -81,7 +85,8 @@ export function overallStatus(
   rows: RunPropertyRow[],
   focusedId: number | null,
 ): PropertyStatus {
-  if (rows.some((r) => r.error !== null)) return "error";
+  if (rows.some((r) => r.error !== null || r.saveError !== null))
+    return "error";
   if (rows.some((r) => r.saving)) return "saving";
   if (focusedId !== null) return "editing";
   if (rows.some((r) => r.justSaved)) return "saved";
