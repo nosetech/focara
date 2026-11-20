@@ -76,6 +76,8 @@ export interface OrganizeCounts {
   waiting: number;
   someday: number;
   habits: number;
+  /** 終了した習慣の数(習慣ページの「終了した習慣も表示」に添える) */
+  endedHabits: number;
 }
 
 /** ナビに出す件数。assign は日付未設定の next(完了済みを除く)。habits は有効な習慣(親)の数(一時停止中・終了を除く)。 */
@@ -91,6 +93,7 @@ export function countTasks(
     waiting: n((t) => t.status === "waiting"),
     someday: n((t) => t.status === "someday"),
     habits: habits.filter((h) => h.active && !h.ended).length,
+    endedHabits: habits.filter((h) => h.ended).length,
   };
 }
 
@@ -121,6 +124,7 @@ export function screenSub(
   key: OrganizeScreenKey,
   counts: OrganizeCounts | null,
   date: Date,
+  showEndedHabits = false,
 ): string {
   switch (key) {
     case "inbox":
@@ -137,7 +141,13 @@ export function screenSub(
     case "someday":
       return counts ? `${counts[key]}件` : "";
     case "habits":
-      return counts ? `${counts.habits}件 · 直近7回の実施状況` : "";
+      return counts
+        ? `${counts.habits}件 · 直近7回の実施状況${
+            counts.endedHabits > 0
+              ? ` · 終了 ${counts.endedHabits}件${showEndedHabits ? "" : "を非表示"}`
+              : ""
+          }`
+        : "";
     default:
       return "";
   }

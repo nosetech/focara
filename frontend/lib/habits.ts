@@ -161,6 +161,27 @@ export function draftFromHabit(h: Habit): HabitDraft {
   };
 }
 
+/**
+ * 習慣をコピーして新規作成するときの初期値。開始日は今日にし、終了日指定の終了条件は
+ * 日付が過去になりやすいので空にして入力させる。子タスク・実績・状態は引き継がない。
+ */
+export function copyDraft(h: Habit, today: Date): HabitDraft {
+  const d = draftFromHabit(h);
+  return {
+    ...d,
+    start: toDateParam(today),
+    end: d.end.type === "date" ? { type: "date", date: "" } : d.end,
+  };
+}
+
+/** 一覧に出す習慣。既定は終了していないものだけ。showEnded で終了済みも含める。 */
+export function visibleHabits<T extends { ended?: boolean }>(
+  habits: readonly T[],
+  showEnded: boolean,
+): T[] {
+  return showEnded ? [...habits] : habits.filter((h) => !h.ended);
+}
+
 /** 新規作成の初期値。inboxのタスクから作る場合は seed で項目を引き継ぐ。 */
 export function emptyDraft(
   today: Date,

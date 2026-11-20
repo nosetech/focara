@@ -10,6 +10,8 @@ import {
   habitRuleText,
   recentDots,
   slotName,
+  copyDraft,
+  visibleHabits,
   type Habit,
   type HabitDraft,
 } from "@/lib/habits";
@@ -39,11 +41,23 @@ export function HabitsScreen({
   /** 新規作成シートの初期値(省略可) */
   seed?: Partial<HabitDraft>;
 }) {
-  const { filters, clearFilters, projects, refreshCounts, showToast } =
-    useOrganize();
+  const {
+    filters,
+    clearFilters,
+    projects,
+    refreshCounts,
+    showToast,
+    showEndedHabits,
+    setShowEndedHabits,
+  } = useOrganize();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [load, setLoad] = useState<Load>("loading");
   const [sel, setSel] = useState<Selection>(null);
+  /** 終了した習慣をコピーして新規作成するときの、コピー元の名前と初期値 */
+  const [copy, setCopy] = useState<{
+    title: string;
+    seed: HabitDraft;
+  } | null>(null);
   const [today] = useState(() => new Date());
 
   const fetchAll = useCallback(
@@ -78,13 +92,19 @@ export function HabitsScreen({
   );
   const rows = useMemo(
     () =>
-      filterInbox(habits.map(asListRow), filters, projectName).map((r) =>
-        habits.find((h) => h.id === r.id),
-      ) as Habit[],
-    [habits, filters, projectName],
+      filterInbox(
+        visibleHabits(habits, showEndedHabits).map(asListRow),
+        filters,
+        projectName,
+      ).map((r) => habits.find((h) => h.id === r.id)) as Habit[],
+    [habits, filters, projectName, showEndedHabits],
   );
-  const current =
+  const endedCount = habits.filter((h) => h.ended).length;
+  // 終了した習慣の表示をやめたら、開いていた終了済みのシートは閉じる
+  const selected =
     typeof sel === "number" ? habits.find((h) => h.id === sel) : undefined;
+  const current =
+    selected && (showEndedHabits || !selected.ended) ? selected : undefined;
 
   const replace = useCallback(
     (next: Habit) => {
@@ -99,7 +119,13 @@ export function HabitsScreen({
     return <OrganizeError label="習慣" onRetry={() => void fetchAll(true)} />;
 
   const add = (
-    <button className={styles.outline} onClick={() => setSel("new")}>
+    <button
+      className={styles.outline}
+      onClick={() => {
+        setCopy(null);
+        setSel("new");
+      }}
+    >
       習慣を追加
     </button>
   );
@@ -110,6 +136,20 @@ export function HabitsScreen({
         habits.length === 0 ? (
           <div className={styles.empty}>
             <OrganizeEmpty title={EMPTY_TITLE} text={EMPTY_TEXT} />
+            {add}
+          </div>
+        ) : !showEndedHabits && endedCount === habits.length ? (
+          <div className={styles.empty}>
+            <OrganizeEmpty
+              title="進行中の習慣はありません"
+              text={`終了した習慣が ${endedCount}件 あります。表示すると内容を確かめたり、コピーして新しい習慣を作ったりできます。`}
+            />
+            <button
+              className={styles.outline}
+              onClick={() => setShowEndedHabits(true)}
+            >
+              終了した習慣を表示
+            </button>
             {add}
           </div>
         ) : (
@@ -195,10 +235,16 @@ export function HabitsScreen({
         showEmpty
         mode={sel === "new" ? "new" : "edit"}
         habit={current}
-        seed={seed}
+        seed={copy?.seed ?? seed}
+        copyOf={copy?.title}
+        onCopy={(src) => {
+          setCopy({ title: src.title, seed: copyDraft(src, new Date()) });
+          setSel("new");
+        }}
         onChanged={replace}
         onCreated={(created) => {
           setHabits((hs) => [...hs, created]);
+          setCopy(null);
           setSel(created.id);
           refreshCounts();
           showToast({ msg: `習慣「${created.title}」を作成しました` });
@@ -212,6 +258,7 @@ export function HabitsScreen({
         }}
         onClose={() => {
           setSel(null);
+          setCopy(null);
           void fetchAll(false);
         }}
       />

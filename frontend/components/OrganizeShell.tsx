@@ -102,6 +102,7 @@ export function OrganizeShell({
   const [projects, setProjects] = useState<OrganizeProject[]>([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showEndedHabits, setShowEndedHabits] = useState(false);
   const [panelEl, setPanelEl] = useState<HTMLElement | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -141,7 +142,7 @@ export function OrganizeShell({
   const hasFilter =
     JSON.stringify(activeFilters) !== JSON.stringify(DEFAULT_FILTERS);
   const list = isListScreen(screen);
-  const sub = screenSub(screen, counts, date);
+  const sub = screenSub(screen, counts, date, showEndedHabits);
 
   const select = (
     key: keyof typeof filters,
@@ -380,6 +381,42 @@ export function OrganizeShell({
                       <span className={styles.divider} aria-hidden="true" />
                     </>
                   )}
+                  {screen === "habits" && (
+                    <>
+                      <button
+                        className={styles.chip}
+                        aria-pressed={showEndedHabits}
+                        title="終了した習慣を一覧に含める"
+                        onClick={() => setShowEndedHabits(!showEndedHabits)}
+                      >
+                        <span
+                          className={styles.chipBox}
+                          data-on={showEndedHabits ? "" : undefined}
+                          aria-hidden="true"
+                        >
+                          {showEndedHabits && (
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" />
+                            </svg>
+                          )}
+                        </span>
+                        終了した習慣も表示
+                        <span className={styles.chipCount}>
+                          {counts?.endedHabits ?? 0}
+                        </span>
+                      </button>
+                      <span className={styles.divider} aria-hidden="true" />
+                    </>
+                  )}
                   {screen === "projects" &&
                     select("status", "ステータス", [
                       { v: "", l: "ステータス: すべて" },
@@ -420,6 +457,9 @@ export function OrganizeShell({
                 projects,
                 refreshProjects,
                 showCompleted,
+                showEndedHabits,
+                setShowEndedHabits,
+                endedHabitCount: counts?.endedHabits ?? 0,
                 panelEl,
                 date,
                 setDate,

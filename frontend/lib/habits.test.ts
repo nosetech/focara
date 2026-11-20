@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   asListRow,
+  copyDraft,
+  visibleHabits,
   habitState,
   defaultRule,
   draftBody,
@@ -338,4 +340,56 @@ test("habitState: 終了は一時停止中と区別する", () => {
     asListRow({ active: true, ended: true } as never).status,
     "ended",
   );
+});
+
+test("copyDraft: 内容を引き継ぎ、開始日は今日にする", () => {
+  const src = habit({
+    title: "ストレッチ",
+    project_id: 3,
+    priority: 1,
+    estimate_minutes: 10,
+    memo: "メモ",
+    time_slot: "evening",
+    start_date: "2020-01-01",
+    recurrence_end_type: "count",
+    recurrence_end_count: 5,
+    properties: [{ key: "体重", value_type: "number", unit: "kg" }],
+    ended: true,
+    active: false,
+  });
+  const d = copyDraft(src, new Date(2026, 10, 20));
+  assert.equal(d.title, "ストレッチ");
+  assert.equal(d.projectId, 3);
+  assert.equal(d.priority, 1);
+  assert.equal(d.estimate, 10);
+  assert.equal(d.memo, "メモ");
+  assert.equal(d.slot, "evening");
+  assert.equal(d.start, "2026-11-20");
+  assert.deepEqual(d.end, { type: "count", count: 5 });
+  assert.deepEqual(d.properties, [{ key: "体重", type: "number", unit: "kg" }]);
+});
+
+test("copyDraft: 終了日指定の終了条件は日付を空にする", () => {
+  const d = copyDraft(
+    habit({ recurrence_end_type: "date", recurrence_end_date: "2026-01-31" }),
+    new Date(2026, 10, 20),
+  );
+  assert.deepEqual(d.end, { type: "date", date: "" });
+});
+
+test("visibleHabits: 既定は終了を除外し、切替で含める", () => {
+  const hs = [
+    habit({ id: 1 }),
+    habit({ id: 2, active: false }),
+    habit({ id: 3, ended: true }),
+  ];
+  assert.deepEqual(
+    visibleHabits(hs, false).map((h) => h.id),
+    [1, 2],
+  );
+  assert.deepEqual(
+    visibleHabits(hs, true).map((h) => h.id),
+    [1, 2, 3],
+  );
+  assert.deepEqual(visibleHabits([hs[2]], false), []);
 });
