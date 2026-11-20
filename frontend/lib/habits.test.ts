@@ -356,7 +356,6 @@ test("copyDraft: 内容を引き継ぎ、開始日は今日にする", () => {
     properties: [{ key: "体重", value_type: "number", unit: "kg" }],
     ended: true,
     active: false,
-    auto_cancel_overdue: true,
   });
   const d = copyDraft(src, new Date(2026, 10, 20));
   assert.equal(d.title, "ストレッチ");
@@ -366,7 +365,6 @@ test("copyDraft: 内容を引き継ぎ、開始日は今日にする", () => {
   assert.equal(d.memo, "メモ");
   assert.equal(d.slot, "evening");
   assert.equal(d.start, "2026-11-20");
-  assert.equal(d.autoCancel, false);
   assert.deepEqual(d.end, { type: "count", count: 5 });
   assert.deepEqual(d.properties, [{ key: "体重", type: "number", unit: "kg" }]);
 });
