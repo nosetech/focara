@@ -22,16 +22,7 @@ export const metadata: Metadata = {
   title: "Focara",
   description: "Focara(フォカラ)",
   appleWebApp: { capable: true, title: "Focara", statusBarStyle: "default" },
-  // Android 版 Chrome は SVG を使わず、48px の倍数の PNG を favicon に選ぶ。
-  // favicon.ico(16/32px)だけでは足りないため、PNG を明示する。
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
-    ],
-    apple: "/icons/apple-touch-icon.png",
-  },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
