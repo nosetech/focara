@@ -22,16 +22,6 @@ export const metadata: Metadata = {
   title: "Focara",
   description: "Focara(フォカラ)",
   appleWebApp: { capable: true, title: "Focara", statusBarStyle: "default" },
-  // Android 版 Chrome は SVG を使わず、48px の倍数の PNG を favicon に選ぶ。
-  // favicon.ico(16/32px)だけでは足りないため、PNG を明示する。
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
-    ],
-    apple: "/icons/apple-touch-icon.png",
-  },
 };
 
 export const viewport: Viewport = {
@@ -53,6 +43,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* favicon.ico / icon.svg は app/ 直下のファイルから自動で出力される。
+            apple-touch-icon は next dev では出さない: dev サーバーで apple-touch-icon があると
+            Android 版 Chrome のタブで favicon が一瞬表示されたあと消える(next start では問題ない)。
+            metadata.icons で指定すると icon.svg が出力されなくなるので、ここで直接書く。 */}
+        {process.env.NODE_ENV === "production" && (
+          <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        )}
       </head>
       <body>
         <ServiceWorkerRegister />
