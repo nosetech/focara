@@ -130,6 +130,27 @@ def test_reorder(client):
     assert [t["title"] for t in day] == ["c", "a", "b"]
 
 
+def test_reorder_ignores_cancelled(client):
+    # キャンセルできるのは習慣の子タスクだけ。画面に出ないので並べ替えの対象外
+    a, c = _task(client, "a"), _task(client, "c")
+    habit = client.post(
+        "/api/habits",
+        json={"title": "h", "recurrence_type": "weekly", "recurrence_weekdays": 127},
+    ).json()
+    kid = client.get(f"/api/tasks?habit_id={habit['id']}").json()[0]["id"]
+    for t in (a, kid, c):
+        assert _assign(client, t, "morning").status_code == 200
+    res = client.post(f"/api/tasks/{kid}/transition", json={"status": "cancelled"})
+    assert res.status_code == 200
+    body = {"scheduled_date": DAY, "time_slot": "morning", "task_ids": [c, a]}
+    res = client.put("/api/schedule/order", json=body)
+    assert res.status_code == 200
+    assert [t["title"] for t in res.json()] == ["c", "a"]
+    # キャンセル済みを含めて送ると過不足扱い(422)
+    body["task_ids"] = [c, a, kid]
+    assert client.put("/api/schedule/order", json=body).status_code == 422
+
+
 def test_reorder_rejects_mismatch(client):
     a, b = _task(client, "a"), _task(client, "b")
     _assign(client, a, "morning")
