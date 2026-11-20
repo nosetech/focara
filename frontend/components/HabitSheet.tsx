@@ -54,6 +54,10 @@ export interface HabitSheetProps {
   /** new: 初期値(inboxのタスクから作る場合など) */
   seed?: Partial<HabitDraft>;
   fromInbox?: boolean;
+  /** new: コピー元の習慣名(コピーから開いたときの案内に使う) */
+  copyOf?: string;
+  /** edit(終了した習慣): 「コピーして新しい習慣を作成」を押したとき */
+  onCopy?: (habit: Habit) => void;
   projects: { id: number; name: string }[];
   onChanged?: (habit: Habit) => void;
   onCreated?: (habit: Habit) => void;
@@ -235,6 +239,8 @@ export function HabitSheet({
   habit,
   seed,
   fromInbox = false,
+  copyOf,
+  onCopy,
   projects,
   onChanged,
   onCreated,
@@ -498,6 +504,28 @@ export function HabitSheet({
         </div>
 
         <div className={styles.body}>
+          {isNew && copyOf && (
+            <div className={own.copyNote} role="note">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                <path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" />
+              </svg>
+              <span>
+                「{copyOf}
+                」をコピーしています。保存するまで新しい習慣は作られません
+              </span>
+            </div>
+          )}
           {isNew && fromInbox && (
             <div className={own.note}>
               inboxのタスクから作成します。作成すると、元のタスクはinboxから取り除かれます。
@@ -530,6 +558,28 @@ export function HabitSheet({
                   この習慣は終了しました。すべての子タスクが完了したため、編集や再開はできません。
                 </span>
                 <small>累計 {total}回</small>
+                {onCopy && (
+                  <button
+                    className={own.copyBtn}
+                    onClick={() => onCopy(current)}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                      <path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" />
+                    </svg>
+                    コピーして新しい習慣を作成
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -976,6 +1026,9 @@ export function HabitSheet({
                       min={draft.start}
                       value={draft.end.date}
                       aria-label="終了日"
+                      data-prompt={
+                        isNew && draft.end.date === "" ? "" : undefined
+                      }
                       onChange={(e) =>
                         change({ end: { type: "date", date: e.target.value } })
                       }
@@ -983,6 +1036,13 @@ export function HabitSheet({
                     <span className={styles.unit}>まで</span>
                   </div>
                 )}
+                {draft.end.type === "date" &&
+                  isNew &&
+                  draft.end.date === "" && (
+                    <div className={own.endPrompt}>
+                      終了日を入力してください
+                    </div>
+                  )}
               </div>
               <div className={own.endBlock}>
                 <div className={own.endRow}>

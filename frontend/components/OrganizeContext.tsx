@@ -18,6 +18,11 @@ export interface OrganizeContextValue {
   refreshProjects: () => void;
   /** プロジェクト画面で完了済みも表示するか(既定は未完了のみ) */
   showCompleted: boolean;
+  /** 習慣ページで終了した習慣も表示するか(既定は終了していないものだけ) */
+  showEndedHabits: boolean;
+  setShowEndedHabits: (v: boolean) => void;
+  /** 終了した習慣の数(習慣ページの空状態の案内に使う) */
+  endedHabitCount: number;
   /** 詳細パネルの描画先。デスクトップのみ存在する */
   panelEl: HTMLElement | null;
   /** 日付ナビで選んでいる日 */

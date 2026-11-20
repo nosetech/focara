@@ -30,6 +30,7 @@ test("件数はステータスごとに数え、assign は日付未設定の nex
     waiting: 0,
     someday: 0,
     habits: 2,
+    endedHabits: 0,
   });
 });
 
@@ -38,7 +39,14 @@ test("日付ラベルと補足", () => {
   assert.equal(dateNavLabel("day", d), "10月26日（月）");
   assert.equal(dateNavLabel("week", d), "10月26日 – 1日");
   assert.equal(screenSub("inbox", null, d), "");
-  const counts = { inbox: 3, assign: 0, waiting: 0, someday: 0, habits: 0 };
+  const counts = {
+    inbox: 3,
+    assign: 0,
+    waiting: 0,
+    someday: 0,
+    habits: 0,
+    endedHabits: 0,
+  };
   assert.equal(screenSub("inbox", counts, d), "3件 · 未整理");
 });
 
@@ -52,4 +60,28 @@ test("習慣の件数は終了を含めない", () => {
     ],
   );
   assert.equal(c.habits, 1);
+});
+
+test("習慣の補足は終了した習慣があれば件数と表示状態を添える", () => {
+  const d = new Date(2026, 9, 26);
+  const counts = {
+    inbox: 0,
+    assign: 0,
+    waiting: 0,
+    someday: 0,
+    habits: 2,
+    endedHabits: 3,
+  };
+  assert.equal(
+    screenSub("habits", counts, d),
+    "2件 · 直近7回の実施状況 · 終了 3件を非表示",
+  );
+  assert.equal(
+    screenSub("habits", counts, d, true),
+    "2件 · 直近7回の実施状況 · 終了 3件",
+  );
+  assert.equal(
+    screenSub("habits", { ...counts, endedHabits: 0 }, d),
+    "2件 · 直近7回の実施状況",
+  );
 });

@@ -369,3 +369,53 @@
 .form:disabled .addBtn {
   display: none;
 }
+
+.copyNote {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sunk);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.copyNote svg {
+  flex: none;
+  margin-top: 4px;
+}
+
+.copyBtn {
+  align-self: flex-start;
+  margin-top: 10px;
+  height: 36px;
+  padding: 0 14px 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.copyBtn:hover {
+  border-color: var(--ink3);
+}
+
+.endDetail input[data-prompt] {
+  border-color: var(--accent);
+}
+
+.endPrompt {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
