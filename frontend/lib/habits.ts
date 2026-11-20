@@ -163,13 +163,14 @@ export function draftFromHabit(h: Habit): HabitDraft {
 
 /**
  * 習慣をコピーして新規作成するときの初期値。開始日は今日にし、終了日指定の終了条件は
- * 日付が過去になりやすいので空にして入力させる。子タスク・実績・状態は引き継がない。
+ * 日付が過去になりやすいので空にして入力させる。期限切れの子の扱いは既定に戻す。子タスク・実績・状態は引き継がない。
  */
 export function copyDraft(h: Habit, today: Date): HabitDraft {
   const d = draftFromHabit(h);
   return {
     ...d,
     start: toDateParam(today),
+    autoCancel: emptyDraft(today).autoCancel,
     end: d.end.type === "date" ? { type: "date", date: "" } : d.end,
   };
 }
