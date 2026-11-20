@@ -52,9 +52,14 @@ def arrange_fixed(tasks: list[Task]) -> list[Task]:
 
 
 def _slot_tasks(session: Session, day: date, slot: str) -> list[Task]:
+    """並べ替え対象のタスク。キャンセル済みは画面に出さないので含めない。"""
     stmt = (
         select(Task)
-        .where(Task.scheduled_date == day.isoformat(), Task.time_slot == slot)
+        .where(
+            Task.scheduled_date == day.isoformat(),
+            Task.time_slot == slot,
+            Task.status != "cancelled",
+        )
         .order_by(Task.run_order.is_(None), Task.run_order, Task.id)
     )
     return list(session.scalars(stmt))
