@@ -419,3 +419,178 @@
   font-size: 12px;
   color: var(--accent);
 }
+
+/* 子タスク一覧(HabitSheet.dc.html の「子タスク」) */
+.children {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.childrenHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.childrenTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.childrenTitle > span:last-child {
+  font-size: 12px;
+  color: var(--ink2);
+}
+
+.childFilters {
+  display: flex;
+  gap: 6px;
+}
+
+.childFilters button {
+  flex: none;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: var(--sunk);
+  color: var(--ink2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.childFilters button:hover {
+  border-color: var(--ink3);
+}
+
+.childFilters button[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-weight: 500;
+}
+
+.childFilters .mono {
+  font-size: 11px;
+}
+
+.childList {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.childRow {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px 0 4px;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.childRow:hover {
+  background: var(--sunk);
+}
+
+.childRow[data-kind="cancelled"] {
+  color: var(--ink3);
+  opacity: 0.72;
+}
+
+.childDate {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.childToday {
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.childBadge {
+  flex: none;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--ink2);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.childBadge[data-kind="done"] {
+  border-color: transparent;
+  background: var(--sunk);
+}
+
+.childBadge[data-kind="done"] svg {
+  color: var(--accent);
+}
+
+.childBadge[data-kind="cancelled"] {
+  border-style: dashed;
+  color: var(--ink3);
+}
+
+.childChevron {
+  flex: none;
+  color: var(--ink3);
+}
+
+.childEmpty {
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink2);
+}
+
+.childMore {
+  align-self: flex-start;
+  margin-top: 6px;
+  height: 36px;
+  padding: 0 8px 0 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.childMore:hover {
+  color: var(--ink);
+}

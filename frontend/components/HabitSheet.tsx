@@ -28,6 +28,8 @@ import {
   WEEKDAYS,
   type SaveState,
 } from "@/lib/taskDetail";
+import { HabitChildren } from "./HabitChildren";
+import { TaskDetail } from "./TaskDetail";
 import styles from "./TaskDetail.module.css";
 import own from "./HabitSheet.module.css";
 
@@ -258,6 +260,9 @@ export function HabitSheet({
   const [busy, setBusy] = useState(false);
   const [total, setTotal] = useState(0);
   const [today] = useState(() => new Date());
+  // 開いている子タスクの詳細と、子一覧の取り直し用カウンタ
+  const [childId, setChildId] = useState<number | null>(null);
+  const [childrenKey, setChildrenKey] = useState(0);
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dirty = useRef<HabitBody | null>(null);
@@ -446,6 +451,31 @@ export function HabitSheet({
   const days = rule.type === "weekly" ? rule.days : [];
   const mdayNote = rule.type === "monthly" && (rule.mday ?? 0) > 28;
   const bodyError = draftBody(draft);
+
+  /** 子タスクの詳細を閉じたら、一覧と直近7回のドットを取り直す。 */
+  const closeChild = () => {
+    setChildId(null);
+    setChildrenKey((k) => k + 1);
+    if (habitId == null) return;
+    apiFetch<Habit>(`/habits/${habitId}`)
+      .then((next) => {
+        setCurrent(next);
+        onChanged?.(next);
+      })
+      .catch(() => {});
+  };
+
+  // 子の詳細は、この習慣シートの代わりに同じ場所(右ペイン / 下のシート)へ出す
+  if (childId != null) {
+    return (
+      <TaskDetail
+        key={childId}
+        variant={variant}
+        taskId={childId}
+        onClose={closeChild}
+      />
+    );
+  }
 
   return (
     <div className={styles.root} data-variant={variant}>
@@ -658,7 +688,17 @@ export function HabitSheet({
                 </span>
               </div>
             )}
+          </fieldset>
 
+          {!isNew && habitId != null && (
+            <HabitChildren
+              habitId={habitId}
+              reloadKey={childrenKey}
+              onOpen={setChildId}
+            />
+          )}
+
+          <fieldset className={own.form} disabled={ended}>
             <div className={styles.list}>
               <div className={styles.item}>
                 <span className={styles.itemLabel}>プロジェクト</span>
