@@ -482,7 +482,11 @@
   font-weight: 500;
 }
 
-.childFilters .childList {
+.childFilters .mono {
+  font-size: 11px;
+}
+
+.childList {
   border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
