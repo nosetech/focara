@@ -435,3 +435,65 @@ export function seedFromTask(
     slot: slotForTime(start),
   };
 }
+
+/** 習慣シートの子一覧の1件(GET /api/tasks?habit_id= の一部)。 */
+export interface HabitChild {
+  id: number;
+  habit_id: number | null;
+  occurrence_date: string | null;
+  status: string;
+}
+
+export type ChildFilter = "all" | "cancelled";
+export type ChildKind = "open" | "done" | "cancelled";
+
+export const CHILD_FILTERS: { key: ChildFilter; label: string }[] = [
+  { key: "all", label: "すべて" },
+  { key: "cancelled", label: "キャンセル" },
+];
+
+export const CHILD_KIND_LABEL: Record<ChildKind, string> = {
+  open: "未完了",
+  done: "完了",
+  cancelled: "キャンセル",
+};
+
+/** 一覧に最初から出す件数。これを超えると「もっと見る」で残りを出す。 */
+export const CHILD_PREVIEW = 5;
+
+export const childKind = (status: string): ChildKind =>
+  status === "done" || status === "cancelled" ? status : "open";
+
+/** 予定日の新しい順(予定日なしは末尾)。同じ日は id の新しい順。 */
+export function sortChildren<T extends HabitChild>(
+  children: readonly T[],
+): T[] {
+  return [...children].sort((a, b) => {
+    const da = a.occurrence_date ?? "";
+    const db = b.occurrence_date ?? "";
+    if (da !== db) return da < db ? 1 : -1;
+    return b.id - a.id;
+  });
+}
+
+/** 絞り込み。「キャンセル」は status=cancelled(手動・自動どちらも)だけ。 */
+export function filterChildren<T extends HabitChild>(
+  children: readonly T[],
+  filter: ChildFilter,
+): T[] {
+  return filter === "cancelled"
+    ? children.filter((c) => c.status === "cancelled")
+    : [...children];
+}
+
+/** 折りたたみ時は直近 CHILD_PREVIEW 件だけ。 */
+export function visibleChildren<T>(list: readonly T[], expanded: boolean): T[] {
+  return expanded ? [...list] : list.slice(0, CHILD_PREVIEW);
+}
+
+/** 「11/20(金)」形式。予定日なしは「日付なし」。 */
+export function childDateLabel(date: string | null): string {
+  if (!date) return "日付なし";
+  const d = new Date(`${date}T00:00:00`);
+  return `${d.getMonth() + 1}/${d.getDate()}(${"日月火水木金土"[d.getDay()]})`;
+}

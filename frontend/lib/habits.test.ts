@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   asListRow,
+  CHILD_PREVIEW,
+  childDateLabel,
+  childKind,
+  filterChildren,
+  sortChildren,
+  visibleChildren,
+  type HabitChild,
   copyDraft,
   visibleHabits,
   habitState,
@@ -392,4 +399,62 @@ test("visibleHabits: 既定は終了を除外し、切替で含める", () => {
     [1, 2, 3],
   );
   assert.deepEqual(visibleHabits([hs[2]], false), []);
+});
+
+const child = (
+  id: number,
+  date: string | null,
+  status: string,
+): HabitChild => ({
+  id,
+  habit_id: 1,
+  occurrence_date: date,
+  status,
+});
+
+test("子は予定日の新しい順に並べる(予定日なしは末尾・同日はidの新しい順)", () => {
+  const sorted = sortChildren([
+    child(1, "2026-10-05", "done"),
+    child(2, null, "next"),
+    child(3, "2026-10-14", "next"),
+    child(4, "2026-10-05", "cancelled"),
+  ]);
+  assert.deepEqual(
+    sorted.map((c) => c.id),
+    [3, 4, 1, 2],
+  );
+});
+
+test("キャンセルで絞り込むと cancelled の子だけになり、元は変えない", () => {
+  const all = [
+    child(1, "2026-10-05", "done"),
+    child(2, "2026-10-06", "cancelled"),
+    child(3, "2026-10-07", "next"),
+  ];
+  assert.deepEqual(
+    filterChildren(all, "cancelled").map((c) => c.id),
+    [2],
+  );
+  assert.equal(filterChildren(all, "all").length, 3);
+  assert.deepEqual(filterChildren([all[0]], "cancelled"), []);
+});
+
+test("子のステータスは 未完了/完了/キャンセル に分ける", () => {
+  assert.equal(childKind("done"), "done");
+  assert.equal(childKind("cancelled"), "cancelled");
+  for (const s of ["inbox", "next", "someday", "waiting"]) {
+    assert.equal(childKind(s), "open");
+  }
+});
+
+test("子は直近5件だけ出し、展開すると全件出す", () => {
+  const list = Array.from({ length: 8 }, (_, i) => i);
+  assert.equal(visibleChildren(list, false).length, CHILD_PREVIEW);
+  assert.equal(visibleChildren(list, true).length, 8);
+  assert.deepEqual(visibleChildren([1, 2], false), [1, 2]);
+});
+
+test("子の予定日は月/日(曜日)で表す", () => {
+  assert.equal(childDateLabel("2026-10-14"), "10/14(水)");
+  assert.equal(childDateLabel(null), "日付なし");
 });
