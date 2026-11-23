@@ -243,6 +243,10 @@ export function OrganizeShell({
               >
                 {shortcutKeyFor("/")}
               </kbd>
+              <span
+                className={`${styles.countSlot} ${styles.label}`}
+                aria-hidden="true"
+              />
             </Link>
             <button
               className={styles.addButton}
@@ -260,8 +264,14 @@ export function OrganizeShell({
               >
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              <span className={styles.label}>inboxに追加</span>
+              <span className={`${styles.label} ${styles.labelGrow}`}>
+                inboxに追加
+              </span>
               <kbd className={`${styles.kbd} ${styles.label}`}>N</kbd>
+              <span
+                className={`${styles.countSlot} ${styles.label}`}
+                aria-hidden="true"
+              />
             </button>
             {ORGANIZE_GROUPS.map((g) => (
               <div key={g.label} className={styles.group}>
@@ -296,13 +306,18 @@ export function OrganizeShell({
                       <span className={`${styles.label} ${styles.labelGrow}`}>
                         {s.label}
                       </span>
-                      {keyHint && (
+                      {keyHint ? (
                         <kbd
                           className={`${styles.kbd} ${styles.label}`}
                           aria-hidden="true"
                         >
                           {keyHint}
                         </kbd>
+                      ) : (
+                        <span
+                          className={`${styles.keySlot} ${styles.label}`}
+                          aria-hidden="true"
+                        />
                       )}
                       <span className={`${styles.count} ${styles.label}`}>
                         {count}

@@ -106,18 +106,45 @@
   font-family: inherit;
 }
 
-.addButton span {
-  flex: 1;
+.addButton .labelGrow {
   text-align: left;
 }
 
 .kbd {
   font-family: var(--font-mono), monospace;
   font-size: 11px;
-  padding: 1px 6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex: none;
+  font-weight: 400;
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--ink3);
+}
+
+/* キーのない項目でも kbd と同幅の列を確保し、タスク数の列位置を全項目で揃える */
+.keySlot {
+  display: none;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+/* 「実行画面」「inboxに追加」はタスク数を持たないため、count と同幅の空きを置く */
+.countSlot {
+  width: 2ch;
+  flex: none;
+}
+
+/* ボタンのみ 1px の枠があり中身が内側に寄るため、その分を戻す */
+.addButton .countSlot {
+  margin-right: -1px;
 }
 
 .label {
@@ -126,7 +153,8 @@
 
 /* 画面移動のキー表示はデスクトップ幅のみ(キーボードのないモバイルには出さない) */
 .navLink .kbd,
-.navItem .kbd {
+.navItem .kbd,
+.addButton .kbd {
   display: none;
 }
 
@@ -222,6 +250,10 @@
   font-size: 12px;
   color: var(--ink3);
   font-weight: 400;
+  width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex: none;
 }
 
 .main {
@@ -396,8 +428,13 @@
 
 @media (min-width: 900px) {
   .navLink .kbd,
-  .navItem .kbd {
-    display: inline-block;
+  .navItem .kbd,
+  .addButton .kbd {
+    display: inline-flex;
+  }
+
+  .navItem .keySlot {
+    display: block;
   }
 
   .header {
@@ -419,7 +456,7 @@
   .navSlot {
     position: relative;
     flex: none;
-    width: 232px;
+    width: 240px;
     transition: width 0.18s ease;
   }
 
@@ -430,7 +467,7 @@
   .nav {
     position: absolute;
     inset: 0 auto 0 0;
-    width: 232px;
+    width: 240px;
     padding: 20px 12px 12px;
     transform: none;
     visibility: visible;
