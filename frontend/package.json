@@ -1,0 +1,30 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H ${FRONTEND_HOST:-127.0.0.1} -p ${FRONTEND_PORT:-3800}",
+    "build": "NODE_ENV=production next build",
+    "start": "NODE_ENV=production next start -H ${FRONTEND_HOST:-127.0.0.1} -p ${FRONTEND_PORT:-3800}",
+    "lint": "eslint",
+    "format:check": "prettier --check .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "next": "^16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.4.6",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "^5"
+  }
+}

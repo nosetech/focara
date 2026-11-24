@@ -1,0 +1,270 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+.sidebar,
+.sidebarSlot {
+  display: none;
+}
+
+.collapseButton {
+  display: none;
+}
+
+/* 実行画面: ボトムナビなし(操作は画面内の下部バーに置く) */
+.shell[data-run] .main {
+  padding-bottom: 0;
+}
+
+.bottomNav {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  align-items: stretch;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  z-index: 40;
+}
+
+.bottomLink {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+.bottomLink[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 実行画面の操作バー(約96px)の上に置く */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(64px + 96px + 16px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--on-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 45;
+}
+
+.themeButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.themeButton:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.bottomNav .themeButton {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+/* デスクトップ幅: 左サイドバー(デザインの navW 232px) */
+@media (min-width: 900px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .main {
+    padding-bottom: 0;
+  }
+
+  .bottomNav,
+  .fab {
+    display: none;
+  }
+
+  /* 折りたたみ時もレイアウト上の幅は slot が持ち、一時展開(peek)は sidebar が重なって広がる */
+  .sidebarSlot {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    width: 232px;
+    flex: none;
+    z-index: 40;
+    transition: width 0.18s ease;
+  }
+
+  .sidebarSlot[data-collapsed] {
+    width: 68px;
+  }
+
+  .sidebar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 232px;
+    transition:
+      width 0.18s ease,
+      box-shadow 0.18s ease;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 12px;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .sidebarSlot[data-collapsed] .sidebar:not([data-peek]) {
+    width: 68px;
+  }
+
+  .sidebar[data-peek] {
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .label {
+    white-space: nowrap;
+  }
+
+  .sidebar[data-icon-only] .label,
+  .sidebar[data-icon-only] .brand {
+    display: none;
+  }
+
+  .sidebar[data-icon-only] .sideLink,
+  .sidebar[data-icon-only] .themeButton {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .collapseButton {
+    display: flex;
+    border-top: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 14px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .brandVersion {
+    font-family: var(--font-mono), monospace;
+    font-size: 10.5px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    font-weight: 400;
+    color: var(--ink2);
+    align-self: flex-end;
+    margin-bottom: 2px;
+  }
+
+  button.sideLink {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  button.sideLink:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .kbd {
+    margin-left: auto;
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 5px;
+  }
+
+  .sideLink {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+
+  .sideLink[aria-current="page"] {
+    background: var(--sunk);
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  /* 実行画面: サイドバーなし */
+  .shell[data-run] .sidebarSlot {
+    display: none;
+  }
+
+  .shell[data-run] .main {
+    height: 100dvh;
+    overflow: auto;
+  }
+}
+
+@media (max-width: 899.98px) {
+  .brand,
+  .sideLink {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebarSlot,
+  .sidebar {
+    transition: none;
+  }
+}

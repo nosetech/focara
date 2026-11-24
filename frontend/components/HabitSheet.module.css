@@ -1,0 +1,596 @@
+/* 習慣の作成・編集シート(HabitSheet.dc.html)。共通の見た目は TaskDetail.module.css を使う */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink3);
+}
+
+.note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sunk);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.paused {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--ink3);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink2);
+}
+
+.paused span {
+  flex: 1;
+}
+
+.paused b {
+  color: var(--ink);
+}
+
+.stat {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.dots {
+  display: flex;
+  gap: 5px;
+}
+
+.dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ink3);
+}
+
+.dots i[data-state="done"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.dots i[data-state="cancelled"] {
+  background: var(--ink3);
+  border-color: var(--ink3);
+  opacity: 0.45;
+}
+
+.dots i[data-state="today"] {
+  border: 1.5px dashed var(--line);
+}
+
+.ymd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.endBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.endRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.endDetail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 96px;
+}
+
+.confirm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.confirmText {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dangerSolid {
+  height: 48px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 14px;
+  background: var(--danger);
+  color: var(--on-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dangerSolid:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.blockRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.props {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.propCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.propRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.propRow input {
+  flex: 1;
+  min-width: 0;
+  margin-right: 4px;
+}
+
+.propRow input[data-bad] {
+  border-color: var(--danger);
+}
+
+.iconBtn {
+  width: 32px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.addBtn {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 10px 0 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.propNote,
+.slotNote,
+.timeNote {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink3);
+}
+
+.propError {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.slotNote,
+.timeNote {
+  padding-left: 96px;
+}
+
+.tiny {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.timeRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeRow input {
+  flex: 1;
+  min-width: 0;
+}
+
+.typeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeRow button {
+  flex: none;
+  min-width: 44px;
+  padding: 0 10px;
+}
+
+.form {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form:disabled input,
+.form:disabled select,
+.form:disabled textarea {
+  background: transparent !important;
+  opacity: 1;
+  cursor: default;
+  resize: none;
+}
+
+.form:disabled button {
+  cursor: default;
+}
+
+.endedBox {
+  margin: 2px 0 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+}
+
+.endedIcon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink2);
+}
+
+.endedText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.endedText b {
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.endedText small {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.finishing {
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink2);
+}
+
+.finishing svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.mono {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+}
+
+/* 終了した習慣では、プロパティの並べ替え・削除・追加を出さない */
+.form:disabled .iconBtn,
+.form:disabled .addBtn {
+  display: none;
+}
+
+.copyNote {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sunk);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.copyNote svg {
+  flex: none;
+  margin-top: 4px;
+}
+
+.copyBtn {
+  align-self: flex-start;
+  margin-top: 10px;
+  height: 36px;
+  padding: 0 14px 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.copyBtn:hover {
+  border-color: var(--ink3);
+}
+
+.endDetail input[data-prompt] {
+  border-color: var(--accent);
+}
+
+.endPrompt {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* 子タスク一覧(HabitSheet.dc.html の「子タスク」) */
+.children {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.childrenHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+}
+
+.childrenTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.childrenTitle > span:last-child {
+  font-size: 12px;
+  color: var(--ink2);
+}
+
+.childFilters {
+  display: flex;
+  gap: 6px;
+}
+
+.childFilters button {
+  flex: none;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: var(--sunk);
+  color: var(--ink2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.childFilters button:hover {
+  border-color: var(--ink3);
+}
+
+.childFilters button[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-weight: 500;
+}
+
+.childFilters .mono {
+  font-size: 11px;
+}
+
+.childList {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.childRow {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px 0 4px;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.childRow:hover {
+  background: var(--sunk);
+}
+
+.childRow[data-kind="cancelled"] {
+  color: var(--ink3);
+  opacity: 0.72;
+}
+
+.childDate {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.childToday {
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.childBadge {
+  flex: none;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--ink2);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.childBadge[data-kind="done"] {
+  border-color: transparent;
+  background: var(--sunk);
+}
+
+.childBadge[data-kind="done"] svg {
+  color: var(--accent);
+}
+
+.childBadge[data-kind="cancelled"] {
+  border-style: dashed;
+  color: var(--ink3);
+}
+
+.childChevron {
+  flex: none;
+  color: var(--ink3);
+}
+
+.childEmpty {
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink2);
+}
+
+.childMore {
+  align-self: flex-start;
+  margin-top: 6px;
+  height: 36px;
+  padding: 0 8px 0 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.childMore:hover {
+  color: var(--ink);
+}

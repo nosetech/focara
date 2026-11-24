@@ -1,0 +1,62 @@
+import { sortByOrder } from "./order.ts";
+import type { TimeSlot } from "./run";
+
+export interface AssignTask {
+  id: number;
+  title: string;
+  status: string;
+  project_id: number | null;
+  estimate_minutes: number | null;
+  scheduled_date: string | null;
+  time_slot: TimeSlot | null;
+  run_order: number | null;
+  fixed_at: string | null;
+  habit_id: number | null;
+}
+
+/** 割り当て先。none は未割り当て(候補)。 */
+export type Column = TimeSlot | "none";
+
+export const COLUMNS: { key: Column; label: string }[] = [
+  { key: "none", label: "未割り当て" },
+  { key: "morning", label: "午前中" },
+  { key: "afternoon", label: "午後" },
+  { key: "evening", label: "夜" },
+];
+
+/** 候補(次にやるタスクのうち日付未設定のもの) */
+export const isCandidate = (t: AssignTask) =>
+  t.status === "next" && !t.scheduled_date;
+
+/** 枠の中のタスクを並べる(サーバーの並びと同じ: 実行順。予定時刻ありは、その位置の中で開始順) */
+export function slotTasks(
+  scheduled: readonly AssignTask[],
+  slot: TimeSlot,
+): AssignTask[] {
+  return sortByOrder(scheduled.filter((t) => t.time_slot === slot));
+}
+
+/** 見積もりの合計(分) */
+export const totalEstimate = (tasks: readonly AssignTask[]) =>
+  tasks.reduce((sum, t) => sum + (t.estimate_minutes ?? 0), 0);
+
+/** ドロップ後の枠内の並び。index は挿入位置(未指定なら末尾)。 */
+export function insertAt(
+  ids: readonly number[],
+  id: number,
+  index?: number,
+): number[] {
+  const rest = ids.filter((x) => x !== id);
+  const i = index === undefined ? rest.length : Math.min(index, rest.length);
+  return [...rest.slice(0, i), id, ...rest.slice(i)];
+}
+
+/** 選択日の日付あり・時間帯未設定のタスク(実行順。run_order 未設定は末尾) */
+export function unslotted(scheduled: readonly AssignTask[]): AssignTask[] {
+  return sortByOrder(
+    scheduled.filter((t) => !!t.scheduled_date && t.time_slot === null),
+  );
+}
+
+/** 3枠割り当てで動かせるのは、予定時刻のないタスクだけ。 */
+export const isAssignable = (t: AssignTask) => !t.fixed_at;

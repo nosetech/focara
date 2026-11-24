@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  backend の per-user LaunchAgent テンプレート。
+  scripts/service.sh install / restart が __XXX__ を埋めて ~/Library/LaunchAgents/ に生成する。
+  手で編集せず、設定は config/config.yaml を編集して service.sh restart で反映する。
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__ROOT__/backend/.venv/bin/python</string>
+    <string>-m</string>
+    <string>focara.main</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__ROOT__/backend</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__PATH__</string>__EXTRA_ENV__
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>__LOG_FILE__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG_FILE__</string>
+</dict>
+</plist>

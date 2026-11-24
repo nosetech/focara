@@ -1,0 +1,1317 @@
+.screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 0 8px;
+  height: 48px;
+}
+
+.date {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.slotMarks {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.slotMarks > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.slotCheck {
+  flex: none;
+  stroke: var(--accent);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.slotMarks [data-on] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.vsep,
+.clock,
+.headProgress,
+.headAdd,
+.backText,
+.hint {
+  display: none;
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.date {
+  margin-right: 8px;
+}
+
+.hint {
+  display: flex;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--ink3);
+  gap: 6px;
+  align-items: center;
+}
+
+.addBtn {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addOnlyBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
+  z-index: 30;
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.runLayout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.runMain {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 112px;
+}
+
+.progress {
+  padding: 4px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.now {
+  padding: 36px 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.now[data-after-banner] {
+  padding-top: 20px;
+}
+
+.slotBanner {
+  margin: 20px 24px 0;
+  min-height: 36px;
+  padding: 7px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--sunk);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink2);
+  animation: slotIn 0.32s ease both;
+}
+
+.slotBanner svg {
+  flex: none;
+  stroke: var(--accent);
+}
+
+.sep {
+  color: var(--ink3);
+  margin: 0 6px;
+}
+
+@keyframes slotIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slotBanner {
+    animation: none;
+  }
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.swipe {
+  position: relative;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.reveal {
+  position: absolute;
+  inset: 0;
+  background: var(--sunk);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 28px;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink2);
+  opacity: 0;
+}
+
+.revealCancel {
+  position: absolute;
+  inset: 0;
+  background: var(--sunk);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 28px;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink2);
+  opacity: 0;
+}
+
+.revealCancel[data-armed] {
+  color: var(--accent);
+}
+
+.reveal[data-armed] {
+  color: var(--accent);
+}
+
+.card {
+  position: relative;
+  background: var(--bg);
+  padding: 6px 24px 22px;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+  transition:
+    transform 0.22s ease,
+    opacity 0.28s ease;
+  animation: fadeIn 0.28s ease;
+}
+
+.card[data-dragging] {
+  transition: none;
+  cursor: grabbing;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+.actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom) / 2);
+  display: flex;
+  gap: 12px;
+  background: var(--bg);
+  z-index: 30;
+}
+
+.complete,
+.postpone,
+.cancelBtn {
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.complete {
+  flex: 1;
+  height: 64px;
+  border-radius: 20px;
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: transform 0.15s;
+}
+
+.complete:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.complete:disabled,
+.postpone:disabled,
+.cancelBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.postpone,
+.cancelBtn,
+.actions kbd {
+  display: none;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink2);
+}
+
+.tagsNarrow {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.tagsWide {
+  display: none;
+  min-width: 0;
+}
+
+.box {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1.5px solid var(--ink3);
+}
+
+.title {
+  font-size: 30px;
+  line-height: 1.38;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin: 10px 0 18px;
+  text-wrap: pretty;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink2);
+}
+
+.chip[data-accent] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip[data-danger] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.chip[data-mono] {
+  font-family: var(--font-mono), monospace;
+}
+
+.memo {
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.after {
+  margin-top: 32px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.afterLabel {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink3);
+  flex: none;
+}
+
+.after > .afterLabel {
+  padding-bottom: 4px;
+}
+
+.slotHeader {
+  font-size: 11px;
+  color: var(--ink3);
+  padding: 14px 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slotHeader span {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.upRow {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upTitle {
+  flex: 1;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upRow .mono,
+.est {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
+
+.est {
+  color: var(--ink3);
+  min-width: 36px;
+  text-align: right;
+}
+
+.more,
+.last {
+  padding-top: 8px;
+  color: var(--ink3);
+  font-size: 12px;
+}
+
+.last {
+  font-size: 13px;
+}
+
+.nextUp,
+.flow {
+  display: none;
+}
+
+.message {
+  padding: 120px 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.message h1 {
+  font-size: 26px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.message p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink2);
+  margin-top: 12px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.counts {
+  display: flex;
+  gap: 32px;
+  margin-top: 28px;
+}
+
+.counts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.counts b {
+  font-family: var(--font-mono), monospace;
+  font-size: 32px;
+  font-weight: 400;
+}
+
+.counts span {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.dim {
+  color: var(--ink2);
+}
+
+@media (min-width: 900px) {
+  .header {
+    height: 64px;
+    padding: 0 20px 0 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    gap: 20px;
+    flex: none;
+  }
+
+  .backLink {
+    width: auto;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px 0 8px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .backText {
+    display: inline;
+  }
+
+  .hint,
+  .addBtn,
+  .addOnlyBar {
+    display: none;
+  }
+
+  .backLink:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .vsep {
+    display: block;
+    width: 1px;
+    height: 24px;
+    background: var(--line);
+  }
+
+  .clock {
+    display: block;
+    font-family: var(--font-mono), monospace;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+
+  .headProgress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+
+  .headProgress .mono {
+    color: var(--ink2);
+  }
+
+  .headBar {
+    width: 110px;
+    flex: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .headBar > div {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+
+  .headAdd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .headAdd kbd {
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .date {
+    font-size: 16px;
+  }
+
+  .slotMarks {
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .runMain {
+    padding: 72px 80px 48px;
+    max-width: 980px;
+  }
+
+  .progress {
+    display: none;
+  }
+
+  .runMain[data-banner] {
+    padding-top: 48px;
+  }
+
+  .slotBanner {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 0 28px;
+    min-height: 38px;
+    padding: 8px 16px 8px 12px;
+    font-size: 14px;
+  }
+
+  .slotBanner svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .sep {
+    margin: 0 8px;
+  }
+
+  .now[data-after-banner] {
+    padding-top: 0;
+  }
+
+  .now {
+    padding: 0;
+    font-size: 13px;
+  }
+
+  .swipe {
+    margin-top: 28px;
+    overflow: visible;
+  }
+
+  .reveal,
+  .revealCancel {
+    display: none;
+  }
+
+  .card {
+    padding: 0;
+    background: transparent;
+    cursor: default;
+    user-select: auto;
+  }
+
+  .actions {
+    position: static;
+    padding: 48px 0 0;
+    background: transparent;
+    align-items: center;
+  }
+
+  .complete {
+    flex: none;
+    height: 56px;
+    padding: 0 24px 0 20px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .postpone {
+    display: flex;
+    height: 56px;
+    padding: 0 20px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .cancelBtn {
+    display: flex;
+    height: 56px;
+    padding: 0 20px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink2);
+    font-size: 15px;
+    font-weight: 500;
+    gap: 8px;
+  }
+
+  .postpone:hover:not(:disabled) {
+    background: var(--sunk);
+  }
+
+  .cancelBtn:hover:not(:disabled) {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+
+  .actions kbd {
+    display: inline;
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    opacity: 0.6;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+
+  .postpone kbd {
+    color: var(--ink3);
+    opacity: 1;
+    border-color: var(--line);
+  }
+
+  .project {
+    font-size: 14px;
+  }
+
+  .tagsNarrow {
+    display: none;
+  }
+
+  .tagsWide {
+    display: inline-flex;
+  }
+
+  .title {
+    font-size: 44px;
+    line-height: 1.35;
+    margin: 14px 0 24px;
+  }
+
+  .chip {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  .memo {
+    display: block;
+    max-width: 600px;
+    margin-top: 28px;
+    font-size: 15px;
+    line-height: 1.85;
+  }
+
+  .after {
+    display: none;
+  }
+
+  .nextUp {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-top: 72px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    max-width: 600px;
+    font-size: 14px;
+    color: var(--ink3);
+  }
+
+  .nextTitle {
+    flex: 1;
+    font-size: 16px;
+    color: var(--ink2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .flow {
+    display: block;
+    width: 380px;
+    flex: none;
+    border-left: 1px solid var(--line);
+    padding: 28px 16px 32px;
+    overflow: auto;
+  }
+
+  .flow > .afterLabel {
+    padding: 0 12px 8px;
+  }
+
+  .flowHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 12px 6px;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  .flowHeader[data-on] {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .flowHeader i {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .flowHeader .mono {
+    color: var(--ink3);
+    font-weight: 400;
+  }
+
+  .flowRow {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    border-radius: 10px;
+  }
+
+  .flowRow[data-cur] {
+    background: var(--sunk);
+    font-weight: 700;
+  }
+
+  .flowMark {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink3);
+  }
+
+  .flowRow[data-cur] .flowMark {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .flowRow[data-done] .flowMark {
+    background: var(--ink3);
+  }
+
+  .flowTitle {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .flowTime {
+    flex: none;
+    white-space: nowrap;
+    font-family: var(--font-mono), monospace;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .flowTime[data-danger] {
+    color: var(--danger);
+  }
+
+  .flowRow[data-done] .flowTitle {
+    color: var(--ink3);
+    text-decoration: line-through;
+  }
+}
+
+.dayOver {
+  flex: 1;
+  padding: 40px 24px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dayOver h1 {
+  font-size: 28px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.leftList {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.leftRow {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  color: var(--ink2);
+}
+
+.leftRow .mono {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.dayActions {
+  margin-top: auto;
+  padding-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayPrimary,
+.dayGhost {
+  width: 100%;
+  height: 56px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dayPrimary {
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.dayGhost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.sheetRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.sheetBackdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--backdrop);
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  padding: 10px 24px 34px;
+}
+
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  align-self: center;
+}
+
+.sheet h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 18px;
+}
+
+.sheet p {
+  font-size: 13px;
+  color: var(--ink2);
+  margin-top: 6px;
+}
+
+.reschedList {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.reschedRow {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reschedTitle {
+  flex: 1 1 100%;
+  font-size: 15px;
+}
+
+.reschedRow button,
+.reschedRow input {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.closeBtn {
+  margin-top: 20px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    width: 520px;
+    transform: translate(-50%, -50%);
+    border-radius: 16px;
+  }
+
+  .grabber {
+    display: none;
+  }
+}
+
+/* 空状態(今日の予定なし) */
+.empty {
+  flex: 1;
+  padding: 120px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty h1 {
+  font-size: 26px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.empty p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink2);
+  margin-top: 12px;
+}
+
+.emptyActions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyActions .dayPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dayHint {
+  display: none;
+}
+
+.dayHint[data-always] {
+  display: block;
+  margin-top: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink2);
+}
+
+.openDetail {
+  display: none;
+}
+
+.addHeading {
+  font-size: 13px;
+  color: var(--ink2);
+  margin-top: 18px;
+}
+
+.addInput {
+  margin-top: 10px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.slotPicker {
+  display: flex;
+  gap: 4px;
+  background: var(--sunk);
+  border-radius: 10px;
+  padding: 3px;
+  margin-top: 8px;
+}
+
+.slotPicker button {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.slotPicker button[data-on] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.addError {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+@media (min-width: 900px) {
+  .empty {
+    padding: 120px 80px 48px;
+    max-width: 720px;
+  }
+
+  .empty h1 {
+    font-size: 36px;
+  }
+
+  .emptyBr {
+    display: none;
+  }
+
+  .empty p {
+    font-size: 15px;
+    margin-top: 14px;
+  }
+
+  .emptyActions {
+    margin-top: 36px;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .emptyActions .dayPrimary,
+  .emptyActions .dayGhost {
+    width: auto;
+    height: 52px;
+    padding: 0 24px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  .openDetail {
+    display: block;
+    height: 56px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--ink2);
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .openDetail:hover {
+    color: var(--ink);
+  }
+
+  /* 1日の予定を終えた画面(デスクトップ): 一覧は右の「今日の流れ」に任せる */
+  .dayOver {
+    padding: 0;
+    max-width: 640px;
+  }
+
+  .dayOver h1 {
+    font-size: 36px;
+    margin-top: 2px;
+  }
+
+  .dayOver .counts {
+    gap: 48px;
+    margin-top: 32px;
+  }
+
+  .dayOver .counts b {
+    font-size: 40px;
+  }
+
+  .dayOver .counts span {
+    font-size: 13px;
+  }
+
+  .dayHint {
+    display: block;
+    margin-top: 36px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--ink2);
+  }
+
+  .dayHint[data-always] {
+    margin-top: 24px;
+    font-size: 15px;
+  }
+
+  .dayOver .leftList {
+    display: none;
+  }
+
+  .dayOver .dayActions {
+    flex-direction: row;
+    margin-top: 28px;
+    padding-top: 0;
+    gap: 12px;
+  }
+
+  .dayOver .dayPrimary,
+  .dayOver .dayGhost {
+    width: auto;
+    height: 52px;
+    padding: 0 24px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+}

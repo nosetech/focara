@@ -1,0 +1,826 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--backdrop);
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  animation: rise 0.24s ease;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.grabber {
+  flex: none;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 10px auto 0;
+}
+
+.top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 0 20px;
+  min-height: 52px;
+}
+
+.save {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.save[data-state="saving"] {
+  color: var(--ink2);
+}
+
+.save[data-state="error"] {
+  color: var(--danger);
+}
+
+.saveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.retry {
+  height: 32px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.close {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+}
+
+.alert {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--danger);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.titleText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.45;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.titleEdit {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titleEdit:hover {
+  color: var(--ink);
+  border-color: var(--ink3);
+}
+
+.titleEdit:focus-visible,
+.titleSave:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.titleEditRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.titleInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--ink3);
+  border-radius: 10px;
+  resize: none;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1.45;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.titleInput:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.titleSave {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--ink3);
+  font-family: var(--font-mono), monospace;
+}
+
+.memo {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.props {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.prop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.propRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.input {
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 0 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.seg {
+  display: flex;
+  gap: 2px;
+  background: var(--sunk);
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.seg button {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.seg button[data-on] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 予定時刻があるとき、枠は開始時刻から決まる(変更できない) */
+.seg:has(button:disabled) {
+  opacity: 0.5;
+}
+
+.seg button:disabled {
+  cursor: not-allowed;
+}
+
+.slotNote {
+  padding: 6px 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink3);
+}
+
+.remove {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--ink3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invalid {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.rowError {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.add {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skeleton {
+  flex: 1;
+  padding: 8px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  animation: pulse 1.6s ease-in-out infinite alternate;
+}
+
+.skeleton i {
+  display: block;
+  border-radius: 6px;
+  background: var(--sunk);
+}
+
+@keyframes pulse {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.loadError {
+  padding: 8px 20px 32px;
+  font-size: 14px;
+  color: var(--ink2);
+}
+
+.primary {
+  margin-top: 16px;
+  height: 48px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    left: auto;
+    top: 0;
+    width: var(--detail-w, 420px);
+    max-height: none;
+    border-radius: 0;
+    border-left: 1px solid var(--line);
+    animation: slide 0.24s ease;
+  }
+
+  .grabber {
+    display: none;
+  }
+
+  .footer {
+    padding-bottom: 16px;
+  }
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.unit {
+  font-size: 13px;
+  color: var(--ink2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chip[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
+
+.chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* inbox のタスクを習慣にする(ステータスの選択とは別の操作なので破線で区別する) */
+.chipHabit {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--ink3);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chipHabit:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.list {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tall {
+  min-height: 56px;
+}
+
+.itemBlock {
+  border-bottom: 1px solid var(--line);
+}
+
+.itemLabel {
+  width: 84px;
+  flex: none;
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.solid,
+.ghost {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.solid {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.solid:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ghost {
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  padding: 0 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.fieldNote {
+  font-size: 12px;
+  color: var(--ink3);
+  line-height: 1.6;
+}
+
+.days {
+  display: flex;
+  gap: 4px;
+}
+
+.days button {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.days button[data-on] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cell {
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--sunk);
+  color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cell[data-on] {
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 700;
+}
+
+.cellLast {
+  grid-column: span 4;
+  font-family: inherit;
+}
+
+.summary {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.6;
+}
+
+.skelChips {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.skelLine {
+  height: 1px;
+  background: var(--line);
+  margin-top: 8px;
+}
+
+.footer {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding: 12px 20px calc(34px + env(safe-area-inset-bottom));
+}
+
+.del {
+  height: 48px;
+  padding: 0 10px;
+  margin-right: auto;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.confirmText {
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--ink2);
+}
+
+.secondary,
+.primaryBtn {
+  height: 48px;
+  border-radius: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.secondary {
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.primaryBtn {
+  padding: 0 24px;
+  border: none;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.secondary:disabled,
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.danger {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* panel: 整理画面の右ペインに埋め込む(固定配置・背景・スライドなし) */
+.root[data-variant="panel"] {
+  position: static;
+  height: 100%;
+}
+
+.root[data-variant="panel"] .sheet {
+  position: static;
+  width: auto;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border-left: 1px solid var(--line);
+  animation: none;
+}
+
+.root[data-variant="panel"] .footer {
+  padding-bottom: 16px;
+}
+
+/* 習慣から生成された子タスク(TaskDetail.dc.html) */
+.habitCard {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px 10px 14px;
+  border-radius: 12px;
+  background: var(--sunk);
+  color: var(--ink2);
+}
+
+.habitText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habitKicker {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+}
+
+.habitLine {
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.habitOpen {
+  flex: none;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.occRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.occNote {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.occReset {
+  flex: none;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  padding: 0 14px;
+  color: var(--ink2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.habitKicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancelledTag {
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink2);
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}

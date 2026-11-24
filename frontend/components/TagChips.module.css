@@ -1,0 +1,93 @@
+.tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.tag {
+  flex: 0 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 4px;
+  background: var(--sunk);
+  color: var(--ink2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  flex: none;
+  padding-left: 1px;
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  color: var(--ink2);
+}
+
+/* 実行画面 モバイル */
+.tags[data-size="run-sm"] .tag {
+  height: 18px;
+  line-height: 18px;
+  padding: 0 6px;
+  font-size: 10.5px;
+  max-width: 64px;
+}
+.tags[data-size="run-sm"] .more {
+  font-size: 10.5px;
+}
+
+/* 実行画面 デスクトップ */
+.tags[data-size="run-md"] {
+  gap: 6px;
+  margin-left: 2px;
+}
+.tags[data-size="run-md"] .tag {
+  height: 20px;
+  line-height: 20px;
+  padding: 0 7px;
+  font-size: 11.5px;
+  max-width: 120px;
+}
+.tags[data-size="run-md"] .more {
+  font-size: 11.5px;
+}
+
+/* プロジェクト一覧の行 */
+.tags[data-size="row"] {
+  width: 100%;
+  margin-top: -2px;
+}
+.tags[data-size="row"] .tag {
+  height: 20px;
+  line-height: 20px;
+  padding: 0 7px;
+  font-size: 11.5px;
+  max-width: 96px;
+}
+.tags[data-size="row"][data-surface] .tag {
+  background: var(--surface);
+}
+.tags[data-size="row"] .tag[data-active] {
+  color: var(--ink);
+}
+.tags[data-size="row"] .more {
+  font-size: 11.5px;
+}
+
+/* 詳細ヘッダー(折り返す。全タグを表示) */
+.tags[data-size="header"] {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.tags[data-size="header"] .tag {
+  height: 20px;
+  line-height: 20px;
+  padding: 0 7px;
+  font-size: 11.5px;
+  max-width: 160px;
+}

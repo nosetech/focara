@@ -1,0 +1,301 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import { arrangeFixed } from "@/lib/order";
+import {
+  COLUMNS,
+  insertAt,
+  isAssignable,
+  isCandidate,
+  slotTasks,
+  totalEstimate,
+  unslotted,
+  type AssignTask,
+  type Column,
+} from "@/lib/assign";
+import { formatEstimate } from "@/lib/inbox";
+import { formatClock, toDateParam, type TimeSlot } from "@/lib/run";
+import { useOrganize } from "./OrganizeContext";
+import { TaskDetailHost } from "./TaskDetailHost";
+import { useTaskDetailSync } from "./useTaskDetailSync";
+import { OrganizeError, OrganizeLoading } from "./OrganizeStates";
+import { TASK_ADDED_EVENT } from "./QuickAdd";
+import { HabitBadge } from "./HabitBadge";
+import styles from "./AssignScreen.module.css";
+
+type Load = "loading" | "error" | "ready";
+
+/** 整理画面の3枠割り当て。候補を午前中・午後・夜へドラッグ(またはボタン)で割り当て、枠内で並べ替える。 */
+export function AssignScreen() {
+  const { date, projects, refreshCounts, showToast } = useOrganize();
+  const day = toDateParam(date);
+  const [candidates, setCandidates] = useState<AssignTask[]>([]);
+  const [scheduled, setScheduled] = useState<AssignTask[]>([]);
+  const [load, setLoad] = useState<Load>("loading");
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [over, setOver] = useState<{ col: Column; index?: number } | null>(
+    null,
+  );
+  const [selId, setSelId] = useState<number | null>(null);
+  const busy = useRef(false);
+
+  const fetchAll = useCallback(
+    async (initial: boolean) => {
+      if (initial) setLoad("loading");
+      try {
+        const [next, onDay] = await Promise.all([
+          apiFetch<AssignTask[]>("/tasks", { query: { status: "next" } }),
+          apiFetch<AssignTask[]>("/schedule", {
+            query: { date: day, include_done: true },
+          }),
+        ]);
+        setCandidates(next.filter(isCandidate));
+        // キャンセルした習慣の子は出さない
+        setScheduled(onDay.filter((t) => t.status !== "cancelled"));
+        setLoad("ready");
+      } catch {
+        if (initial) setLoad("error");
+        else showToast({ msg: "更新できませんでした。もう一度お試しください" });
+      }
+    },
+    [day, showToast],
+  );
+
+  const { onSaved, refreshNow } = useTaskDetailSync(() => {
+    void fetchAll(false);
+    refreshCounts();
+  });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchAll(true);
+  }, [fetchAll]);
+
+  useEffect(() => {
+    const onAdded = () => void fetchAll(false);
+    window.addEventListener(TASK_ADDED_EVENT, onAdded);
+    return () => window.removeEventListener(TASK_ADDED_EVENT, onAdded);
+  }, [fetchAll]);
+
+  const projectName = (id: number | null) =>
+    projects.find((p) => p.id === id)?.name ?? "";
+
+  const move = useCallback(
+    async (task: AssignTask, target: Column, index?: number) => {
+      if (busy.current) return;
+      busy.current = true;
+      try {
+        if (target === "none") {
+          if (isCandidate(task)) return;
+          await apiFetch(`/tasks/${task.id}/schedule`, { method: "DELETE" });
+        } else {
+          const slot = slotTasks(scheduled, target);
+          const here = slot.map((t) => t.id);
+          // 予定時刻ありのタスクは、その位置の中で開始時刻順に直してから送る
+          const arranged = (ids: number[]) => {
+            const byId = new Map(
+              [...slot, task].map((t) => [t.id, t] as const),
+            );
+            return arrangeFixed(
+              ids.map((id) => byId.get(id) as AssignTask),
+            ).map((t) => t.id);
+          };
+          const inSlot =
+            task.scheduled_date === day && task.time_slot === target;
+          if (!inSlot) {
+            await apiFetch(`/tasks/${task.id}/schedule`, {
+              method: "PUT",
+              body: { scheduled_date: day, time_slot: target },
+            });
+            here.push(task.id);
+          }
+          await apiFetch("/schedule/order", {
+            method: "PUT",
+            body: {
+              scheduled_date: day,
+              time_slot: target,
+              task_ids: arranged(insertAt(here, task.id, index)),
+            },
+          });
+        }
+        refreshCounts();
+      } catch {
+        showToast({ msg: "割り当てできませんでした。もう一度お試しください" });
+      } finally {
+        busy.current = false;
+        await fetchAll(false);
+      }
+    },
+    [day, scheduled, fetchAll, refreshCounts, showToast],
+  );
+
+  if (load === "loading") return <OrganizeLoading />;
+  if (load === "error")
+    return (
+      <OrganizeError label="3枠割り当て" onRetry={() => void fetchAll(true)} />
+    );
+
+  const all = [...candidates, ...scheduled];
+  const dragged = all.find((t) => t.id === dragId);
+  const noSlot = unslotted(scheduled);
+  const columns = COLUMNS.map((c) => ({
+    ...c,
+    tasks:
+      c.key === "none"
+        ? [...noSlot, ...candidates]
+        : slotTasks(scheduled, c.key as TimeSlot),
+  }));
+
+  const renderCard = (t: AssignTask, i: number, key: Column) => (
+    <div
+      key={t.id}
+      className={styles.card}
+      draggable={isAssignable(t)}
+      title={
+        isAssignable(t)
+          ? undefined
+          : "予定時刻のあるタスクは動かせません。日付はタスク詳細で変更します"
+      }
+      data-drag={dragId === t.id ? "" : undefined}
+      data-selected={selId === t.id ? "" : undefined}
+      onClick={() => setSelId(t.id)}
+      data-drop={
+        over?.col === key && over.index === i && dragId !== t.id
+          ? ""
+          : undefined
+      }
+      style={
+        t.status === "done"
+          ? { textDecoration: "line-through", opacity: 0.5 }
+          : undefined
+      }
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(t.id));
+        setDragId(t.id);
+      }}
+      onDragEnd={() => {
+        setDragId(null);
+        setOver(null);
+      }}
+      onDragOver={(e) => {
+        if (key === "none") return;
+        e.preventDefault();
+        e.stopPropagation();
+        setOver({ col: key, index: i });
+      }}
+      onDrop={key === "none" ? undefined : drop(key, i)}
+    >
+      <div className={styles.title}>
+        {t.title}
+        {t.habit_id != null && <HabitBadge />}
+      </div>
+      <div className={styles.meta}>
+        <span>{projectName(t.project_id) || "プロジェクトなし"}</span>
+        <span className={styles.mono}>
+          {t.fixed_at && `${formatClock(t.fixed_at)} · `}
+          {formatEstimate(t.estimate_minutes)}
+        </span>
+      </div>
+      {key === "none" && (
+        <div className={styles.slotBtns}>
+          {COLUMNS.filter((x) => x.key !== "none").map((s) => (
+            <button
+              key={s.key}
+              className={styles.slotBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                void move(t, s.key);
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const drop = (col: Column, index?: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOver(null);
+    setDragId(null);
+    if (dragged) void move(dragged, col, index);
+  };
+
+  return (
+    <>
+      <div className={styles.grid}>
+        {columns.map((c) => (
+          <div
+            key={c.key}
+            className={styles.col}
+            data-none={c.key === "none" ? "" : undefined}
+            data-dragging={dragId !== null ? "" : undefined}
+            data-over={over?.col === c.key ? "" : undefined}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setOver((o) => (o?.col === c.key ? o : { col: c.key }));
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node))
+                setOver(null);
+            }}
+            onDrop={drop(c.key)}
+          >
+            <div className={styles.head}>
+              <span className={styles.name}>{c.label}</span>
+              <span className={styles.count}>
+                {c.tasks.length}件 · 合計{" "}
+                <span className={styles.mono}>
+                  {formatEstimate(
+                    totalEstimate(c.tasks.filter((t) => t.status !== "done")),
+                  ) || "0分"}
+                </span>
+              </span>
+            </div>
+            {c.key === "none" && noSlot.length > 0 && (
+              <>
+                <div className={styles.unslotGroup}>
+                  <div className={styles.groupHead}>
+                    <span>この日・時間帯未設定</span>
+                    <span className={styles.count}>
+                      <span className={styles.mono}>{noSlot.length}</span>件
+                    </span>
+                  </div>
+                  {noSlot.map((t, i) => renderCard(t, i, c.key))}
+                </div>
+                <div className={styles.groupHead} data-candidate="">
+                  <span>候補</span>
+                  <span className={styles.count}>
+                    <span className={styles.mono}>{candidates.length}</span>件
+                  </span>
+                </div>
+              </>
+            )}
+            {(c.key === "none" ? candidates : c.tasks).map((t, i) =>
+              renderCard(t, i, c.key),
+            )}
+            {c.tasks.length === 0 && (
+              <div className={styles.empty}>
+                {c.key === "none"
+                  ? "未割り当てのタスクはありません"
+                  : "ここにドラッグして割り当て"}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <TaskDetailHost
+        taskId={selId}
+        onClose={() => {
+          setSelId(null);
+          refreshNow();
+        }}
+        onSaved={onSaved}
+      />
+    </>
+  );
+}
