@@ -22,6 +22,7 @@ import {
   newDraft,
   propertyBody,
   waitingBody,
+  shouldAutoSaveCond,
   toDraft,
   type PropertyDraft,
   type PropertyType,
@@ -539,7 +540,9 @@ export function TaskDetail({
     setCond(value);
     liveCond.current = value;
     clearTimeout(condTimer.current);
-    condTimer.current = setTimeout(flushCond, MEMO_DEBOUNCE_MS);
+    // 条件待ちへ移す途中は入力中に保存しない(Enter / blur で確定する)
+    if (shouldAutoSaveCond(savedStatus.current))
+      condTimer.current = setTimeout(flushCond, MEMO_DEBOUNCE_MS);
   };
 
   const startEditTitle = () => setEditingTitle(true);
@@ -1167,6 +1170,10 @@ export function TaskDetail({
                       aria-label="待つ条件"
                       onChange={(e) => onCond(e.target.value)}
                       onBlur={flushCond}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.nativeEvent.isComposing)
+                          flushCond();
+                      }}
                     />
                     {cond.trim() === "" && (
                       <span className={styles.hint} role="note">

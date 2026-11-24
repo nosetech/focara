@@ -7,6 +7,7 @@ import {
   propertyBody,
   toDraft,
   waitingBody,
+  shouldAutoSaveCond,
 } from "./taskDetail.ts";
 
 test("名前が空の行は保存対象外", () => {
@@ -152,4 +153,10 @@ test("時間の行は秒数を HH:MM:SS で表示する", () => {
     unit: null,
   });
   assert.equal(draft.value, "01:02:03");
+});
+
+test("条件の自動保存は、すでに条件待ちのタスクだけ", () => {
+  assert.equal(shouldAutoSaveCond("waiting"), true);
+  assert.equal(shouldAutoSaveCond("inbox"), false);
+  assert.equal(shouldAutoSaveCond("todo"), false);
 });

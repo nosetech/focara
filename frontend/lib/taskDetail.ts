@@ -128,6 +128,15 @@ export function waitingBody(
 }
 
 /**
+ * 条件の入力中にデバウンスで自動保存してよいか。
+ * すでに条件待ちのタスクだけ自動保存する。他のステータスから移す途中は、
+ * 書きかけの条件で確定してタスクが一覧から消えないよう、Enter / blur で確定する。
+ */
+export function shouldAutoSaveCond(savedStatus: string): boolean {
+  return savedStatus === "waiting";
+}
+
+/**
  * タスク名の編集を確定したときの扱い。
  * 前後の空白は取り除く。空なら保存せず編集前の値に戻す。変更がなければ保存しない。
  */
