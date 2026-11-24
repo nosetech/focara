@@ -72,8 +72,10 @@ scripts/dev-instance.sh stop    # 起動したプロセスグループだけを�
 | `config/config.yaml.example` | `dist/config/config.yaml.example` | 開発用 `config/config.yaml.example` と項目は揃える(`backend/focara/config.py` の項目を変えたら両方更新) |
 | `scripts/start.sh` / `backend_start.sh` / `frontend_start.sh` | `dist/scripts/` の同名ファイル | standalone(`node server.js`)で起動するため開発用と別実装。`.env` を読み込む |
 | `scripts/migrate.sh` | `dist/scripts/migrate.sh` | 配布専用(テスト: `backend/tests/test_dist_migrate.py`) |
+| `scripts/service.sh` / `com.nosetech.focara.frontend.plist.example` | `dist/scripts/` の同名ファイル | standalone(`node server.js`)で常時起動するため開発用と別実装。`.env` を読み込む(テスト: `backend/tests/test_dist_service.py`) |
+| `scripts/com.nosetech.focara.backend.plist.example` | `scripts/` | 共通実体をコピー |
 | `scripts/lib.sh` / `stop.sh` / `backend_stop.sh` / `frontend_stop.sh` | `scripts/` | 共通実体をコピー |
 | `backend/` | `backend/` | `tests` などを除いてコピー(利用者側で `uv sync --frozen`) |
 | `frontend/` | `frontend/` のビルド | `output: "standalone"` の出力 + `.next/static` + `public/` |
 
-`scripts/dev-instance.sh` / `service.sh` は同梱しません。`scripts/lib.sh` / `stop.sh` / `backend_stop.sh` / `frontend_stop.sh`、設定項目、`start.sh` / `backend_start.sh` / `frontend_start.sh` の挙動を変えたときは `dist/` への反映を確認してください(release-prepare スキルも確認します)。
+`scripts/dev-instance.sh` は同梱しません。`scripts/lib.sh` / `stop.sh` / `backend_stop.sh` / `frontend_stop.sh`、設定項目、`start.sh` / `backend_start.sh` / `frontend_start.sh` / `service.sh` / plist テンプレートの挙動を変えたときは `dist/` への反映を確認してください(release-prepare スキルも確認します)。

@@ -60,6 +60,20 @@ cd focara-<新version>
 - 旧バージョンと並行稼働する場合は、新側の `config/config.yaml` で `instance` / `backend.port` / `frontend.port` / `db.path` を変更してください。
 - 移行後に、旧バージョンで `scripts/stop.sh`、新バージョンで `scripts/start.sh` を実行します。
 
-## 含まれないもの
+## 5. 常時起動(任意)
 
-常時起動(launchd)用の `scripts/service.sh` は配布版に含まれません。常時起動が必要な場合は `scripts/start.sh` をログイン項目などから呼び出してください。
+ログイン時の自動起動とクラッシュ時の自動再起動を、launchd の LaunchAgent で設定できます。
+
+```sh
+scripts/service.sh install     # plist を生成して登録・起動(再実行で更新)
+scripts/service.sh status      # 稼働状態
+scripts/service.sh restart     # config.yaml / .env を読み直して plist を再生成し、再起動
+scripts/service.sh stop        # 停止(次回ログイン時に再び起動)
+scripts/service.sh uninstall   # 停止して登録を解除
+```
+
+- `install` は **ログイン項目を変更**します。内容を確認してから実行してください。
+- `scripts/start.sh` とは併用できません。起動中は先に `scripts/stop.sh` を実行してください(登録中は `start.sh` が拒否します)。
+- frontend の bind 先は `install` / `restart` 時の `.env`(`LAN_IP` / `TAILSCALE_IP`)で決まり、plist に埋め込まれます。
+- `node` / `uv` のパス(nvm・volta 等のバージョン付きパス)は plist に埋め込まれます。更新・移動したら `restart` で作り直してください。
+- 新バージョンに更新したら、新しい展開先で `install` し直します(旧展開先は先に `uninstall`。同じ `instance` だと登録名が同じです)。
