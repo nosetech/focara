@@ -1,0 +1,27 @@
+# Focara 設定ファイル。config/config.yaml にコピーして使う(config.yaml は引き継ぎ対象)。
+# 設定ファイルのパスは環境変数 FOCARA_CONFIG で上書きできる。反映にはアプリの再起動が必要。
+# 複数バージョンを並行稼働する場合は instance / backend.port / frontend.port / db.path を
+# バージョンごとに変えること。
+
+# 並行稼働の識別子(PIDファイル名などに使う)。
+instance: default
+
+backend:
+  port: 8800 # 常に 127.0.0.1 に bind する
+
+frontend:
+  port: 3800 # bind 先は .env の LAN_IP / TAILSCALE_IP で指定(未指定は 127.0.0.1)
+
+db:
+  path: data/focara.db # backend/ 基準の相対パス
+
+log:
+  dir: logs # backend/ 基準の相対パス
+
+ui:
+  # この時刻(0〜23)以降、未完了が残っていると実行画面が「1日の予定を終えた」画面に切り替わる
+  day_end_hour: 22
+
+habit:
+  # 習慣の子タスクを、今日から何日先まで先行生成するか(1〜365)
+  generate_ahead_days: 14

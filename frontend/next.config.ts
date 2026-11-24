@@ -8,6 +8,8 @@ const allowedDevOrigins = (process.env.FRONTEND_ALLOWED_DEV_ORIGINS ?? "")
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // 配布用に standalone 出力する(.next/standalone/server.js で起動できる)。
+  output: "standalone",
   allowedDevOrigins,
 };
 
