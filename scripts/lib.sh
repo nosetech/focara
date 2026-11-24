@@ -1,4 +1,4 @@
-# start.sh / stop.sh 共通。source して使う。
+# 起動・停止スクリプト共通。source して使う。
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # config.yaml の値を読み込む(検証は backend の設定ローダーに任せる。不正なら失敗する)。
@@ -42,3 +42,65 @@ is_running() {
 # launchd(常時起動)のラベルと登録状態。service.sh / start.sh 共通。
 service_label() { echo "com.nosetech.focara.$INSTANCE.$1"; }
 service_loaded() { launchctl print "gui/$(id -u)/$(service_label "$1")" >/dev/null 2>&1; }
+
+# --- 起動・停止(backend_*.sh / frontend_*.sh / start.sh / stop.sh 共通) ---
+
+# launchd 登録中だった場合に案内する対処(配布版は呼び出し側で上書きする)
+LAUNCHD_HINT="${LAUNCHD_HINT:-scripts/service.sh stop か uninstall を実行してください}"
+
+# 起動前のチェック: 対象サービスが launchd に登録されている、または起動中なら失敗する
+guard_start() {
+  local svc=$1
+  if [ "$(uname)" = Darwin ] && service_loaded "$svc"; then
+    echo "$svc は launchd(常時起動)に登録されています。$LAUNCHD_HINT" >&2
+    exit 1
+  fi
+  if is_running "$svc"; then
+    echo "$svc は既に起動しています(pid $(cat "$(pid_file "$svc")"))。先に scripts/stop.sh を実行してください" >&2
+    exit 1
+  fi
+}
+
+# FOCARA_FRONTEND_MODE(start | dev)を検証して MODE に入れる
+resolve_frontend_mode() {
+  MODE="${FOCARA_FRONTEND_MODE:-start}"
+  case "$MODE" in start | dev) ;; *) echo "FOCARA_FRONTEND_MODE は start か dev を指定してください: $MODE" >&2; exit 1 ;; esac
+}
+
+# 開発用: start モードで未ビルドなら frontend をビルドする
+ensure_frontend_build() {
+  if [ "$MODE" = start ] && [ ! -f "$ROOT/frontend/.next/BUILD_ID" ]; then
+    echo "frontend をビルドします"
+    (cd "$ROOT/frontend" && npm run build)
+  fi
+}
+
+# load_config 済みであること。backend をバックグラウンドで起動する。
+start_backend() {
+  guard_start backend
+  mkdir -p "$LOG_DIR"
+  (cd "$ROOT/backend" && nohup uv run python -m focara.main \
+    >>"$LOG_DIR/backend.log" 2>&1 & echo $! >"$(pid_file backend)")
+}
+
+# npm / uv は子プロセスを起こすので、子孫を先に止めてから親を止める
+kill_tree() {
+  local pid=$1 child
+  for child in $(pgrep -P "$pid" 2>/dev/null || true); do kill_tree "$child"; done
+  kill "$pid" 2>/dev/null || true
+}
+
+# サービスを停止する。起動していなければ 1 を返す(PIDファイルはどちらでも消す)。
+stop_service() {
+  local svc=$1 f rc=0
+  f="$(pid_file "$svc")"
+  if is_running "$svc"; then
+    kill_tree "$(cat "$f")"
+    echo "$svc を停止しました"
+  else
+    echo "$svc は起動していません"
+    rc=1
+  fi
+  rm -f "$f"
+  return "$rc"
+}

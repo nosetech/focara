@@ -1,44 +1,22 @@
 #!/usr/bin/env bash
-# backend と frontend をバックグラウンドで起動する。
+# backend と frontend をバックグラウンドで起動する(backend_start.sh → frontend_start.sh を順に呼ぶ)。
 #   FOCARA_FRONTEND_MODE=start(既定。未ビルドなら build する) | dev
 # frontend の bind 先は LAN_IP / TAILSCALE_IP(どちらか一方)で指定する。未指定なら 127.0.0.1。
 set -euo pipefail
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/lib.sh"
 load_config
 resolve_frontend_host
-mkdir -p "$LOG_DIR"
+resolve_frontend_mode
 
-MODE="${FOCARA_FRONTEND_MODE:-start}"
-case "$MODE" in start | dev) ;; *) echo "FOCARA_FRONTEND_MODE は start か dev を指定してください: $MODE" >&2; exit 1 ;; esac
+# どちらかが起動できない場合は、何も起動しない
+for svc in backend frontend; do guard_start "$svc"; done
+# ビルド失敗時に backend だけが残らないよう、先にビルドする
+ensure_frontend_build
 
-for svc in backend frontend; do
-  if [ "$(uname)" = Darwin ] && service_loaded "$svc"; then
-    echo "$svc は launchd(常時起動)に登録されています。scripts/service.sh stop か uninstall を実行してください" >&2
-    exit 1
-  fi
-  if is_running "$svc"; then
-    echo "$svc は既に起動しています(pid $(cat "$(pid_file "$svc")"))。先に scripts/stop.sh を実行してください" >&2
-    exit 1
-  fi
-done
-
-if [ "$MODE" = start ] && [ ! -f "$ROOT/frontend/.next/BUILD_ID" ]; then
-  echo "frontend をビルドします"
-  (cd "$ROOT/frontend" && npm run build)
-fi
-
-(cd "$ROOT/backend" && nohup uv run python -m focara.main \
-  >>"$LOG_DIR/backend.log" 2>&1 & echo $! >"$(pid_file backend)")
-
-# BACKEND_URL は /api/* の中継先。backend は常に 127.0.0.1
-# 開発サーバは bind 先を許可オリジンの既定にする(未指定だと /_next/* が403になる)
-DEV_ORIGINS="${FRONTEND_ALLOWED_DEV_ORIGINS:-}"
-if [ -z "$DEV_ORIGINS" ] && [ "$FRONTEND_PUBLIC" = 1 ]; then DEV_ORIGINS="$FRONTEND_HOST"; fi
-
-(cd "$ROOT/frontend" && \
-  FRONTEND_ALLOWED_DEV_ORIGINS="$DEV_ORIGINS" FRONTEND_HOST="$FRONTEND_HOST" FRONTEND_PORT="$FRONTEND_PORT" \
-  BACKEND_URL="http://127.0.0.1:$BACKEND_PORT" \
-  nohup npm run "$MODE" >>"$LOG_DIR/frontend.log" 2>&1 & echo $! >"$(pid_file frontend)")
+export FOCARA_BATCH=1
+"$DIR/backend_start.sh"
+"$DIR/frontend_start.sh"
 
 echo "起動しました: backend http://127.0.0.1:$BACKEND_PORT / frontend http://$FRONTEND_HOST:$FRONTEND_PORT"
 if [ "$FRONTEND_PUBLIC" = 1 ]; then

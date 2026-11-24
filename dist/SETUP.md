@@ -41,6 +41,8 @@ scripts/start.sh   # backend と frontend をバックグラウンドで起動
 scripts/stop.sh    # 停止
 ```
 
+片方だけ操作する場合は `scripts/backend_start.sh` / `backend_stop.sh` / `frontend_start.sh` / `frontend_stop.sh` を使います(いずれもバックグラウンドで起動して即終了)。PID・ログは共通なので、一括と個別を混在させても `stop.sh` で止められます。個別の停止は、対象が起動していないと失敗終了します。
+
 起動時にDBのスキーマが最新へ自動で更新されます。ログとPIDファイルは `config.yaml` の `log.dir`(既定 `backend/logs/`)に出力します。
 
 ## 4. 新バージョンへの更新(マイグレーション)
