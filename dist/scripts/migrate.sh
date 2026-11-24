@@ -47,9 +47,46 @@ prepare_dest() {
 
 py() { (cd "$NEW/backend" && uv run python -I "$@"); }
 
-# ---- config/config.yaml ----
+# 設定値(db.path / log.dir)を取り出す。相対パスは各展開先の backend/ 基準。
+read_paths() { # read_paths <cfgfile or ""> -> "db_path<TAB>log_dir"
+  if [ -n "$1" ]; then
+    py -c '
+import sys
+from focara.config import load_config
+c = load_config(sys.argv[1]); print(c.db.path); print(c.log.dir)' "$1"
+  else
+    py -c '
+from focara.config import Config
+c = Config(); print(c.db.path); print(c.log.dir)'
+  fi
+}
+abs_under() { case "$2" in /*) echo "$2" ;; *) echo "$1/backend/$2" ;; esac; }
+
+# ---- 事前確認(何も書き込む前に、旧DBのスキーマが新バージョンで扱えるか確認する) ----
 OLD_CFG="$OLD/config/config.yaml"
 NEW_CFG="$NEW/config/config.yaml"
+OLD_PATHS="$(read_paths "$([ -f "$OLD_CFG" ] && echo "$OLD_CFG")")" || die "旧の config.yaml が新バージョンの設定として不正です(修正してから再実行してください): $OLD_CFG"
+OLD_DB="$(abs_under "$OLD" "$(echo "$OLD_PATHS" | sed -n 1p)")"
+STATE=none REV=""
+if [ -f "$OLD_DB" ]; then
+  REV="$(sqlite3 "file:$OLD_DB?mode=ro" "SELECT version_num FROM alembic_version" 2>/dev/null | head -n1 || true)"
+  if [ -n "$REV" ]; then
+    STATE="$(py -c '
+import sys
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from focara.db.migrate import MIGRATIONS_DIR
+cfg = Config(); cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
+sd = ScriptDirectory.from_config(cfg)
+known = {r.revision for r in sd.walk_revisions()}
+head = sd.get_current_head()
+print("unknown" if sys.argv[1] not in known else ("same" if sys.argv[1] == head else "older"))
+' "$REV")"
+    [ "$STATE" != unknown ] || die "旧DBのスキーマ($REV)が新バージョンに対応していません(新しすぎる可能性があります)。旧より古いバージョンへの移行ではありませんか"
+  fi
+fi
+
+# ---- config/config.yaml ----
 echo "[config]"
 if [ -f "$OLD_CFG" ]; then
   py -c '
@@ -89,54 +126,22 @@ else
   echo "  旧の config.yaml がないためスキップ: $OLD_CFG"
 fi
 
-# 設定値(db.path / log.dir)を取り出す。相対パスは各展開先の backend/ 基準。
-read_paths() { # read_paths <cfgfile or ""> -> "db_path<TAB>log_dir"
-  if [ -n "$1" ]; then
-    py -c '
-import sys
-from focara.config import load_config
-c = load_config(sys.argv[1]); print(c.db.path); print(c.log.dir)' "$1"
-  else
-    py -c '
-from focara.config import Config
-c = Config(); print(c.db.path); print(c.log.dir)'
-  fi
-}
-abs_under() { case "$2" in /*) echo "$2" ;; *) echo "$1/backend/$2" ;; esac; }
-
-OLD_PATHS="$(read_paths "$([ -f "$OLD_CFG" ] && echo "$OLD_CFG")")"
-OLD_DB="$(abs_under "$OLD" "$(echo "$OLD_PATHS" | sed -n 1p)")"
 OLD_LOG="$(abs_under "$OLD" "$(echo "$OLD_PATHS" | sed -n 2p)")"
 NEW_PATHS="$(read_paths "$([ -f "$NEW_CFG" ] && echo "$NEW_CFG")")"
 NEW_DB="$(abs_under "$NEW" "$(echo "$NEW_PATHS" | sed -n 1p)")"
 NEW_LOG="$(abs_under "$NEW" "$(echo "$NEW_PATHS" | sed -n 2p)")"
+
 
 # ---- DB ----
 echo "[db]"
 if [ -f "$OLD_DB" ]; then
   [ "$(cd "$(dirname "$OLD_DB")" && pwd -P)/$(basename "$OLD_DB")" != "$(mkdir -p "$(dirname "$NEW_DB")" && cd "$(dirname "$NEW_DB")" && pwd -P)/$(basename "$NEW_DB")" ] \
     || die "移行元と移行先のDBが同じファイルです(db.path が絶対パスのままの可能性があります): $NEW_DB"
-  rev="$(sqlite3 "file:$OLD_DB?mode=ro" "SELECT version_num FROM alembic_version" 2>/dev/null | head -n1 || true)"
-  if [ -n "$rev" ]; then
-    state="$(py -c '
-import sys
-from alembic.config import Config
-from alembic.script import ScriptDirectory
-from focara.db.migrate import MIGRATIONS_DIR
-cfg = Config(); cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
-sd = ScriptDirectory.from_config(cfg)
-known = {r.revision for r in sd.walk_revisions()}
-head = sd.get_current_head()
-print("unknown" if sys.argv[1] not in known else ("same" if sys.argv[1] == head else "older"))
-' "$rev")"
-    case "$state" in
-      unknown) die "旧DBのスキーマ($rev)が新バージョンに対応していません(新しすぎる可能性があります)。新バージョンは旧より古い版ではありませんか" ;;
-      older) echo "  旧DBのスキーマ: $rev(新バージョン起動時に自動で最新へ更新されます)" ;;
-      same) echo "  旧DBのスキーマ: $rev(最新です)" ;;
-    esac
-  else
-    warn "旧DBに alembic_version がありません。スキーマの確認をスキップします"
-  fi
+  case "$STATE" in
+    older) echo "  旧DBのスキーマ: $REV(新バージョン起動時に自動で最新へ更新されます)" ;;
+    same) echo "  旧DBのスキーマ: $REV(最新です)" ;;
+    none) warn "旧DBに alembic_version がありません。スキーマの確認をスキップします" ;;
+  esac
   mkdir -p "$(dirname "$NEW_DB")"
   if prepare_dest "$NEW_DB"; then
     rm -f "$NEW_DB-wal" "$NEW_DB-shm"
@@ -151,7 +156,7 @@ fi
 echo "[.env]"
 if [ -f "$OLD/.env" ]; then
   if prepare_dest "$NEW/.env"; then
-    cp "$OLD/.env" "$NEW/.env"
+    cp -p "$OLD/.env" "$NEW/.env"
     echo "  コピーしました: $NEW/.env"
   fi
   lan="$(grep -E '^[[:space:]]*(export[[:space:]]+)?LAN_IP=.+' "$OLD/.env" || true)"

@@ -107,8 +107,8 @@ jobs:
           # backend: ソース一式(テスト・キャッシュ・ローカル状態を除く)
           rsync -a \
             --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' --exclude '*.egg-info' \
-            --exclude '.pytest_cache' --exclude '.ruff_cache' --exclude 'tests' \
-            --exclude 'data' --exclude 'logs' \
+            --exclude '.pytest_cache' --exclude '.ruff_cache' --exclude '/tests' \
+            --exclude '/data' --exclude '/logs' \
             backend/ "$pkg/backend/"
           # frontend: CI でビルドした standalone 出力
           cp -a frontend-standalone "$pkg/frontend"
@@ -133,8 +133,18 @@ jobs:
           done
           tar -czf "$pkg.tar.gz" "$pkg"
           sha256sum "$pkg.tar.gz" > "$pkg.tar.gz.sha256"
+      - name: タグが master 上にあることを検証する
+        run: |
+          git fetch origin master
+          git merge-base --is-ancestor "${TAG}^{commit}" origin/master \
+            || { echo "::error::タグが master 上のコミットを指していません"; exit 1; }
       - name: リリースノートを作る(タグが指す master コミットの本文)
-        run: git log -1 --format=%b "${TAG}^{commit}" > release-notes.md
+        run: |
+          git log -1 --format=%b "${TAG}^{commit}" > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::タグが指すコミットの本文が空です(変更点サマリのコミットにタグを付けてください)"
+            exit 1
+          fi
       - name: GitHub Release を公開する
         run: |
           gh release create "$TAG" \

@@ -145,6 +145,7 @@ def test_too_new_schema_stops(deploys):
     r = _run(new, old)
     assert r.returncode != 0
     assert not (new / "backend" / "data" / "focara.db").exists()
+    assert not (new / "config" / "config.yaml").exists()  # 失敗時は何も書き込まない
 
 
 def test_same_dir_stops(deploys):
