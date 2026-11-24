@@ -40,8 +40,8 @@ LAN_IP=192.168.10.101 scripts/service.sh restart
 
 ## 二重起動の防止
 
-- `start.sh` は、サービスが launchd に登録(起動)されていると、メッセージを出して止まります。
-- `service.sh install` / `start` / `restart` は、`start.sh` で起動中のプロセスがあると止まります。
+- `start.sh` と個別の `backend_start.sh` / `frontend_start.sh` は、対象のサービスが launchd に登録(起動)されていると、メッセージを出して止まります(併用不可)。
+- `service.sh install` / `start` / `restart` は、`start.sh` や個別の起動スクリプトで起動中のプロセスがあると止まります。
 
 ## ログ
 

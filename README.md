@@ -20,6 +20,15 @@ scripts/start.sh   # backend と frontend をバックグラウンドで起動(f
 scripts/stop.sh    # 停止
 ```
 
+片方だけ操作したい場合(プロセスごとに管理するツールへ登録する場合など)は、個別のスクリプトを使います。いずれもバックグラウンドで起動して即終了します。
+
+```sh
+scripts/backend_start.sh  / scripts/backend_stop.sh
+scripts/frontend_start.sh / scripts/frontend_stop.sh   # LAN_IP / TAILSCALE_IP / FOCARA_FRONTEND_MODE はこちらで有効
+```
+
+PID ファイルとログは一括と共通なので、一括と個別を混在させても停止できます(個別に起動したものを `stop.sh` で止める、など)。個別の停止スクリプトは、対象が起動していないと失敗終了します(`stop.sh` は常に成功)。
+
 設定は `config/config.yaml`(`config/config.yaml.example` をコピー)から読みます。ログと PID ファイルは `log.dir`(既定 `backend/logs/`)に出力します。
 
 ## 常時起動(macOS / launchd)
