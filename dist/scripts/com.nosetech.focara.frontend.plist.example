@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  frontend(配布版)の per-user LaunchAgent テンプレート。
+  scripts/service.sh install / restart が __XXX__ を埋めて ~/Library/LaunchAgents/ に生成する。
+  手で編集せず、設定は config/config.yaml と .env を編集して service.sh restart で反映する。
+  配布版: ビルド済みの standalone 出力を node で直接起動する(npm を介さない)。
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__ROOT__/frontend/server.js</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__ROOT__/frontend</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__PATH__</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>HOSTNAME</key>
+    <string>__FRONTEND_HOST__</string>
+    <key>PORT</key>
+    <string>__FRONTEND_PORT__</string>
+    <key>BACKEND_URL</key>
+    <string>__BACKEND_URL__</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>__LOG_FILE__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG_FILE__</string>
+</dict>
+</plist>

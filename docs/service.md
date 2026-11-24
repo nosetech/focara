@@ -11,6 +11,15 @@ backend / frontend を、macOS の per-user LaunchAgent として登録し、ロ
 - `PATH` は install 時の `node` / `uv` の場所から組み立てます(launchd の既定 `PATH` では見つからないため)。
 - ログは `start.sh` と同じ `log.dir` の `backend.log` / `frontend.log` です。
 
+## 配布版との違い
+
+配布版(`dist/`、GitHub Releases の tarball)にも `scripts/service.sh` が含まれます(`dist/scripts/service.sh`。手順は `dist/SETUP.md`)。開発用との違い:
+
+- frontend はビルド済みの standalone 出力を `node frontend/server.js` で起動します(`PORT` / `HOSTNAME` / `BACKEND_URL` / `NODE_ENV=production` を plist に設定)。`npm` もビルドも不要で、`next` は使いません。
+- `.env` の `LAN_IP` / `TAILSCALE_IP` を読み込みます(環境変数での指定は不要)。
+- 前提チェックは `backend/.venv/bin/python`(`uv sync --frozen` 済み)・`frontend/server.js`・`node` の存在です。
+- backend の plist テンプレートは開発用と共通です。`render` コマンドは plist を生成するだけで登録しません(確認・テスト用)。
+
 ## コマンド
 
 | コマンド | 内容 |

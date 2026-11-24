@@ -23,10 +23,14 @@ command -v node >/dev/null || { echo "node が見つかりません" >&2; exit 1
 guard_start frontend
 mkdir -p "$LOG_DIR"
 
-(cd "$ROOT/frontend" && \
+# & はコマンド単体に掛ける(cd && ... のリストに掛けると $! が bash の PID になる)
+(
+  cd "$ROOT/frontend"
   NODE_ENV=production PORT="$FRONTEND_PORT" HOSTNAME="$FRONTEND_HOST" \
-  BACKEND_URL="http://127.0.0.1:$BACKEND_PORT" \
-  nohup node server.js >>"$LOG_DIR/frontend.log" 2>&1 & echo $! >"$(pid_file frontend)")
+    BACKEND_URL="http://127.0.0.1:$BACKEND_PORT" \
+    nohup node server.js >>"$LOG_DIR/frontend.log" 2>&1 &
+  echo $! >"$(pid_file frontend)"
+)
 
 # 一括起動(start.sh)からは FOCARA_BATCH=1 で呼ばれ、案内は start.sh がまとめて出す
 if [ -z "${FOCARA_BATCH:-}" ]; then

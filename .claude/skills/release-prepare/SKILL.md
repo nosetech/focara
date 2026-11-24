@@ -20,7 +20,7 @@ Focara のリリース準備を行ってください: 新バージョン `$ARGUM
    - `frontend/package-lock.json`(`npm install --package-lock-only --ignore-scripts` を `frontend/` で実行)と `backend/uv.lock`(`uv lock` を `backend/` で実行)のバージョンを追従させる。
 
 4. **`dist/` の最新化確認**
-   - CONTRIBUTING.md の「dist/ と開発用ファイルの対応」表に従い、前バージョンタグ(なければ初回)以降の `scripts/`・`config/config.yaml.example`・`backend/focara/config.py` 等の変更が `dist/` に反映されているか差分を確認する。
+   - CONTRIBUTING.md の「dist/ と開発用ファイルの対応」表に従い、前バージョンタグ(なければ初回)以降の `scripts/`・`config/config.yaml.example`・`backend/focara/config.py` 等の変更が `dist/` に反映されているか差分を確認する。`service.sh` と plist テンプレート(`dist/scripts/service.sh`、frontend/backend の `*.plist.example`)も対象で、release.yml の tarball 組み立て・必須ファイル検証に含まれているかも確認する。
    - 未反映なら同じコミットで修正する。判断に迷う差分は、修正せず人間に確認する。
 
 5. **検証**
