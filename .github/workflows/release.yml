@@ -118,12 +118,16 @@ jobs:
           cp dist/SETUP.md dist/.env.example "$pkg/"
           cp dist/config/config.yaml.example "$pkg/config/"
           cp dist/scripts/start.sh dist/scripts/backend_start.sh dist/scripts/frontend_start.sh dist/scripts/migrate.sh "$pkg/scripts/"
+          cp dist/scripts/service.sh dist/scripts/com.nosetech.focara.frontend.plist.example "$pkg/scripts/"
+          # backend の plist テンプレートは開発用と共通実体
+          cp scripts/com.nosetech.focara.backend.plist.example "$pkg/scripts/"
           chmod +x "$pkg"/scripts/*.sh
           cp LICENSE "$pkg/" 2>/dev/null || true
           echo "$VERSION" > "$pkg/VERSION"
           # 必須ファイルの欠落を検知する
           for f in SETUP.md VERSION .env.example config/config.yaml.example \
                    scripts/start.sh scripts/stop.sh scripts/lib.sh scripts/migrate.sh \
+                   scripts/service.sh scripts/com.nosetech.focara.backend.plist.example scripts/com.nosetech.focara.frontend.plist.example \
                    scripts/backend_start.sh scripts/backend_stop.sh scripts/frontend_start.sh scripts/frontend_stop.sh \
                    backend/pyproject.toml backend/uv.lock \
                    frontend/server.js frontend/.next/BUILD_ID frontend/.next/static frontend/public/sw.js; do
