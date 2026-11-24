@@ -79,8 +79,19 @@ ensure_frontend_build() {
 start_backend() {
   guard_start backend
   mkdir -p "$LOG_DIR"
-  (cd "$ROOT/backend" && nohup uv run python -m focara.main \
-    >>"$LOG_DIR/backend.log" 2>&1 & echo $! >"$(pid_file backend)")
+  # uv run は exec せず子プロセスとしてサーバーを起こすため、PID ファイルにはサーバー自身の PID が
+  # 書かれるよう venv の python を直接起動する(service.sh の plist と同じ方式)。
+  local py="$ROOT/backend/.venv/bin/python"
+  if [ ! -x "$py" ]; then
+    echo "backend/.venv がありません。backend で uv sync を実行してください" >&2
+    exit 1
+  fi
+  # & はコマンド単体に掛ける(cd && ... のリストに掛けると $! が bash の PID になる)
+  (
+    cd "$ROOT/backend"
+    nohup "$py" -m focara.main >>"$LOG_DIR/backend.log" 2>&1 &
+    echo $! >"$(pid_file backend)"
+  )
 }
 
 # npm / uv は子プロセスを起こすので、子孫を先に止めてから親を止める
