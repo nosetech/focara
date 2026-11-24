@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # 配布版: backend / frontend(standalone)を launchd の per-user LaunchAgent として常時起動する(macOS)。
-# backend / frontend を launchd の per-user LaunchAgent として常時起動する(macOS)。
-#   scripts/service.sh {install|uninstall|start|stop|restart|status}
+#   scripts/service.sh {install|uninstall|start|stop|restart|status|render}
 #   install   : plist を生成して登録・起動する(再実行で更新)
 #   uninstall : 停止して登録を解除し、plist を削除する
 #   start     : 登録済みサービスを起動する
 #   stop      : 停止する(plist は残るため、次回ログイン時に再び起動する。恒久的に止めるなら uninstall)
 #   restart   : 設定(config.yaml / .env)を読み直して plist を再生成し、再起動する
-#   render    : plist を生成するだけで登録しない(確認用)
+#   render    : plist を生成するだけで登録しない(確認・テスト用。登録済みの plist は上書きされるので、通常は使わない)
 # frontend の bind 先は install / restart 時の .env の LAN_IP / TAILSCALE_IP(どちらか一方)で決まる。
 set -euo pipefail
 LAUNCHD_HINT="scripts/service.sh stop か uninstall を実行してください"
