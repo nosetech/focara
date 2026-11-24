@@ -50,3 +50,30 @@ scripts/dev-instance.sh stop    # 起動したプロセスグループだけを�
 - 画面に表示されるバージョンは `backend/pyproject.toml` の `version` が正です。リリース時はここを更新します(更新後に `uv sync` で反映)。
 - `frontend/package.json` の `version` は表示に使わないため、触りません。
 - 設定ファイルの `instance` は並行稼働の識別子で、バージョンとは別物です。
+
+## リリース
+
+リリースは次の手順で行います(自動アップデートはありません。配布物は GitHub Releases の tarball です)。
+
+1. `/release-prepare <version>`(`.claude/skills/release-prepare`)で `release/v<version>` ブランチを作り、バージョン更新と変更点サマリのコミット、`master` 宛PRの作成までを行う。
+   - **例外:** リリースPRは `develop` ではなく **`master` 宛**です(`feature/*` → `develop` の通常ルールとは異なる)。
+2. 人間がPRをレビューして `master` にマージする(PR本文のサマリがコミット本文になる squash 推奨。この本文が Release のノートになる)。
+3. 人間が `master` にタグを付けて push する: `git tag v<version> && git push origin v<version>`。`.github/workflows/release.yml` がバージョン一致検証・テスト・ビルドを行い、tarball と sha256 を Release に公開する。
+4. `master` を `develop` にマージする。
+
+### dist/ の管理
+
+`dist/` は配布専用のファイルを置きます。開発用と共通実体のものは `dist/` に複製せず、release.yml が組み立て時にコピーします(二重管理しない)。
+
+| 配布物のパス | 元 | 備考 |
+| --- | --- | --- |
+| `SETUP.md` | `dist/SETUP.md` | 配布専用 |
+| `.env.example` | `dist/.env.example` | 配布専用 |
+| `config/config.yaml.example` | `dist/config/config.yaml.example` | 開発用 `config/config.yaml.example` と項目は揃える(`backend/focara/config.py` の項目を変えたら両方更新) |
+| `scripts/start.sh` | `dist/scripts/start.sh` | standalone(`node server.js`)で起動するため開発用と別実装。`.env` を読み込む |
+| `scripts/migrate.sh` | `dist/scripts/migrate.sh` | 配布専用(テスト: `backend/tests/test_dist_migrate.py`) |
+| `scripts/lib.sh` / `scripts/stop.sh` | `scripts/` | 共通実体をコピー |
+| `backend/` | `backend/` | `tests` などを除いてコピー(利用者側で `uv sync --frozen`) |
+| `frontend/` | `frontend/` のビルド | `output: "standalone"` の出力 + `.next/static` + `public/` |
+
+`scripts/dev-instance.sh` / `service.sh` は同梱しません。`scripts/lib.sh` / `stop.sh`、設定項目、`start.sh` の挙動を変えたときは `dist/` への反映を確認してください(release-prepare スキルも確認します)。

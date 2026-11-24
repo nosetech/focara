@@ -15,6 +15,7 @@ config/config.yaml
 data/
 logs/
 .env*
+!.env.example
 .DS_Store
 .serena/
 .dev-run/

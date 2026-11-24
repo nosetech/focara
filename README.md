@@ -9,6 +9,10 @@ Focara(フォカラ)は、集中して作業に取り組むためのアプリで
 ブランチ運用・PR作成ルール・コミット規約は [CONTRIBUTING.md](./CONTRIBUTING.md) を、
 AIエージェント向けのガイドは [CLAUDE.md](./CLAUDE.md) を参照してください。
 
+## 配布版(GitHub Releases)
+
+利用者向けの tarball は GitHub Releases で配布します。セットアップ・更新手順は tarball 内の `SETUP.md`(ソースでは [dist/SETUP.md](./dist/SETUP.md))を参照してください。
+
 ## 起動・停止
 
 ```sh

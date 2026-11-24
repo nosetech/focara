@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          py=$(grep -E '^version = ' backend/pyproject.toml | head -n1 | sed -E 's/version = "(.*)"/\1/')
+          js=$(node -p "require('./frontend/package.json').version")
+          echo "tag=$version backend=$py frontend=$js"
+          if [ "$version" != "$py" ] || [ "$version" != "$js" ]; then
+            echo "::error::タグ・backend/pyproject.toml・frontend/package.json のバージョンが一致しません"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  backend:
+    needs: validate-version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv sync --frozen
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run pytest
+
+  frontend:
+    needs: validate-version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          NODE_ENV: production
+      - name: standalone 出力を組み立てる
+        run: |
+          test -f .next/standalone/server.js || { echo "::error::.next/standalone/server.js がありません"; exit 1; }
+          mkdir -p ../pkg/frontend
+          cp -a .next/standalone/. ../pkg/frontend/
+          mkdir -p ../pkg/frontend/.next
+          cp -a .next/static ../pkg/frontend/.next/static
+          cp -a public ../pkg/frontend/public
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frontend-standalone
+          path: pkg/frontend
+          include-hidden-files: true
+          if-no-files-found: error
+
+  package-and-release:
+    needs: [validate-version, backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.validate-version.outputs.version }}
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-standalone
+          path: frontend-standalone
+      - name: tarball を組み立てる
+        run: |
+          set -euo pipefail
+          pkg="focara-${VERSION}"
+          mkdir -p "$pkg/scripts" "$pkg/config"
+          # backend: ソース一式(テスト・キャッシュ・ローカル状態を除く)
+          rsync -a \
+            --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' --exclude '*.egg-info' \
+            --exclude '.pytest_cache' --exclude '.ruff_cache' --exclude '/tests' \
+            --exclude '/data' --exclude '/logs' \
+            backend/ "$pkg/backend/"
+          # frontend: CI でビルドした standalone 出力
+          cp -a frontend-standalone "$pkg/frontend"
+          # 開発用と共通実体のスクリプト
+          cp scripts/lib.sh scripts/stop.sh "$pkg/scripts/"
+          # dist/ にある配布専用ファイル
+          cp dist/SETUP.md dist/.env.example "$pkg/"
+          cp dist/config/config.yaml.example "$pkg/config/"
+          cp dist/scripts/start.sh dist/scripts/migrate.sh "$pkg/scripts/"
+          chmod +x "$pkg"/scripts/*.sh
+          cp LICENSE "$pkg/" 2>/dev/null || true
+          echo "$VERSION" > "$pkg/VERSION"
+          # 必須ファイルの欠落を検知する
+          for f in SETUP.md VERSION .env.example config/config.yaml.example \
+                   scripts/start.sh scripts/stop.sh scripts/lib.sh scripts/migrate.sh \
+                   backend/pyproject.toml backend/uv.lock \
+                   frontend/server.js frontend/.next/BUILD_ID frontend/.next/static frontend/public/sw.js; do
+            [ -e "$pkg/$f" ] || { echo "::error::必須ファイルがありません: $f"; exit 1; }
+          done
+          for f in .env config/config.yaml; do
+            [ ! -e "$pkg/$f" ] || { echo "::error::利用者固有のファイルが含まれています: $f"; exit 1; }
+          done
+          tar -czf "$pkg.tar.gz" "$pkg"
+          sha256sum "$pkg.tar.gz" > "$pkg.tar.gz.sha256"
+      - name: タグが master 上にあることを検証する
+        run: |
+          git fetch origin master
+          git merge-base --is-ancestor "${TAG}^{commit}" origin/master \
+            || { echo "::error::タグが master 上のコミットを指していません"; exit 1; }
+      - name: リリースノートを作る(タグが指す master コミットの本文)
+        run: |
+          git log -1 --format=%b "${TAG}^{commit}" > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::タグが指すコミットの本文が空です(変更点サマリのコミットにタグを付けてください)"
+            exit 1
+          fi
+      - name: GitHub Release を公開する
+        run: |
+          gh release create "$TAG" \
+            "focara-${VERSION}.tar.gz" "focara-${VERSION}.tar.gz.sha256" \
+            --title "$TAG" --notes-file release-notes.md

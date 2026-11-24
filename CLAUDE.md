@@ -19,6 +19,7 @@ Focara(フォカラ)リポジトリでAIエージェントが従うガイドで�
 - `scripts/service.sh install|uninstall|start|stop|restart|status`: launchd の LaunchAgent による常時起動(運用用。詳細は `docs/service.md`)。登録は利用者のログイン項目を変更するため、人間の了承なしに実行しない。`start.sh` とは併用不可。
 
 - `scripts/dev-instance.sh start|stop|status`: 動作確認用インスタンス(運用と分離。ポートは18000番台から自動採番、設定・DB・ログ・PID記録は `.dev-run/`)。画面・APIの動作確認はこれで行う。`pkill` / `killall` / ポート検索による kill はしない(運用や他worktreeのインスタンスを巻き込むため)。
+- `dist/`: 配布用ファイル(`SETUP.md` / `.env.example` / `config/config.yaml.example` / `scripts/start.sh` / `scripts/migrate.sh`)。リリースは `.github/workflows/release.yml`(`v*.*.*` タグ)、準備は `/release-prepare`、対応表は CONTRIBUTING.md の「リリース」。
 
 backend(`backend/` で実行。uv + Python 3.11+):
 
