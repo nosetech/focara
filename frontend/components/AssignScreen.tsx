@@ -28,7 +28,14 @@ type Load = "loading" | "error" | "ready";
 
 /** 整理画面の3枠割り当て。候補を午前中・午後・夜へドラッグ(またはボタン)で割り当て、枠内で並べ替える。 */
 export function AssignScreen() {
-  const { date, projects, refreshCounts, showToast } = useOrganize();
+  // 今日の日付はハイドレーション後に決まる。それまでは読み込み中として扱う
+  const { date } = useOrganize();
+  if (!date) return <OrganizeLoading />;
+  return <AssignScreenBody date={date} />;
+}
+
+function AssignScreenBody({ date }: { date: Date }) {
+  const { projects, refreshCounts, showToast } = useOrganize();
   const day = toDateParam(date);
   const [candidates, setCandidates] = useState<AssignTask[]>([]);
   const [scheduled, setScheduled] = useState<AssignTask[]>([]);

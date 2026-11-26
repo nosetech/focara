@@ -33,7 +33,20 @@ const sameTarget = (a: Target | null, day: string, slot: TimeSlot) =>
 
 /** 整理画面の日・週カレンダー。タスクはドラッグで別の日・枠へ移せる(日時が決まる予定は動かさない)。 */
 export function CalendarScreen({ mode }: { mode: "day" | "week" }) {
-  const { date, setDate, projects, refreshCounts, showToast } = useOrganize();
+  // 今日の日付はハイドレーション後に決まる。それまでは読み込み中として扱う
+  const { date } = useOrganize();
+  if (!date) return <OrganizeLoading />;
+  return <CalendarScreenBody mode={mode} date={date} />;
+}
+
+function CalendarScreenBody({
+  mode,
+  date,
+}: {
+  mode: "day" | "week";
+  date: Date;
+}) {
+  const { setDate, projects, refreshCounts, showToast } = useOrganize();
   const router = useRouter();
   const anchor = toDateParam(date);
   const days = rangeKey(mode, date).split(",");
