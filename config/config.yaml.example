@@ -23,3 +23,13 @@ ui:
 habit:
   # 習慣の子タスクを、今日から何日先まで先行生成するか(1〜365)
   generate_ahead_days: 14
+
+ai:
+  # AI(Claude Code CLI の claude -p)を実行する専用の作業ディレクトリ。スキル・プロンプトを置く
+  workdir: data/ai
+  # Claude Code CLI のコマンド(PATH 上の名前か絶対パス)。サブスクリプションの Claude Code を使う
+  claude_command: claude
+  # 1回の実行の上限秒数(1〜86400)。超えると停止してエラーにする
+  timeout_seconds: 600
+  # 実行ログ(log.dir 配下の ai/)の保持日数(1〜3650)
+  log_retention_days: 30

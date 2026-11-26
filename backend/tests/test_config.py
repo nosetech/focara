@@ -117,3 +117,55 @@ def test_habit_generate_ahead_days_invalid(value: object) -> None:
 def test_habit_unknown_key() -> None:
     with pytest.raises(ConfigError):
         parse_config({"habit": {"foo": 1}})
+
+
+def test_ai_defaults() -> None:
+    ai = parse_config(None).ai
+    assert (ai.workdir, ai.claude_command, ai.timeout_seconds, ai.log_retention_days) == (
+        "data/ai",
+        "claude",
+        600,
+        30,
+    )
+
+
+def test_ai_applied() -> None:
+    ai = parse_config(
+        {
+            "ai": {
+                "workdir": "/srv/focara-ai",
+                "claude_command": "/usr/local/bin/claude",
+                "timeout_seconds": 1,
+                "log_retention_days": 3650,
+            }
+        }
+    ).ai
+    assert ai.workdir == "/srv/focara-ai"
+    assert ai.claude_command == "/usr/local/bin/claude"
+    assert (ai.timeout_seconds, ai.log_retention_days) == (1, 3650)
+
+
+def test_dist_example_is_valid() -> None:
+    dist = Path(__file__).resolve().parents[2] / "dist" / "config" / "config.yaml.example"
+    assert load_config(dist) == Config()
+
+
+@pytest.mark.parametrize(
+    "ai",
+    [
+        {"workdir": ""},
+        {"workdir": 1},
+        {"claude_command": "  "},
+        {"timeout_seconds": 0},
+        {"timeout_seconds": 86401},
+        {"timeout_seconds": "600"},
+        {"timeout_seconds": True},
+        {"log_retention_days": 0},
+        {"log_retention_days": 3651},
+        {"log_retention_days": 1.5},
+        {"unknown": 1},
+    ],
+)
+def test_ai_invalid(ai: dict) -> None:
+    with pytest.raises(ConfigError, match="ai"):
+        parse_config({"ai": ai})
