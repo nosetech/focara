@@ -54,6 +54,10 @@ elif mode == "rate_limit":
 elif mode == "crash":
     print("fatal error", flush=True)
     sys.exit(3)
+elif mode == "orphan":
+    import subprocess
+    subprocess.Popen(["sleep", "60"])  # 標準出力を引き継いだまま残る孫プロセス
+    emit({{"type": "result", "is_error": False, "result": "done"}})
 elif mode == "sleep":
     print("started", flush=True)
     time.sleep(60)
@@ -179,6 +183,13 @@ def test_timeout(tmp_path: Path, stub: Path) -> None:
     log = e.value.log_path.read_text()
     assert "started" in log
     assert "タイムアウト" in log
+
+
+def test_leftover_child_does_not_block(tmp_path: Path, stub: Path) -> None:
+    started = time.monotonic()
+    result = make_provider(tmp_path, stub, "orphan").run(AIRequest(prompt="x"))
+    assert result.text == "done"
+    assert time.monotonic() - started < 20
 
 
 def test_command_not_found(tmp_path: Path) -> None:

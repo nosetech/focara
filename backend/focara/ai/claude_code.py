@@ -189,7 +189,10 @@ class ClaudeCodeProvider(AIProvider):
                     log_path=log_path,
                     session_id=session_id,
                 ) from None
-            reader.join()
+            # 本体の終了後も孫プロセスが標準出力を握ったまま残ると読み取りが終わらないため、
+            # 同じプロセスグループの残りを止めてから読み取りを待つ
+            _terminate(process)
+            reader.join(timeout=_KILL_GRACE_SECONDS)
             log.write(f"exit: {returncode}\n")
 
         return _to_result(parse_result_event(lines), returncode, session_id, log_path)
