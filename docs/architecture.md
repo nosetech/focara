@@ -125,6 +125,9 @@ producer-desk の `orchestrator/orchestrator/agent_runner.py` の実装を調査
   - **作業ディレクトリ**: タスク管理用途ではコードリポジトリを触らないため、専用の作業ディレクトリ（設定 `ai.workdir`）を `cwd` に指定する。スキル・プロンプトはここに置く。
   - **権限**: 非対話のため権限確認ができない。producer-desk のように `--dangerously-skip-permissions` を常用せず、利用するツールを `--allowedTools` で最小限に限定することを基本とする。MCPサーバー（Phase 5）経由のタスク登録に必要なツールのみ許可する。
   - **ログ**: 実行ごとにログファイルを `logs/ai/` に出力し、保持日数を設定で変更できるようにする。
+- **実装**(`backend/focara/ai/`): `AIProvider.run(AIRequest) -> AIResult`。`AIRequest` はプロンプト・許可ツール(`allowed_tools`)・継続する `session_id`(省略時は新規)・追加のシステムプロンプトを持つ。プロンプトは引数でなく標準入力で渡す。失敗は種別の分かる例外(`AIRateLimitError`(429等) / `AIExecutionError`(`is_error`・異常終了・結果なし) / `AITimeoutError` / `AICommandNotFoundError`、いずれも `AIError` のサブクラスでログのパスを持つ)で返す。
+  - 設定: `ai.workdir`(既定 `data/ai`) / `ai.claude_command`(既定 `claude`) / `ai.timeout_seconds`(既定600) / `ai.log_retention_days`(既定30)。ログは `log.dir` 配下の `ai/<timestamp>.log`。
+  - 子プロセスには `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_BASE_URL`(APIキー課金・接続先の差し替えを防ぐ)、`CLAUDECODE` 等(入れ子判定)、`FOCARA_CONFIG` を渡さない。タイムアウト時はプロセスグループごと停止する。
 - 実行はAPIリクエスト内で完結させず、`ai_jobs` 相当のジョブとして記録し、状態（pending / running / succeeded / failed）と結果・エラーを残す。結果はジョブから取得する。
 - Claude Code の利用上限はアプリ側で設けない。上限到達（429等）や異常終了は、ジョブを `failed` にしてエラー内容を返す。
 - 同時実行数は設定で制限する（既定1）。サブスクリプションの利用枠を意図せず消費しないようにするため。

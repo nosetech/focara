@@ -46,6 +46,19 @@ class HabitConfig:
 
 
 @dataclass(frozen=True)
+class AiConfig:
+    # claude -p を実行する作業ディレクトリ(cwd)。スキル・プロンプトを置く。
+    # backend/ 基準の相対パス可。
+    workdir: str = "data/ai"
+    # Claude Code CLI のコマンド(PATH 上の名前か絶対パス)。
+    claude_command: str = "claude"
+    # 1回の実行の上限秒数。超えたら子プロセスを停止してタイムアウトにする。
+    timeout_seconds: int = 600
+    # logs/ai/ の実行ログを保持する日数。
+    log_retention_days: int = 30
+
+
+@dataclass(frozen=True)
 class Config:
     instance: str = "default"
     backend: BackendConfig = field(default_factory=BackendConfig)
@@ -54,6 +67,7 @@ class Config:
     log: LogConfig = field(default_factory=LogConfig)
     ui: UiConfig = field(default_factory=UiConfig)
     habit: HabitConfig = field(default_factory=HabitConfig)
+    ai: AiConfig = field(default_factory=AiConfig)
 
 
 _FRONTEND_HOST_REMOVED = (
@@ -100,6 +114,12 @@ def _ahead_days(value: Any, name: str) -> int:
     return value
 
 
+def _int_range(value: Any, name: str, low: int, high: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+        raise ConfigError(f"{name} は {low}〜{high} の整数で指定してください: {value!r}")
+    return value
+
+
 def _string(value: Any, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{name} は空でない文字列で指定してください: {value!r}")
@@ -112,7 +132,7 @@ def parse_config(raw: Any) -> Config:
         raw = {}
     if not isinstance(raw, dict):
         raise ConfigError("設定ファイルのトップレベルはマッピングで指定してください")
-    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log", "ui", "habit"}
+    unknown = set(raw) - {"instance", "backend", "frontend", "db", "log", "ui", "habit", "ai"}
     if unknown:
         raise ConfigError(f"未知の項目があります: {', '.join(sorted(map(str, unknown)))}")
 
@@ -123,6 +143,7 @@ def parse_config(raw: Any) -> Config:
     log = _section(raw, "log", {"dir"})
     ui = _section(raw, "ui", {"day_end_hour"})
     habit = _section(raw, "habit", {"generate_ahead_days"})
+    ai = _section(raw, "ai", {"workdir", "claude_command", "timeout_seconds", "log_retention_days"})
 
     cfg = Config(
         instance=_string(raw.get("instance", d.instance), "instance"),
@@ -140,6 +161,21 @@ def parse_config(raw: Any) -> Config:
                 habit.get("generate_ahead_days", d.habit.generate_ahead_days),
                 "habit.generate_ahead_days",
             )
+        ),
+        ai=AiConfig(
+            workdir=_string(ai.get("workdir", d.ai.workdir), "ai.workdir"),
+            claude_command=_string(
+                ai.get("claude_command", d.ai.claude_command), "ai.claude_command"
+            ),
+            timeout_seconds=_int_range(
+                ai.get("timeout_seconds", d.ai.timeout_seconds), "ai.timeout_seconds", 1, 86400
+            ),
+            log_retention_days=_int_range(
+                ai.get("log_retention_days", d.ai.log_retention_days),
+                "ai.log_retention_days",
+                1,
+                3650,
+            ),
         ),
     )
     if cfg.backend.port == cfg.frontend.port:
