@@ -50,6 +50,22 @@ test("日付ラベルと補足", () => {
   assert.equal(screenSub("inbox", counts, d), "3件 · 未整理");
 });
 
+test("日付が決まる前(null)は補足に日付を出さない", () => {
+  const counts = {
+    inbox: 3,
+    assign: 2,
+    waiting: 0,
+    someday: 0,
+    habits: 0,
+    endedHabits: 0,
+  };
+  assert.equal(screenSub("day", counts, null), "");
+  assert.equal(screenSub("week", counts, null), "");
+  // 日付を使わない画面は従来どおり
+  assert.equal(screenSub("inbox", counts, null), "3件 · 未整理");
+  assert.equal(screenSub("assign", counts, null), "未割り当て 2件");
+});
+
 test("習慣の件数は終了を含めない", () => {
   const c = countTasks(
     [],

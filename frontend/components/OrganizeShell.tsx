@@ -97,7 +97,9 @@ export function OrganizeShell({
   const [navOpen, setNavOpen] = useState(false);
   const side = useSidebarCollapse();
   const panelWidth = useDetailWidth(PANEL_DEFAULT_WIDTH);
-  const [date, setDate] = useState(() => new Date());
+  // 今日の日付はハイドレーション後に決める(静的生成したHTMLの日付とずれて不一致にならないように)
+  const [date, setDate] = useState<Date | null>(null);
+  useEffect(() => setDate(new Date()), []);
   const [counts, setCounts] = useState<OrganizeCounts | null>(null);
   const [projects, setProjects] = useState<OrganizeProject[]>([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -352,17 +354,19 @@ export function OrganizeShell({
                   <button
                     className={styles.iconButton}
                     aria-label="前へ"
-                    onClick={() => setDate(addDays(date, -step))}
+                    disabled={!date}
+                    onClick={() => date && setDate(addDays(date, -step))}
                   >
                     {chevron("M15 6l-6 6 6 6")}
                   </button>
                   <span className={styles.dateLabel}>
-                    {dateNavLabel(screen, date)}
+                    {date ? dateNavLabel(screen, date) : ""}
                   </span>
                   <button
                     className={styles.iconButton}
                     aria-label="次へ"
-                    onClick={() => setDate(addDays(date, step))}
+                    disabled={!date}
+                    onClick={() => date && setDate(addDays(date, step))}
                   >
                     {chevron("M9 6l6 6-6 6")}
                   </button>

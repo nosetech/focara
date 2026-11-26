@@ -119,11 +119,11 @@ export function dateNavLabel(key: OrganizeScreenKey, d: Date): string {
   return `${mon.getMonth() + 1}月${mon.getDate()}日 – ${sun.getDate()}日`;
 }
 
-/** 見出しの右に出す補足 */
+/** 見出しの右に出す補足。date が null(今日がまだ決まっていない)なら日付は出さない。 */
 export function screenSub(
   key: OrganizeScreenKey,
   counts: OrganizeCounts | null,
-  date: Date,
+  date: Date | null,
   showEndedHabits = false,
 ): string {
   switch (key) {
@@ -132,8 +132,9 @@ export function screenSub(
     case "assign":
       return counts ? `未割り当て ${counts.assign}件` : "";
     case "day":
-      return formatDay(date);
+      return date ? formatDay(date) : "";
     case "week": {
+      if (!date) return "";
       const mon = mondayOf(date);
       return `${formatDay(mon)} – ${addDays(mon, 6).getDate()}日`;
     }

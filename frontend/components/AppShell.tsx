@@ -11,6 +11,7 @@ import { ShellContext } from "./ShellContext";
 import { SidebarToggle } from "./SidebarToggle";
 import { useSidebarCollapse } from "./useSidebarCollapse";
 import { resolveNavShortcut, shortcutKeyFor } from "@/lib/shortcuts";
+import { getStoredTheme } from "@/lib/theme";
 import styles from "./AppShell.module.css";
 
 const NAV_ITEMS = [
@@ -34,6 +35,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const [quickAdd, setQuickAdd] = useState(false);
   const side = useSidebarCollapse();
+
+  // ハイドレーション不一致などで <html> が描き直されると、初期化スクリプトが付けた
+  // data-theme が消えて OS 設定のテーマに戻ってしまう。保存済みのテーマがあれば付け直す。
+  useEffect(() => {
+    const stored = getStoredTheme();
+    if (stored && document.documentElement.dataset.theme !== stored)
+      document.documentElement.dataset.theme = stored;
+  }, []);
 
   // デスクトップ: N でクイック追加、R / I / A で画面移動(入力中・ダイアログ中は無視)
   useEffect(() => {
